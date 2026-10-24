@@ -1,0 +1,14 @@
+{
+  "domain": "viertelstunden_waechter",
+  "name": "Viertelstunden-Wächter",
+  "codeowners": ["@mobilewhatelse"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/mobilewhatelse/viertelstunden-waechter",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/mobilewhatelse/viertelstunden-waechter/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

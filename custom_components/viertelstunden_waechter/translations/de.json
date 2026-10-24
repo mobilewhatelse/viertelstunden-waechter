@@ -1,0 +1,177 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Viertelstunden-Wächter",
+        "description": "Hält den mittleren Netzbezug jeder Viertelstunde unter einer Grenze (Leistungspreis beim Netzentgelt). Die Geräte fügen Sie danach unter „Konfigurieren“ hinzu.",
+        "data": {
+          "name": "Name",
+          "grid_power": "Netzbezug (Leistung)",
+          "grid_energy": "Bezugszähler",
+          "limit_kw": "Grenze",
+          "margin_kw": "Sicherheitsabstand"
+        },
+        "data_description": {
+          "grid_power": "Sensor mit der Leistung aus dem Netz (W oder kW). Negative Werte (Einspeisung) zählen als 0.",
+          "grid_energy": "Optional, aber empfohlen: Bezugszähler des Stromzählers. Damit stimmt die Viertelstunde auch nach einem Neustart genau.",
+          "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
+          "margin_kw": "Der Wächter zielt auf Grenze minus Abstand."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Es kann nur ein Wächter eingerichtet werden."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Viertelstunden-Wächter",
+        "menu_options": {
+          "settings": "Allgemeine Einstellungen",
+          "add_wallbox": "Wallbox hinzufügen (Ladestrom senken)",
+          "add_switch": "Schaltbares Gerät hinzufügen (Pumpe, Boiler …)",
+          "add_script": "Notfall-Aktion hinzufügen (Skript, z. B. Hausakku entladen)",
+          "edit_device": "Gerät bearbeiten",
+          "remove_device": "Geräte entfernen"
+        }
+      },
+      "settings": {
+        "title": "Allgemeine Einstellungen",
+        "data": {
+          "grid_power": "Netzbezug (Leistung)",
+          "grid_energy": "Bezugszähler",
+          "condition_entity": "Nur nötig, solange",
+          "lock_entity": "„Aktiv“ sperren, solange",
+          "notify_services": "Benachrichtigungsdienste",
+          "startup_mode": "Betriebsart nach Neustart"
+        },
+        "data_description": {
+          "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
+          "lock_entity": "Optional. Solange sie an ist, wird „Aktiv“ verweigert und der Wächter beobachtet nur (z. B. ein älterer Wächter, der noch läuft).",
+          "notify_services": "Optional, mit Komma getrennt, z. B. notify.mobile_app_handy. Für den Fall, dass die Grenze nicht zu halten ist.",
+          "startup_mode": "Wiederherstellen = die Betriebsart von vor dem Neustart."
+        }
+      },
+      "wallbox": {
+        "title": "Wallbox",
+        "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nie gestoppt.",
+        "data": {
+          "name": "Name",
+          "priority": "Priorität",
+          "power_entity": "Ladeleistung",
+          "current_entity": "Einstellung Ladestrom",
+          "min_current": "Mindeststrom",
+          "max_current": "Höchststrom",
+          "phase_entity": "Phasenwahl",
+          "one_phase_option": "Option für 1 Phase",
+          "phases_entity": "Genutzte Phasen",
+          "allow_entity": "Eingriff nur, solange"
+        },
+        "data_description": {
+          "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+          "phase_entity": "Optional. Ohne sie wird nur gedrosselt, nie auf 1 Phase umgeschaltet.",
+          "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
+          "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
+          "allow_entity": "Optional. Nur solange diese Entität an ist."
+        }
+      },
+      "switch": {
+        "title": "Schaltbares Gerät",
+        "description": "Wird bei Bedarf ausgeschaltet und wieder eingeschaltet, sobald Platz ist. Eingeschaltet wird nur, was der Wächter selbst ausgeschaltet hat.",
+        "data": {
+          "name": "Name",
+          "priority": "Priorität",
+          "switch_entity": "Schalter",
+          "power_entity": "Leistungssensor",
+          "min_power_w": "Läuft ab",
+          "power_w": "Angenommene Leistung ohne Sensor",
+          "max_off_min": "Höchste Auszeit",
+          "restore_entity": "Nur wieder einschalten, solange",
+          "allow_entity": "Eingriff nur, solange"
+        },
+        "data_description": {
+          "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+          "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
+          "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will."
+        }
+      },
+      "script": {
+        "title": "Notfall-Aktion",
+        "description": "Ein Skript, das den Netzbezug senkt, z. B. den Hausakku freigibt. Ein zweites Skript nimmt es zurück.",
+        "data": {
+          "name": "Name",
+          "priority": "Priorität",
+          "on_script": "Skript: eingreifen",
+          "off_script": "Skript: zurücknehmen",
+          "power_w": "Erwartete Entlastung",
+          "max_off_min": "Höchste Dauer",
+          "allow_entity": "Eingriff nur, solange"
+        },
+        "data_description": {
+          "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt."
+        }
+      },
+      "edit_device": {
+        "title": "Gerät bearbeiten",
+        "data": { "id": "Gerät" }
+      },
+      "remove_device": {
+        "title": "Geräte entfernen",
+        "data": { "id": "Geräte" }
+      }
+    },
+    "error": {
+      "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
+      "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
+      "unknown_option": "Diese Option hat die Phasenwahl nicht."
+    }
+  },
+  "selector": {
+    "startup_mode": {
+      "options": {
+        "restore": "Wiederherstellen",
+        "observe": "Beobachten",
+        "active": "Aktiv",
+        "off": "Aus"
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "mode": {
+        "name": "Betriebsart",
+        "state": { "off": "Aus", "observe": "Nur beobachten", "active": "Aktiv" }
+      },
+      "strategy": {
+        "name": "Strategie",
+        "state": { "comfort": "Geringster Komfortverlust", "order": "Strenge Reihenfolge" }
+      }
+    },
+    "number": {
+      "limit": { "name": "Grenze" },
+      "margin": { "name": "Sicherheitsabstand" }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Aus",
+          "locked": "Gesperrt",
+          "idle": "Nicht nötig",
+          "no_data": "Messwerte fehlen",
+          "observing": "Beobachtet",
+          "would_intervene": "Würde eingreifen",
+          "ready": "Bereit",
+          "intervening": "Greift ein"
+        }
+      },
+      "quarter_energy": { "name": "Viertelstunde bisher" },
+      "forecast": { "name": "Prognose Viertelstunde" },
+      "allowed": { "name": "Erlaubter Bezug jetzt" },
+      "last_quarter": { "name": "Letzte Viertelstunde" },
+      "month_peak": { "name": "Spitze im Monat" },
+      "interventions_today": { "name": "Eingriffe heute" }
+    }
+  }
+}

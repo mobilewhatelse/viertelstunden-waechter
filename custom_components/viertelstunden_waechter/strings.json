@@ -1,0 +1,177 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Quarter-hour peak guard",
+        "description": "Keeps the average grid import of every quarter hour below a limit (power-based grid tariffs). Devices are added afterwards under Configure.",
+        "data": {
+          "name": "Name",
+          "grid_power": "Grid import power",
+          "grid_energy": "Grid import energy counter",
+          "limit_kw": "Limit",
+          "margin_kw": "Safety margin"
+        },
+        "data_description": {
+          "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0.",
+          "grid_energy": "Optional but recommended: the meter's import counter. Makes the quarter-hour energy exact after restarts.",
+          "limit_kw": "The quarter-hour average that must not be exceeded.",
+          "margin_kw": "The guard aims at limit minus margin."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one guard can be set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Quarter-hour peak guard",
+        "menu_options": {
+          "settings": "General settings",
+          "add_wallbox": "Add wallbox (reduce charging current)",
+          "add_switch": "Add switchable device (pump, heater ...)",
+          "add_script": "Add emergency action (script, e.g. discharge home battery)",
+          "edit_device": "Edit device",
+          "remove_device": "Remove devices"
+        }
+      },
+      "settings": {
+        "title": "General settings",
+        "data": {
+          "grid_power": "Grid import power",
+          "grid_energy": "Grid import energy counter",
+          "condition_entity": "Only needed while",
+          "lock_entity": "Block active mode while",
+          "notify_services": "Notify services",
+          "startup_mode": "Mode after a restart"
+        },
+        "data_description": {
+          "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
+          "lock_entity": "Optional. While this is on, active mode is refused and the guard only observes (e.g. an older guard that is still running).",
+          "notify_services": "Optional, comma-separated, e.g. notify.mobile_app_phone. Used when the limit cannot be held.",
+          "startup_mode": "Restore = the mode it had before the restart."
+        }
+      },
+      "wallbox": {
+        "title": "Wallbox",
+        "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is never stopped.",
+        "data": {
+          "name": "Name",
+          "priority": "Priority",
+          "power_entity": "Charging power",
+          "current_entity": "Charging current setting",
+          "min_current": "Minimum current",
+          "max_current": "Maximum current",
+          "phase_entity": "Phase selection",
+          "one_phase_option": "Option for 1 phase",
+          "phases_entity": "Phases in use",
+          "allow_entity": "Intervention only while"
+        },
+        "data_description": {
+          "priority": "1 = restricted first, 10 = only when nothing else helps.",
+          "phase_entity": "Optional. Without it the wallbox is only throttled, never switched to 1 phase.",
+          "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
+          "phases_entity": "Optional sensor with the number of phases currently used.",
+          "allow_entity": "Optional. Only while this entity is on."
+        }
+      },
+      "switch": {
+        "title": "Switchable device",
+        "description": "Switched off when needed and on again when there is room. Only devices the guard switched off are switched on again.",
+        "data": {
+          "name": "Name",
+          "priority": "Priority",
+          "switch_entity": "Switch",
+          "power_entity": "Power sensor",
+          "min_power_w": "Counts as running above",
+          "power_w": "Assumed power without sensor",
+          "max_off_min": "Maximum off time",
+          "restore_entity": "Switch on again only while",
+          "allow_entity": "Intervention only while"
+        },
+        "data_description": {
+          "priority": "1 = restricted first, 10 = only when nothing else helps.",
+          "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
+          "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on."
+        }
+      },
+      "script": {
+        "title": "Emergency action",
+        "description": "A script that lowers the grid import, e.g. releases the home battery. A second script undoes it.",
+        "data": {
+          "name": "Name",
+          "priority": "Priority",
+          "on_script": "Script: intervene",
+          "off_script": "Script: undo",
+          "power_w": "Expected reduction",
+          "max_off_min": "Maximum duration",
+          "allow_entity": "Intervention only while"
+        },
+        "data_description": {
+          "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge."
+        }
+      },
+      "edit_device": {
+        "title": "Edit device",
+        "data": { "id": "Device" }
+      },
+      "remove_device": {
+        "title": "Remove devices",
+        "data": { "id": "Devices" }
+      }
+    },
+    "error": {
+      "min_above_max": "Minimum current is above maximum current.",
+      "phase_pair": "Phase selection and option for 1 phase belong together.",
+      "unknown_option": "The phase selection has no such option."
+    }
+  },
+  "selector": {
+    "startup_mode": {
+      "options": {
+        "restore": "Restore",
+        "observe": "Observe",
+        "active": "Active",
+        "off": "Off"
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": { "off": "Off", "observe": "Observe only", "active": "Active" }
+      },
+      "strategy": {
+        "name": "Strategy",
+        "state": { "comfort": "Least loss of comfort", "order": "Strict priority order" }
+      }
+    },
+    "number": {
+      "limit": { "name": "Limit" },
+      "margin": { "name": "Safety margin" }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Off",
+          "locked": "Blocked",
+          "idle": "Not needed",
+          "no_data": "Readings missing",
+          "observing": "Observing",
+          "would_intervene": "Would intervene",
+          "ready": "Ready",
+          "intervening": "Intervening"
+        }
+      },
+      "quarter_energy": { "name": "Quarter-hour energy so far" },
+      "forecast": { "name": "Quarter-hour forecast" },
+      "allowed": { "name": "Allowed import now" },
+      "last_quarter": { "name": "Last quarter hour" },
+      "month_peak": { "name": "Peak this month" },
+      "interventions_today": { "name": "Interventions today" }
+    }
+  }
+}
