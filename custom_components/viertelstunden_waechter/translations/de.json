@@ -170,6 +170,7 @@
       "forecast": { "name": "Prognose Viertelstunde" },
       "allowed": { "name": "Erlaubter Bezug jetzt" },
       "last_quarter": { "name": "Letzte Viertelstunde" },
+      "today_peak": { "name": "Spitze heute" },
       "month_peak": { "name": "Spitze im Monat" },
       "interventions_today": { "name": "Eingriffe heute" }
     }

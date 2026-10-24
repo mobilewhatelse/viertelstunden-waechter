@@ -27,6 +27,7 @@ from .engine import (
 _LOGGER = logging.getLogger(__name__)
 _BAD = (None, "", STATE_UNKNOWN, STATE_UNAVAILABLE)
 LOG_KEEP = 200
+DAYS_KEEP = 62
 CALL_TIMEOUT_S = 15
 
 
@@ -47,6 +48,7 @@ class Waechter:
         self.log: list[dict[str, Any]] = []
         self.counts: dict[str, dict[str, int]] = {}
         self.month_peak: dict[str, Any] = {}
+        self.day_peaks: dict[str, dict[str, Any]] = {}  # "2026-10-24": {"kw": 7.9, "at": "18:15"}
         self.last_quarter_kw: float | None = None
         self._store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self._unsub = None
@@ -63,6 +65,7 @@ class Waechter:
         self.log = data.get("log", [])
         self.counts = data.get("counts", {})
         self.month_peak = data.get("month_peak", {})
+        self.day_peaks = data.get("day_peaks", {})
         self.last_quarter_kw = data.get("last_quarter_kw")
         if data.get("executing") and data.get("interventions"):
             # Home Assistant restarted while the guard had changed devices: give them back first
@@ -202,6 +205,11 @@ class Waechter:
         month = start.strftime("%Y-%m")
         if self.month_peak.get("month") != month or kw > float(self.month_peak.get("kw") or 0.0):
             self.month_peak = {"month": month, "kw": kw, "at": start.isoformat()}
+        day = start.strftime("%Y-%m-%d")
+        if kw > float(self.day_peaks.get(day, {}).get("kw") or 0.0):
+            self.day_peaks[day] = {"kw": kw, "at": start.strftime("%H:%M")}
+        for k in sorted(self.day_peaks)[:-DAYS_KEEP]:
+            del self.day_peaks[k]
 
     # ---------- executing ----------
 
@@ -258,6 +266,7 @@ class Waechter:
             "log": self.log,
             "counts": self.counts,
             "month_peak": self.month_peak,
+            "day_peaks": self.day_peaks,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,
             "interventions": self.guard.interventions if self.executing else {},

@@ -23,6 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         ValueSensor(w, "forecast", "forecast_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
         ValueSensor(w, "allowed", "allowed_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
         LastQuarterSensor(w),
+        TodayPeakSensor(w),
         MonthPeakSensor(w),
         InterventionsTodaySensor(w),
     ])
@@ -86,6 +87,28 @@ class LastQuarterSensor(WaechterEntity, SensorEntity):
     @property
     def native_value(self) -> float | None:
         return self.waechter.last_quarter_kw
+
+
+class TodayPeakSensor(WaechterEntity, SensorEntity):
+    """Highest quarter hour today; attribute `days` lists the peaks of the last 31 days (for a table or chart)."""
+
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.KILO_WATT
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:calendar-today"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "today_peak")
+
+    @property
+    def native_value(self) -> float:
+        return float(self.waechter.day_peaks.get(dt_util.now().strftime("%Y-%m-%d"), {}).get("kw") or 0.0)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        w = self.waechter
+        days = [{"date": d, **w.day_peaks[d]} for d in sorted(w.day_peaks, reverse=True)[:31]]
+        return {"days": days, "days_over_limit": sum(1 for x in days if x["kw"] > w.limit_kw)}
 
 
 class MonthPeakSensor(WaechterEntity, SensorEntity):

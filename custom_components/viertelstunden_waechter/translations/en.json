@@ -170,6 +170,7 @@
       "forecast": { "name": "Quarter-hour forecast" },
       "allowed": { "name": "Allowed import now" },
       "last_quarter": { "name": "Last quarter hour" },
+      "today_peak": { "name": "Peak today" },
       "month_peak": { "name": "Peak this month" },
       "interventions_today": { "name": "Interventions today" }
     }

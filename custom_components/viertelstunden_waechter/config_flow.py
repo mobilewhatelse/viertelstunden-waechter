@@ -25,6 +25,8 @@ ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
 
 
 def _num(lo: float, hi: float, step: float = 1, unit: str | None = None) -> NumberSelector:
+    if unit is None:  # the selector rejects unit_of_measurement=None
+        return NumberSelector(NumberSelectorConfig(min=lo, max=hi, step=step, mode=NumberSelectorMode.BOX))
     return NumberSelector(NumberSelectorConfig(min=lo, max=hi, step=step, mode=NumberSelectorMode.BOX, unit_of_measurement=unit))
 
 
