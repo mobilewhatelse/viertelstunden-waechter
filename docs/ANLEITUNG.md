@@ -195,6 +195,8 @@ bei dem, was Sie eingetragen haben.
 
 ### Welche Wallboxen gehen?
 
+**Die vollständige Liste für Wallboxen, Batterien und Wärmepumpen mit dem Teststand jeder Integration (von uns getestet / Entitätstypen im Quelltext bestätigt / Hilfe gesucht): [KOMPATIBILITAET.md](KOMPATIBILITAET.md).** Für die neuen Gerätetypen ist noch nichts als „getestet“ eingetragen – Berichte sind willkommen (siehe Ende dieser Seite).
+
 Der Wächter braucht von der Wallbox-Integration einen **Leistungssensor** und einen **einstellbaren Ladestrom**
 (`number`, A). Geprüft im Quelltext der Integrationen am 25.10.2026, auf echter Hardware nur der Wattpilot.
 Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installation nachsehen.

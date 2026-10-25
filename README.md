@@ -189,6 +189,8 @@ The integration only asks for them where you enter a device.
 
 ### Wallbox compatibility
 
+**Full list for wallboxes, batteries and heat pumps, with the test status of every integration (tested by us / entity types verified in the source / help wanted): [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).** Nothing is marked "tested" for the new device types yet - reports are welcome (see the end of that page).
+
 What the guard needs from a wallbox integration: a **charging power sensor** and a **settable charging current**
 (`number`, A). Checked in the integrations' source code on 2026-10-25; only the Wattpilot was tried on real
 hardware. Entity names change between versions - look for them in your own installation.
