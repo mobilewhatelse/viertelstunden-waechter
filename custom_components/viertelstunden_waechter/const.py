@@ -36,6 +36,13 @@ D_MAX_OFF = "max_off_min"
 D_ALLOW = "allow_entity"                # optional: intervention only while this is on
 D_RESTORE = "restore_entity"            # optional (switch): switched back on only while this is on
 D_ON_SCRIPT = "on_script"
+D_SOC = "soc_entity"                    # battery: state of charge sensor
+D_MIN_SOC = "min_soc"                   # battery: released only at or above this state of charge (%)
+D_REL1 = "release_entity_1"             # battery: setting that releases the battery ...
+D_REL1_VALUE = "release_value_1"        # ... and the value that does it
+D_REL2 = "release_entity_2"
+D_REL2_VALUE = "release_value_2"
+D_RESTORE_ORIG = "restore_original"     # battery: put the original values back (default on)
 D_OFF_SCRIPT = "off_script"
 
 MODE_OFF = "off"

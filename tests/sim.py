@@ -24,7 +24,7 @@ START = datetime(2027, 1, 12, 17, 0, tzinfo=timezone(timedelta(hours=1)))
 class House:
     """Very small physical model. Times in minutes since START."""
 
-    def __init__(self, cooker=(), base_kw=0.4, car=True, pool=True, heater=True, pv_kw=0.0):
+    def __init__(self, cooker=(), base_kw=0.4, car=True, pool=True, heater=True, pv_kw=0.0, battery=False, soc=80.0):
         self.cooker = list(cooker)        # (from_min, to_min, kw); cooker cycles 40 s on / 20 s off
         self.base_kw = base_kw
         self.pv_kw = pv_kw
@@ -38,6 +38,9 @@ class House:
         self.counter_kwh = 1000.0
         self.min_current_seen = 99
         self.car_stopped_by_guard = False
+        self.has_battery = battery
+        self.soc = soc
+        self.bat_released = False  # released battery feeds the house with 0.8 kW
 
     def _car_setpoint_kw(self) -> float:
         if not self.car_wants:
@@ -55,13 +58,14 @@ class House:
         else:
             self.car_kw += (self._car_setpoint_kw() - self.car_kw) * 0.7  # car follows within ~20-40 s
         load = self.base_kw + cook + self.car_kw + (0.75 if self.pool_on else 0.0) + (2.0 if self.heater_on else 0.0)
-        grid = max(0.0, load - self.pv_kw)
+        grid = max(0.0, load - self.pv_kw - (0.8 if self.bat_released else 0.0))
         self.counter_kwh += grid * STEP_S / 3600.0
         return grid
 
     def readings(self) -> dict:
         R = engine.Reading
-        return {
+        extra = {"bat": R(soc=self.soc, releasable=not self.bat_released)} if self.has_battery else {}
+        return {**extra,
             "wb": R(power_w=self.car_kw * 1000, current_a=self.current, phase_option=self.phase_option,
                     phases=1 if self.phase_option == "1 Phase" else 3),
             "pool": R(power_w=750.0 if self.pool_on else 0.0, is_on=self.pool_on),
@@ -76,13 +80,16 @@ class House:
             elif a.kind == "set_phase" and a.value != self.phase_option:
                 self.phase_option = a.value
                 self.pause_until = t_min + 1.0  # phase switch: about a minute without charging
+        elif a.kind in ("battery_release", "battery_restore"):
+            self.bat_released = a.kind == "battery_release"
         elif a.kind in ("turn_off", "turn_on"):
             setattr(self, "pool_on" if a.device_id == "pool" else "heater_on", a.kind == "turn_on")
 
 
-def devices(prio_wb=1, prio_pool=2, prio_heater=3, pool_max_off=0.0):
+def devices(prio_wb=1, prio_pool=2, prio_heater=3, pool_max_off=0.0, battery=False):
     D = engine.DeviceConfig
-    return [
+    bat = [D(id="bat", name="Batterie", kind="battery", priority=10, power_w=800, min_soc=30)] if battery else []
+    return bat + [
         D(id="wb", name="Wallbox", kind="wallbox", priority=prio_wb, one_phase_option="1 Phase"),
         D(id="pool", name="Pool", kind="switch", priority=prio_pool, min_power_w=150, max_off_min=pool_max_off),
         D(id="heater", name="Boiler", kind="switch", priority=prio_heater, min_power_w=300),

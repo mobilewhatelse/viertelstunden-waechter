@@ -89,10 +89,31 @@ Poolpumpe, Boiler, Heizstab, Klimaanlage, Wärmepumpe über SG-Ready-Kontakt …
 Ein abgeschaltetes Gerät bleibt mindestens 5 Minuten aus. Wieder eingeschaltet wird nur, was der Wächter selbst
 ausgeschaltet hat – und nur, wenn es noch aus ist.
 
+### Batterie (direkt freigeben)
+
+Für den **Hausakku** braucht es keine Skripte und keine Hilfs-Vorlagen: Der Gerätetyp **Batterie** gibt ihn im
+Notfall frei, damit er das Haus versorgt und den Netzbezug senkt.
+
+| Feld | Beispiel | Bedeutung |
+|---|---|---|
+| Ladestand | `sensor.akku_ladestand` | Sensor in % |
+| Mindest-Ladestand | 30 % | Freigabe nur ab diesem Wert; fällt der Akku darunter, wird zurückgenommen |
+| Einstellung, die die Batterie freigibt + Wert | `number.akku_max_ausgangsleistung` → `800` | eine Zahl, eine Auswahl (Option als Text, z. B. `on`) oder ein Schalter (`on`/`off`) |
+| Zweite Einstellung (optional) | `select.akku_modus` → `on` | z. B. der Modus, wenn die erste Einstellung die Leistung ist |
+| Erwartete Entlastung | 800 W | für Planung und Ersparnis-Schätzung |
+| Höchste Dauer | 0 = ohne Grenze | danach wird auf jeden Fall zurückgenommen |
+| Vorherige Werte wiederherstellen | an | stellt die Werte von vor der Freigabe wieder her – **nur die, die noch den Freigabewert haben**; hat inzwischen eine andere Automation etwas gesetzt, bleibt es |
+| Skript nach dem Zurücknehmen | optional | z. B. damit Ihre eigene Automation den Akku setzt (statt Wiederherstellen, wenn der Akku eine eigene Steuerlogik hat) |
+
+Die Batterie wird nur als Maßnahme angeboten, wenn mindestens eine ihrer Einstellungen vom Freigabewert abweicht
+(sie wird nicht zweimal „freigegeben“) und der Ladestand es zulässt. Standard-Priorität ist 10: zuletzt.
+
 ### Notfall-Aktion (Skript)
 
-Für alles, was sich nicht einfach schalten lässt, vor allem den **Hausakku**: Jeder Akku wird anders gesteuert
-(Lademodus, Entladeleistung, Standby …), deshalb zwei kleine Skripte – eines greift ein, eines nimmt es zurück.
+Für alles, was die anderen Gerätetypen nicht können. Beim **Hausakku** nehmen Sie besser den Gerätetyp Batterie
+(oben). Das Beispiel hier zeigt das Prinzip:
+
+Zwei kleine Skripte: eines greift ein, eines nimmt es zurück.
 
 ```yaml
 # Beispiel: Akku darf voll ins Haus liefern
@@ -129,7 +150,7 @@ Alles, was sich darauf zurückführen lässt, geht.
 | Steckdosen, Relais, Pumpe, Boiler | ja | schaltbares Gerät (`switch`, `input_boolean`, `light`, `fan`) |
 | Wallbox mit einstellbarem Ladestrom | ja | Wallbox (Zahl für den Strom, Phasenumschaltung optional) |
 | Wärmepumpe oder Heizstab mit Kontakt (z. B. SG-Ready), Klimaanlage mit Schalter | ja | schaltbares Gerät |
-| Hausakku, Wechselrichter-Modi | ja | Notfall-Aktion (zwei Skripte) |
+| Hausakku, Wechselrichter-Modi | ja | Batterie (Einstellungen und Werte) oder Notfall-Aktion (zwei Skripte) |
 | Alles, was in Home Assistant eine Aktion hat (Szene, Automation, Modus-Auswahl) | ja | Notfall-Aktion (Skript) |
 | `climate` (Solltemperatur) | nur über Skript | ein Skript senkt die Solltemperatur, eines setzt sie zurück |
 | Gerät mit **einstellbarer Leistung** (stufenloser Heizstab, Akku-Ladeleistung) | grob | über Skripte nur an/aus, nicht stufenweise |
@@ -215,7 +236,7 @@ Spitze nutzen“, Meldung bei Eingriff, Lastprognose, Diagnose.
 | Sensor für den Netzbezug (und optional der Bezugszähler) | wird von Ihrem Wechselrichter oder Zähler gemessen | Integration des Wechselrichters, ESPHome, Modbus … |
 | Die Entitäten Ihrer Geräte (Ladestrom, Schalter, Leistungssensoren) | gehören zu Ihrer Hardware | die Integrationen der Geräte |
 | **Optionale Bedingungs-Entitäten:** „Nur nötig, solange“, „Aktiv sperren, solange“, „Eingriff nur, solange“, „Nur wieder einschalten, solange“ | Regeln Ihres Haushalts | jede An/Aus-Entität: Vorlage-Helfer, `input_boolean`, Zeitplan. Beispiel: „Küchenstecker nur wieder einschalten, solange sein eigener Zeitplan ihn an haben will“ ist ein Vorlage-Helfer, der diesen Zeitplan liest |
-| **Skripte für eine Notfall-Aktion** (Hausakku) | jeder Akku wird anders gesteuert | zwei kleine Skripte (eingreifen / zurücknehmen), Beispiele oben |
+| Skripte für eine Notfall-Aktion | nur für das, was die anderen Gerätetypen nicht können | zwei kleine Skripte (eingreifen / zurücknehmen); ein Hausakku braucht keine: Gerätetyp **Batterie** |
 | Ein Dashboard | Geschmackssache | die Entitäten oben; die Karte zur Konfiguration steht in Abschnitt 5 |
 
 Die Hilfs-Entitäten, die bei einer Installation wie der des Autors vorkommen („Küche darf wieder an“, „Akku-Notfall

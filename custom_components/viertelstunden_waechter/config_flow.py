@@ -14,7 +14,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
-    EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
+    BooleanSelector, EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
     SelectSelector, SelectSelectorConfig, TextSelector,
 )
 
@@ -23,10 +23,12 @@ from .const import (
     CONF_STARTUP_MODE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
     D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
+    D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC,
 )
-from .engine import KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX
+from .engine import KIND_BATTERY, KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX
 
 ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
+RELEASE_DOMAINS = ["number", "input_number", "select", "input_select", "switch", "input_boolean"]
 
 
 def _num(lo: float, hi: float, step: float = 1, unit: str | None = None) -> NumberSelector:
@@ -84,6 +86,17 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 0))] = _num(0, 20000, 10, "W")
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
         s[_opt(D_RESTORE, d)] = _ent(ON_OFF_DOMAINS)
+    elif kind == KIND_BATTERY:
+        s[vol.Required(D_SOC, default=d.get(D_SOC, vol.UNDEFINED))] = _ent("sensor")
+        s[vol.Required(D_MIN_SOC, default=d.get(D_MIN_SOC, 30))] = _num(0, 100, 1, "%")
+        s[vol.Required(D_REL1, default=d.get(D_REL1, vol.UNDEFINED))] = _ent(RELEASE_DOMAINS)
+        s[vol.Required(D_REL1_VALUE, default=d.get(D_REL1_VALUE, vol.UNDEFINED))] = TextSelector()
+        s[_opt(D_REL2, d)] = _ent(RELEASE_DOMAINS)
+        s[_opt(D_REL2_VALUE, d)] = TextSelector()
+        s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 800))] = _num(10, 20000, 10, "W")
+        s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
+        s[vol.Required(D_RESTORE_ORIG, default=d.get(D_RESTORE_ORIG, True))] = BooleanSelector()
+        s[_opt(D_OFF_SCRIPT, d)] = _ent("script")
     else:
         s[vol.Required(D_ON_SCRIPT, default=d.get(D_ON_SCRIPT, vol.UNDEFINED))] = _ent("script")
         s[_opt(D_OFF_SCRIPT, d)] = _ent("script")
@@ -101,6 +114,8 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
         what = f"{int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A" + (", 1~" if d.get(D_ONE_PHASE) else "")
     elif kind == KIND_SWITCH:
         what = f"aus ab {int(d.get(D_MIN_POWER, 100))} W" + (f", ≤ {int(d.get(D_MAX_OFF))} min" if d.get(D_MAX_OFF) else "")
+    elif kind == KIND_BATTERY:
+        what = f"Batterie ab {int(d.get(D_MIN_SOC, 30))} %, ≈ {int(d.get(D_POWER_W, 0))} W"
     else:
         what = f"Skript ≈ {int(d.get(D_POWER_W, 0))} W"
     return f"{prio} · {d.get(D_NAME, '?')} · {what}"
@@ -124,7 +139,7 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        return {KIND_WALLBOX: WallboxFlow, KIND_SWITCH: SwitchFlow, KIND_SCRIPT: ScriptFlow}
+        return {KIND_WALLBOX: WallboxFlow, KIND_SWITCH: SwitchFlow, KIND_SCRIPT: ScriptFlow, KIND_BATTERY: BatteryFlow}
 
 
 class WaechterOptionsFlow(OptionsFlow):
@@ -197,3 +212,28 @@ class SwitchFlow(_DeviceFlow):
 
 class ScriptFlow(_DeviceFlow):
     kind = KIND_SCRIPT
+
+class BatteryFlow(_DeviceFlow):
+    kind = KIND_BATTERY
+
+    def _validate(self, u: dict[str, Any]) -> dict[str, str]:
+        for ent_key, val_key in ((D_REL1, D_REL1_VALUE), (D_REL2, D_REL2_VALUE)):
+            ent, val = u.get(ent_key), str(u.get(val_key) or "").strip()
+            if bool(ent) != bool(val):
+                return {val_key: "pair"}
+            if not ent:
+                continue
+            domain = ent.split(".")[0]
+            if domain in ("number", "input_number"):
+                try:
+                    float(val)
+                except ValueError:
+                    return {val_key: "value_number"}
+            elif domain in ("select", "input_select"):
+                st = self.hass.states.get(ent)
+                options = st.attributes.get("options", []) if st else []
+                if options and val not in options:
+                    return {val_key: "unknown_option"}
+            elif val not in ("on", "off"):
+                return {val_key: "value_onoff"}
+        return {}

@@ -103,6 +103,52 @@ class PricingTests(unittest.TestCase):
         self.assertGreater(saved, 15.0)
 
 
+class BatteryTests(unittest.TestCase):
+    def test_battery_is_released_last_and_given_back(self):
+        # car and cooker: wallbox, pool and heater go first, the battery only helps when nothing else is left
+        house = House(cooker=[(5, 35, 7.0)], battery=True)
+        guard = engine.Guard(devices(battery=True), engine.STRATEGY_ORDER)
+        quarters, log = run(house, guard, 90)
+        released = [x for x in log if "Batterie freigegeben" in x]
+        self.assertTrue(released, log)
+        self.assertFalse(house.bat_released, "given back at the end")
+        self.assertTrue(any("wieder wie vorher" in x for x in log))
+        first_other = next(i for i, x in enumerate(log) if "Pool aus" in x or "Boiler aus" in x)
+        self.assertLess(first_other, log.index(released[0]))
+
+    def test_no_release_below_minimum_soc(self):
+        house = House(cooker=[(5, 35, 7.0)], battery=True, soc=20.0)
+        _, log = run(house, engine.Guard(devices(battery=True), engine.STRATEGY_ORDER), 40)
+        self.assertFalse(any("Batterie freigegeben" in x for x in log), log)
+
+    def test_no_release_when_already_released(self):
+        house = House(cooker=[(5, 35, 7.0)], battery=True)
+        house.bat_released = True  # e.g. the user already runs it freely
+        guard = engine.Guard(devices(battery=True), engine.STRATEGY_ORDER)
+        _, log = run(house, guard, 40)
+        self.assertFalse(any("Batterie freigegeben" in x for x in log), log)
+
+    def test_released_battery_is_given_back_when_soc_drops(self):
+        guard = engine.Guard(devices(battery=True), engine.STRATEGY_ORDER)
+        R = engine.Reading
+        readings = {"bat": R(soc=80.0, releasable=True)}
+        acts = []
+        for i in range(6):  # 12 kW import, only the battery is available
+            acts += guard.step(START + timedelta(seconds=20 * i), 12.0, None, readings, 10.0, 0.5, True)
+        self.assertIn("bat", guard.interventions)
+        readings["bat"] = R(soc=25.0, releasable=False)
+        acts = guard.step(START + timedelta(seconds=20 * 7), 12.0, None, readings, 10.0, 0.5, True)
+        self.assertNotIn("bat", guard.interventions)
+        self.assertTrue(any(a.kind == "battery_restore" for a in acts))
+
+    def test_savings_count_the_battery(self):
+        house = House(cooker=[(5, 55, 7.0)], battery=True)
+        ug: list[float] = []
+        own: list[float] = []
+        run(house, engine.Guard(devices(battery=True), engine.STRATEGY_ORDER), 60, unguarded=ug, finished=own)
+        self.assertGreater(max(ug), max(own))
+
+
 class SafetyTests(unittest.TestCase):
     def _guard_with_pool_off(self):
         guard = engine.Guard(devices(prio_wb=9, prio_pool=1))

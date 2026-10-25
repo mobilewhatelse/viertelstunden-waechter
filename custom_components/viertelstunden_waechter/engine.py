@@ -24,6 +24,7 @@ V3 = 3 * 230.0
 KIND_WALLBOX = "wallbox"
 KIND_SWITCH = "switch"
 KIND_SCRIPT = "script"
+KIND_BATTERY = "battery"
 
 STRATEGY_COMFORT = "comfort"  # least loss of comfort: cheapest combination of devices that is enough
 STRATEGY_ORDER = "order"      # strict order by priority, like a fixed list
@@ -58,6 +59,7 @@ class DeviceConfig:
     min_current: int = 6          # wallbox
     max_current: int = 16
     one_phase_option: str | None = None  # wallbox: select option for 1 phase; None = no phase switching
+    min_soc: float = 30.0         # battery: only released at or above this state of charge (%)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -72,6 +74,7 @@ class DeviceConfig:
             min_current=int(d.get("min_current", 6)),
             max_current=int(d.get("max_current", 16)),
             one_phase_option=d.get("one_phase_option") or None,
+            min_soc=float(d.get("min_soc", 30.0)),
         )
 
 
@@ -87,6 +90,8 @@ class Reading:
     phases: int | None = None
     allowed: bool = True          # condition entity: an intervention is possible right now
     restore_allowed: bool = True  # switch: may be switched back on (e.g. still within its schedule)
+    soc: float | None = None      # battery: state of charge in %
+    releasable: bool = True       # battery: at least one release setting differs from its release value
 
 
 @dataclass
@@ -314,6 +319,9 @@ class Guard:
                     opts.append(_Option(dev, pw / 1000.0))
             elif dev.kind == KIND_SCRIPT and dev.power_w > 0:
                 opts.append(_Option(dev, dev.power_w / 1000.0))
+            elif dev.kind == KIND_BATTERY and dev.power_w > 0:
+                if r.releasable and (r.soc is None or r.soc >= dev.min_soc):
+                    opts.append(_Option(dev, dev.power_w / 1000.0))
         return opts
 
     def _choose(self, opts: list[_Option], excess: float) -> list[_Option]:
@@ -357,6 +365,10 @@ class Guard:
             pw = r.power_w if r.power_w is not None else dev.power_w
             self.interventions[dev.id] = {"since": now.isoformat(), "watt": pw}
             acts = [Action(dev.id, "turn_off", None, f"{dev.name} aus ({pw:.0f} W, {excess:.1f} kW zu viel)")]
+        elif dev.kind == KIND_BATTERY:
+            self.interventions[dev.id] = {"since": now.isoformat(), "soc": r.soc}
+            soc = f", Ladestand {r.soc:.0f} %" if r.soc is not None else ""
+            acts = [Action(dev.id, "battery_release", None, f"{dev.name}: Batterie freigegeben ({excess:.1f} kW zu viel{soc})")]
         else:
             self.interventions[dev.id] = {"since": now.isoformat()}
             acts = [Action(dev.id, "script_on", None, f"{dev.name}: Notfall-Eingriff ({excess:.1f} kW zu viel)")]
@@ -512,6 +524,8 @@ class Guard:
         if not force and room <= need:
             return []
         del self.interventions[dev.id]
+        if dev.kind == KIND_BATTERY:
+            return [Action(dev.id, "battery_restore", None, f"{dev.name}: Batterie wieder wie vorher", False)]
         return [Action(dev.id, "script_off", None, f"{dev.name}: Eingriff zurückgenommen", False)]
 
     def _release(self, now: datetime, room: float, readings: dict[str, Reading]) -> list[Action]:
@@ -540,6 +554,12 @@ class Guard:
         acts: list[Action] = []
         for dev_id in list(self.interventions):
             dev = self.devices[dev_id]
+            r = readings.get(dev_id)
+            if dev.kind == KIND_BATTERY and r is not None and r.soc is not None and r.soc < dev.min_soc:
+                acts.append(Action(dev_id, "log", None, f"{dev.name}: Ladestand {r.soc:.0f} % unter dem Mindestwert ({dev.min_soc:.0f} %)", False))
+                acts += self._release_one(dev, r, 0.0, now, True)
+                self._rest_until[dev_id] = now + timedelta(minutes=10)
+                continue
             if dev.kind == KIND_WALLBOX or dev.max_off_min <= 0:
                 continue
             since = datetime.fromisoformat(self.interventions[dev_id]["since"])

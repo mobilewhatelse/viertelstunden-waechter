@@ -19,15 +19,26 @@ from .const import (
     CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
+    D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC,
 )
 from .forecast import LoadModel, hourly, risk_windows
 from .pricing import monthly_cost
 from .engine import (
-    KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX, STRATEGY_COMFORT, Action, DeviceConfig, Guard, Reading,
+    KIND_BATTERY, KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX, STRATEGY_COMFORT, Action, DeviceConfig, Guard, Reading,
 )
 
 _LOGGER = logging.getLogger(__name__)
 _BAD = (None, "", STATE_UNKNOWN, STATE_UNAVAILABLE)
+
+
+def _same_value(state: str, wanted: str) -> bool:
+    """Equal as text, or as numbers (so 800 and 800.0 are the same)."""
+    if state == wanted:
+        return True
+    try:
+        return abs(float(state) - float(wanted)) < 0.5
+    except ValueError:
+        return False
 LOG_KEEP = 200
 DAYS_KEEP = 62
 CALL_TIMEOUT_S = 15
@@ -65,6 +76,7 @@ class Waechter:
         self.price_high = 0.0            # EUR per kW and year above the threshold
         self.price_threshold = 10.0      # kW
         self._last_push: datetime | None = None
+        self._battery_orig: dict[str, dict[str, str]] = {}  # settings before the release, per battery device
         # load forecast: learned typical grid import per weekday and quarter hour
         self.forecast_enabled = True
         self.model = LoadModel()
@@ -91,6 +103,7 @@ class Waechter:
         self.month_peak = data.get("month_peak", {})
         self.day_peaks = data.get("day_peaks", {})
         self.months = data.get("months", {})
+        self._battery_orig = data.get("battery_orig", {})
         if self.month_peak.get("month") and self.month_peak["month"] not in self.months:
             kw = float(self.month_peak.get("kw") or 0.0)  # taken over from version 0.2
             self.months[self.month_peak["month"]] = {"kw": kw, "ug": kw}
@@ -181,6 +194,11 @@ class Waechter:
                 r.restore_allowed = self._is_on(d.get(D_RESTORE), False) if d.get(D_RESTORE) else True
             elif kind == KIND_SCRIPT:
                 r.available = self.hass.states.get(d.get(D_ON_SCRIPT) or "") is not None
+            elif kind == KIND_BATTERY:
+                r.soc = self._float(d.get(D_SOC))
+                pairs = self._battery_pairs(d)
+                r.available = any(self._state(e) is not None for e, _ in pairs)
+                r.releasable = any(self._state(e) is not None and not _same_value(self._state(e).state, v) for e, v in pairs)
             out[dev_id] = r
         return out
 
@@ -390,6 +408,16 @@ class Waechter:
             await self._call(eid.split(".")[0], "select_option", {"entity_id": eid, "option": a.value})
         elif a.kind in ("turn_off", "turn_on"):
             await self._call("homeassistant", a.kind, {"entity_id": d[D_SWITCH]})
+        elif a.kind == "battery_release":
+            orig: dict[str, str] = {}
+            for ent, val in self._battery_pairs(d):
+                st = self._state(ent)
+                if st is not None:
+                    orig[ent] = st.state
+                await self._set_entity(ent, val)
+            self._battery_orig[a.device_id] = orig
+        elif a.kind == "battery_restore":
+            await self._battery_restore(a.device_id, d)
         elif a.kind == "script_on":
             await self._call("script", "turn_on", {"entity_id": d[D_ON_SCRIPT]})
         elif a.kind == "script_off" and d.get(D_OFF_SCRIPT):
@@ -401,6 +429,33 @@ class Waechter:
                     await self._call(domain, service, {"title": self.entry.title, "message": a.text})
                 except Exception as err:  # noqa: BLE001
                     _LOGGER.warning("Notification via %s failed: %s", svc, err)
+
+    @staticmethod
+    def _battery_pairs(d: dict[str, Any]) -> list[tuple[str, str]]:
+        return [(d[e], str(d[v])) for e, v in ((D_REL1, D_REL1_VALUE), (D_REL2, D_REL2_VALUE)) if d.get(e) and d.get(v) not in (None, "")]
+
+    async def _set_entity(self, entity_id: str, value: str) -> None:
+        domain = entity_id.split(".")[0]
+        if domain in ("number", "input_number"):
+            await self._call(domain, "set_value", {"entity_id": entity_id, "value": float(value)})
+        elif domain in ("select", "input_select"):
+            await self._call(domain, "select_option", {"entity_id": entity_id, "option": value})
+        elif domain in ("switch", "input_boolean"):
+            await self._call("homeassistant", "turn_on" if value == "on" else "turn_off", {"entity_id": entity_id})
+        else:
+            raise ValueError(f"unsupported entity {entity_id}")
+
+    async def _battery_restore(self, dev_id: str, d: dict[str, Any]) -> None:
+        """Put the settings back that the release changed - but only those that still hold the release value."""
+        orig = self._battery_orig.pop(dev_id, {})
+        if d.get(D_RESTORE_ORIG, True):
+            for ent, val in self._battery_pairs(d):
+                before = orig.get(ent)
+                st = self._state(ent)
+                if before is not None and st is not None and _same_value(st.state, val):
+                    await self._set_entity(ent, before)
+        if d.get(D_OFF_SCRIPT):
+            await self._call("script", "turn_on", {"entity_id": d[D_OFF_SCRIPT]})
 
     def _log(self, a: Action, shadow: bool) -> None:
         now = dt_util.now()
@@ -418,6 +473,7 @@ class Waechter:
             "counts": self.counts,
             "month_peak": self.month_peak,
             "months": self.months,
+            "battery_orig": self._battery_orig,
             "day_peaks": self.day_peaks,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,

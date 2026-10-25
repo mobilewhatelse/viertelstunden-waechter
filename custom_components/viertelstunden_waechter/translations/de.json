@@ -315,6 +315,85 @@
           }
         }
       }
+    },
+    "battery": {
+      "entry_type": "Batterie",
+      "initiate_flow": {
+        "user": "Batterie hinzufügen",
+        "reconfigure": "Batterie ändern"
+      },
+      "step": {
+        "user": {
+          "title": "Batterie",
+          "description": "Im Notfall wird die Batterie freigegeben, damit sie das Haus versorgt und den Netzbezug senkt. Tragen Sie die Einstellungen ein, die sie freigeben, und den Wert dafür; der Wächter merkt sich die vorherigen Werte und stellt sie wieder her.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "soc_entity": "Ladestand",
+            "min_soc": "Mindest-Ladestand",
+            "release_entity_1": "Einstellung, die die Batterie freigibt",
+            "release_value_1": "Wert für „freigegeben“",
+            "release_entity_2": "Zweite Einstellung (optional)",
+            "release_value_2": "Wert für „freigegeben“ (zweite)",
+            "power_w": "Erwartete Entlastung",
+            "max_off_min": "Höchste Dauer",
+            "restore_original": "Vorherige Werte wiederherstellen",
+            "off_script": "Skript nach dem Zurücknehmen",
+            "allow_entity": "Eingriff nur, solange"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
+            "soc_entity": "Sensor mit dem Ladestand in %.",
+            "min_soc": "Die Batterie wird nur ab diesem Wert freigegeben und zurückgenommen, wenn sie darunter fällt.",
+            "release_entity_1": "Eine Zahl (z. B. maximale Ausgangsleistung), eine Auswahl (z. B. Modus) oder ein Schalter.",
+            "release_value_1": "Die Zahl, der Optionstext (z. B. on) oder on/off, der die Batterie freigibt.",
+            "release_entity_2": "Optional, z. B. der Modus, wenn die erste Einstellung die Ausgangsleistung ist.",
+            "power_w": "Um wie viele Watt die Freigabe den Netzbezug senkt (für die Planung und die Ersparnis-Schätzung).",
+            "max_off_min": "0 = ohne Grenze. Danach wird die Batterie auf jeden Fall zurückgenommen.",
+            "restore_original": "An: Die Werte von vor der Freigabe werden wiederhergestellt – aber nur die, die noch den Freigabewert haben. Aus: das Skript verwenden.",
+            "off_script": "Optionales Skript nach dem Zurücknehmen, z. B. damit Ihre eigene Automation die Batterie setzt.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist."
+          }
+        },
+        "reconfigure": {
+          "title": "Batterie",
+          "description": "Im Notfall wird die Batterie freigegeben, damit sie das Haus versorgt und den Netzbezug senkt. Tragen Sie die Einstellungen ein, die sie freigeben, und den Wert dafür; der Wächter merkt sich die vorherigen Werte und stellt sie wieder her.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "soc_entity": "Ladestand",
+            "min_soc": "Mindest-Ladestand",
+            "release_entity_1": "Einstellung, die die Batterie freigibt",
+            "release_value_1": "Wert für „freigegeben“",
+            "release_entity_2": "Zweite Einstellung (optional)",
+            "release_value_2": "Wert für „freigegeben“ (zweite)",
+            "power_w": "Erwartete Entlastung",
+            "max_off_min": "Höchste Dauer",
+            "restore_original": "Vorherige Werte wiederherstellen",
+            "off_script": "Skript nach dem Zurücknehmen",
+            "allow_entity": "Eingriff nur, solange"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
+            "soc_entity": "Sensor mit dem Ladestand in %.",
+            "min_soc": "Die Batterie wird nur ab diesem Wert freigegeben und zurückgenommen, wenn sie darunter fällt.",
+            "release_entity_1": "Eine Zahl (z. B. maximale Ausgangsleistung), eine Auswahl (z. B. Modus) oder ein Schalter.",
+            "release_value_1": "Die Zahl, der Optionstext (z. B. on) oder on/off, der die Batterie freigibt.",
+            "release_entity_2": "Optional, z. B. der Modus, wenn die erste Einstellung die Ausgangsleistung ist.",
+            "power_w": "Um wie viele Watt die Freigabe den Netzbezug senkt (für die Planung und die Ersparnis-Schätzung).",
+            "max_off_min": "0 = ohne Grenze. Danach wird die Batterie auf jeden Fall zurückgenommen.",
+            "restore_original": "An: Die Werte von vor der Freigabe werden wiederhergestellt – aber nur die, die noch den Freigabewert haben. Aus: das Skript verwenden.",
+            "off_script": "Optionales Skript nach dem Zurücknehmen, z. B. damit Ihre eigene Automation die Batterie setzt.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist."
+          }
+        }
+      },
+      "error": {
+        "pair": "Einstellung und Wert gehören zusammen.",
+        "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
+        "value_onoff": "Ein Schalter braucht den Wert on oder off.",
+        "unknown_option": "Die Auswahl hat diese Option nicht."
+      }
     }
   }
 }

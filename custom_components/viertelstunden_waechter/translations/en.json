@@ -315,6 +315,85 @@
           }
         }
       }
+    },
+    "battery": {
+      "entry_type": "Battery",
+      "initiate_flow": {
+        "user": "Add battery",
+        "reconfigure": "Reconfigure battery"
+      },
+      "step": {
+        "user": {
+          "title": "Battery",
+          "description": "In an emergency the battery is released so that it feeds the house and lowers the grid import. Enter the settings that release it and the value that does so; the guard remembers the previous values and puts them back.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "soc_entity": "State of charge",
+            "min_soc": "Minimum state of charge",
+            "release_entity_1": "Setting that releases the battery",
+            "release_value_1": "Value for \"released\"",
+            "release_entity_2": "Second setting (optional)",
+            "release_value_2": "Value for \"released\" (second)",
+            "power_w": "Expected relief",
+            "max_off_min": "Maximum duration",
+            "restore_original": "Put the previous values back",
+            "off_script": "Script after taking back",
+            "allow_entity": "Intervention only while"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
+            "soc_entity": "Sensor with the state of charge in %.",
+            "min_soc": "The battery is only released at or above this value and given back if it falls below.",
+            "release_entity_1": "A number (e.g. maximum output power), a selection (e.g. mode) or a switch.",
+            "release_value_1": "The number, the option text (e.g. on) or on/off that releases the battery.",
+            "release_entity_2": "Optional, e.g. the mode when the first setting is the output power.",
+            "power_w": "How many watts the release lowers the grid import (used for planning and the savings estimate).",
+            "max_off_min": "0 = no limit. After this time the battery is taken back in any case.",
+            "restore_original": "On: the values from before the release are put back - but only those still holding the release value. Off: use the script instead.",
+            "off_script": "Optional script that runs after taking back, e.g. to let your own automation set the battery.",
+            "allow_entity": "Optional. Only while this entity is on."
+          }
+        },
+        "reconfigure": {
+          "title": "Battery",
+          "description": "In an emergency the battery is released so that it feeds the house and lowers the grid import. Enter the settings that release it and the value that does so; the guard remembers the previous values and puts them back.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "soc_entity": "State of charge",
+            "min_soc": "Minimum state of charge",
+            "release_entity_1": "Setting that releases the battery",
+            "release_value_1": "Value for \"released\"",
+            "release_entity_2": "Second setting (optional)",
+            "release_value_2": "Value for \"released\" (second)",
+            "power_w": "Expected relief",
+            "max_off_min": "Maximum duration",
+            "restore_original": "Put the previous values back",
+            "off_script": "Script after taking back",
+            "allow_entity": "Intervention only while"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
+            "soc_entity": "Sensor with the state of charge in %.",
+            "min_soc": "The battery is only released at or above this value and given back if it falls below.",
+            "release_entity_1": "A number (e.g. maximum output power), a selection (e.g. mode) or a switch.",
+            "release_value_1": "The number, the option text (e.g. on) or on/off that releases the battery.",
+            "release_entity_2": "Optional, e.g. the mode when the first setting is the output power.",
+            "power_w": "How many watts the release lowers the grid import (used for planning and the savings estimate).",
+            "max_off_min": "0 = no limit. After this time the battery is taken back in any case.",
+            "restore_original": "On: the values from before the release are put back - but only those still holding the release value. Off: use the script instead.",
+            "off_script": "Optional script that runs after taking back, e.g. to let your own automation set the battery.",
+            "allow_entity": "Optional. Only while this entity is on."
+          }
+        }
+      },
+      "error": {
+        "pair": "Setting and value belong together.",
+        "value_number": "This setting is a number: enter a number.",
+        "value_onoff": "A switch needs the value on or off.",
+        "unknown_option": "The selection has no such option."
+      }
     }
   }
 }

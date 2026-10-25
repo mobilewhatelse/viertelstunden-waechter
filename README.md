@@ -85,7 +85,8 @@ The device types:
 |---|---|---|
 | Wallbox | lowers the current (3-phase down to the minimum, then optionally 1-phase) | charging power sensor, current setting (`number`), optional phase selection (`select`) |
 | Switchable device | switches off / on again | switch, optional power sensor |
-| Emergency action | runs a script, a second script undoes it | scripts (e.g. "release home battery") |
+| Battery | releases the home battery so it feeds the house (settings and values you enter, previous values are put back) | state of charge sensor, one or two settings (`number` / `select` / switch) |
+| Emergency action | runs a script, a second script undoes it | scripts, for anything the other types cannot do |
 
 Each device has a **priority** (1 = restricted first, 10 = only if nothing else helps), an optional
 *intervention only while* entity, and for switches/scripts a maximum off time.
@@ -94,6 +95,23 @@ The guard knows no brands, only roles. Any wallbox whose integration offers a se
 (phase switching optional); a home battery is controlled through two small scripts, because every battery is
 controlled differently. Wallboxes that can only be started and stopped are not supported (the car is never
 stopped).
+
+### Battery
+
+The device type **Battery** releases the home battery in an emergency, without scripts or helper templates:
+
+| Field | Meaning |
+|---|---|
+| State of charge, minimum state of charge | released only at or above the minimum, given back if it falls below |
+| Setting that releases the battery + value | e.g. a `number` "maximum output power" with value `800`, or a `select` "mode" with the option `on`; a second setting is optional |
+| Expected relief (W) | how much the release lowers the import (planning, savings estimate) |
+| Maximum duration | taken back after this time in any case (0 = no limit) |
+| Put the previous values back | on: settings are restored to their values from before the release - **only those that still hold the release value**, so a value set meanwhile by another automation is left alone |
+| Script after taking back | optional, e.g. to let your own automation set the battery (use it instead of restoring if your battery has its own control logic) |
+
+The battery is offered as a measure only if at least one of its settings differs from the release value (it is
+not "released" twice) and the state of charge allows it. It defaults to priority 10: last. Example:
+`number.battery_max_output_power` → `800` and `select.battery_mode` → `on`.
 
 ### Which actuators work
 
@@ -105,7 +123,7 @@ reduced to one of these works.
 | Sockets, relays, pumps, boilers | yes | switchable device (`switch`, `input_boolean`, `light`, `fan`) |
 | Wallbox with a settable charging current | yes | wallbox (current `number`, optional phase `select`) |
 | Heat pump / heating element with a contact (e.g. SG-Ready), air conditioner with a switch | yes | switchable device |
-| Home battery, inverter modes | yes | emergency action (two scripts) |
+| Home battery, inverter modes | yes | battery (settings and values), or an emergency action (two scripts) |
 | Anything that is an action in Home Assistant (scene, automation, mode select) | yes | emergency action (script) |
 | `climate` entities (setpoint) | via script only | one script lowers the setpoint, one restores it |
 | Devices with an adjustable **power** (stepless heating element, battery charge power) | roughly | via scripts only on/off, not stepwise |
@@ -129,7 +147,7 @@ intervention, the load forecast, diagnostics.
 | Grid import power sensor and optional import counter | measured by your inverter or meter | the integration of your inverter, ESPHome, Modbus … |
 | The entities of your devices (wallbox current, switches, power sensors) | they belong to your hardware | the integrations of the devices |
 | **Optional condition entities**: *only needed while*, *lock entity*, *intervene only while*, *switch on again only while* | rules of your household | any on/off entity: a template helper, an `input_boolean`, a schedule. Example: "switch the kitchen plug on again only while its own schedule wants it on" is a template helper that reads that schedule |
-| **Scripts for an emergency action** (home battery) | every battery is controlled differently | two small scripts (intervene / undo), see the examples in the German guide |
+| Scripts for an emergency action | only for what the other device types cannot do | two small scripts (intervene / undo); a home battery needs none: use the device type *Battery* |
 | A dashboard | your taste | the entities above; the German guide has a card for the configuration |
 
 So the helper entities in an installation like the author's ("kitchen may switch on again", "battery emergency
