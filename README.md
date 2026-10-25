@@ -331,6 +331,21 @@ entities of *your* installation (whatever the device is called, in German or Eng
 features, devices and priorities, now, cost and savings) and *Statistics and forecast* (24-hour forecast as bars,
 weekly profile, peaks of the last days, months, interventions per day, charge plan). Only standard cards are used.
 
+The *Statistics and forecast* view (nothing to install: the charts are SVG images inside standard markdown cards,
+drawn from the sensors' attributes; the colours work on light and dark themes):
+
+| Chart | What it shows | Source | Fills after |
+|---|---|---|---|
+| **Forecast** | One bar per hour for the next 24 h: solid = typical grid import, light = highest expected value, red = above the target, dashed red line = target | load forecast | the history import (minutes) or a few days |
+| **Typical week** | Heat map weekday x hour (0-23), two panels: *typical* and *highest values*; darker = more import, red = above the target | load forecast | the history import or about 2 weeks |
+| **Highest quarter hour per day** | Last 6 weeks, one bar per day, red above the limit, dashed line = limit | `peaks_by_day` of the sensor *Peak today* | a day per bar; earlier days via *Import history* (hourly means = lower bound) |
+| **Peak per month** | One bar per month with the value, dashed outline = estimate without the guard, line = limit | month history of the sensor *Peak this month* | a month per bar, or via *Import history* |
+| **Hourly graph** | Standard statistics graph of the quarter-hour peaks per hour, last 3 days | recorder statistics | a few hours |
+
+Below the charts: tables for the highest days, the months and the interventions per day. Each chart can show
+"not enough data yet" instead of bars; that is normal on a fresh installation. If images are not shown, reload the
+dashboard (clear the frontend cache in the app).
+
 - With a dashboard URL (e.g. `waechter`): create an empty dashboard first (Settings > Dashboards > Add), then call the
   service with its URL - its views are replaced.
 - Without a URL: the YAML is returned and shown as a notification; paste it into a new dashboard (three dots > Edit >

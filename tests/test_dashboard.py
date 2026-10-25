@@ -44,6 +44,33 @@ class DashboardTests(unittest.TestCase):
             if card["type"] == "markdown":
                 env.parse(card["content"])
 
+    def test_charts_are_svg_images_without_unresolved_placeholders(self):
+        import re
+
+        import dashboard_charts as charts
+
+        cards = [
+            charts.forecast(IDS, "Target", "legend", "none"),
+            charts.profile(IDS, "Mo,Tu,We,Th,Fr,Sa,Su", "Typical|Highest|Hour", "legend", "none"),
+            charts.daily(IDS, "Limit", "legend", "none"),
+            charts.months(IDS, "Limit", "legend", "none"),
+        ]
+        for content in cards:
+            self.assertIn("data:image/svg+xml", content)
+            self.assertIsNone(re.search(r"@[A-Z0-9]+@", content), content[:200])
+        try:
+            import jinja2
+        except ImportError:
+            return
+        env = jinja2.Environment()
+        for content in cards:
+            env.parse(content)
+
+    def test_statistics_view_contains_the_charts(self):
+        for lang in ("de", "en"):
+            text = json.dumps(build_views(IDS, lang)[1])
+            self.assertEqual(text.count("data:image/svg+xml"), 4)
+
     def test_german_text_in_german_installations(self):
         self.assertEqual(build_views(IDS, "de")[0]["title"], "Wächter")
         self.assertEqual(build_views(IDS, "en")[0]["title"], "Guard")

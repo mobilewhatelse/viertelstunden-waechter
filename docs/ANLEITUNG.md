@@ -377,6 +377,21 @@ Zusatzfunktionen, Geräte und Prioritäten, Jetzt, Kosten und Ersparnis) und *St
 als Balken, Wochenprofil, Spitzen der letzten Tage, Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten
 benutzt.
 
+Die Ansicht *Statistik und Prognose* braucht nichts Zusätzliches: Die Diagramme sind SVG-Bilder in normalen Markdown-Karten,
+gezeichnet aus den Attributen der Sensoren; die Farben passen zu hellen und dunklen Designs.
+
+| Diagramm | Was es zeigt | Quelle | Gefüllt nach |
+|---|---|---|---|
+| **Prognose** | Ein Balken je Stunde für die nächsten 24 h: voll = typischer Netzbezug, hell = höchster erwarteter Wert, rot = über dem Ziel, rot gestrichelt = Ziel | Lastprognose | Verlaufsimport (Minuten) oder einigen Tagen |
+| **Typische Woche** | Wärmebild Wochentag × Stunde (0–23) in zwei Feldern: *Typisch* und *Höchste Werte*; dunkler = mehr Bezug, rot = über dem Ziel | Lastprognose | Verlaufsimport oder etwa 2 Wochen |
+| **Höchste Viertelstunde je Tag** | Letzte 6 Wochen, ein Balken je Tag, rot über der Grenze, gestrichelt = Grenze | Attribut `peaks_by_day` des Sensors *Spitze heute* | ein Tag je Balken; frühere Tage per *Verlauf importieren* (Stundenmittel = Untergrenze) |
+| **Spitze je Monat** | Ein Balken je Monat mit Wert, gestrichelter Umriss = Schätzung ohne Wächter, Linie = Grenze | Monatsverlauf des Sensors *Spitze im Monat* | ein Monat je Balken oder per *Verlauf importieren* |
+| **Stundengraph** | Standard-Statistikgraph der Viertelstunden-Spitzen je Stunde, letzte 3 Tage | Langzeitstatistik | einigen Stunden |
+
+Unter den Diagrammen stehen Tabellen für die höchsten Tage, die Monate und die Eingriffe je Tag. Bei zu wenig Daten steht statt der
+Balken „noch zu wenig Daten“; das ist bei einer frischen Installation normal. Werden die Bilder nicht angezeigt, das Dashboard neu laden
+(in der App den Frontend-Cache leeren).
+
 - Mit einer Dashboard-Adresse (z. B. `waechter`): zuerst ein leeres Dashboard anlegen (Einstellungen > Dashboards >
   Hinzufügen), dann den Dienst mit dessen Adresse aufrufen – die Ansichten dort werden ersetzt.
 - Ohne Adresse: Das YAML wird zurückgegeben und als Benachrichtigung angezeigt; in ein neues Dashboard einfügen
