@@ -6,6 +6,11 @@ Format: newest first. German version below each English block is a short summary
 
 - (nothing yet)
 
+## 0.12.1 - 2026-10-25
+
+- Dashboard: the tile *Next risk* showed "Unknown" when no risk window is expected. It is now a text card: "none in the
+  next 24 hours", or day, time window and expected peak (the sensor itself is unchanged).
+
 ## 0.12.0 - 2026-10-25
 
 - **Throttle ahead by the forecast** (switch, default off): in a forecast risk quarter hour the guard keeps a reserve

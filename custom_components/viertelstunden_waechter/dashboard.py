@@ -30,6 +30,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "cost_month": "Leistungspreis diesen Monat", "cost_without": "Ohne Wächter (Schätzung)", "saving_month": "Ersparnis Monat",
         "saving_year": "Ersparnis Jahr", "saved_now": "Entlastung jetzt",
         "typical_now": "Typisch jetzt", "expected_peak": "Erwartete Spitze 24 h", "next_risk": "Nächstes Risiko",
+        "risk_none": "keines in den nächsten 24 Stunden", "risk_today": "heute", "risk_up_to": "bis",
         "predictive": "Vorausschauend drosseln nach Prognose (Standard aus)", "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
         "today": "Heute", "no_decisions": "Noch keine Entscheidungen heute.", "devices": "Geräte und Prioritäten",
@@ -73,6 +74,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "cost_month": "Demand charge this month", "cost_without": "Without the guard (estimate)", "saving_month": "Savings this month",
         "saving_year": "Savings this year", "saved_now": "Relief now",
         "typical_now": "Typical now", "expected_peak": "Expected peak in 24 h", "next_risk": "Next risk",
+        "risk_none": "none in the next 24 hours", "risk_today": "today", "risk_up_to": "up to",
         "predictive": "Throttle ahead using the forecast (default off)", "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
         "today": "Today", "no_decisions": "No decisions yet today.", "devices": "Devices and priorities",
@@ -204,6 +206,20 @@ def _weeks_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     )
 
 
+def _next_risk_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """The next risk window as text; the sensor has no value (shown as unknown) when there is none."""
+    s = ids["next_risk"]
+    return (
+        "{% set s = '" + s + "' %}{% set st = states(s) %}{% set names = '" + x["days"] + "'.split(',') %}"
+        "{% if st not in ['unknown', 'unavailable', 'none', ''] and state_attr(s, 'until') %}"
+        "{% set a = as_datetime(st) | as_local %}{% set e = as_datetime(state_attr(s, 'until')) | as_local %}"
+        "**" + x["next_risk"] + ":** {{ '" + x["risk_today"] + "' if a.date() == now().date() else names[a.weekday()] }} "
+        "{{ a.strftime('%H:%M') }}–{{ e.strftime('%H:%M') }}, " + x["risk_up_to"] + " "
+        "{{ '%.1f' | format(state_attr(s, 'high_kw') | float(0)) }} kW"
+        "{% else %}**" + x["next_risk"] + ":** " + x["risk_none"] + "{% endif %}"
+    )
+
+
 def _months_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     s = ids["month_peak"]
     return (
@@ -292,7 +308,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["forecast"], "icon": "mdi:chart-timeline-variant"},
                 _tile(ids["forecast_now"], x["typical_now"]), _tile(ids["forecast_peak"], x["expected_peak"]),
-                _tile(ids["next_risk"], x["next_risk"]),
+                {"type": "markdown", "content": _next_risk_markdown(ids, x)},
                 {"type": "markdown", "content": _forecast_markdown(ids, x)},
                 {"type": "markdown", "content": charts.forecast(ids, x["target_label"], x["legend_forecast"], x["no_forecast"])},
             ]},
