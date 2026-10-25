@@ -21,7 +21,7 @@ from .const import (
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
 )
-from .forecast import LoadModel, hourly, risk_windows
+from .forecast import LoadModel, hourly, risk_windows, weekly_profile
 from .pricing import monthly_cost
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
@@ -341,6 +341,7 @@ class Waechter:
             "peak": max(highs) if highs else None,
             "windows": risk_windows(series, target),
             "hours": hourly(series),
+            "profile": weekly_profile(self.model),
             "samples": self.model.samples,
             "slots": self.model.slots_with_data,
         }

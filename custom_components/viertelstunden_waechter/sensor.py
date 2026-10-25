@@ -104,7 +104,8 @@ class ForecastNowSensor(WaechterEntity, SensorEntity):
         f = self.waechter.forecast
         now = f.get("now") or {}
         return {"high_kw": now.get("high"), "samples_here": now.get("n"), "samples_total": f.get("samples"),
-                "learned_slots": f.get("slots"), "history_read": self.waechter._bootstrapped}
+                "learned_slots": f.get("slots"), "history_read": self.waechter._bootstrapped,
+                "profile": f.get("profile", [])}
 
 
 class ForecastPeakSensor(WaechterEntity, SensorEntity):
@@ -251,7 +252,13 @@ class MonthPeakSensor(WaechterEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"month": self.waechter.month_peak.get("month"), "quarter_start": self.waechter.month_peak.get("at")}
+        w = self.waechter
+        months = []
+        for m in sorted(w.months)[-12:]:
+            c = w.month_costs(m)
+            months.append({"month": m, "peak_kw": c["peak"], "peak_without_kw": c["peak_without"], "cost": c["cost"],
+                           "cost_without": c["cost_without"], "saving": c["saving"]})
+        return {"month": w.month_peak.get("month"), "quarter_start": w.month_peak.get("at"), "months": months}
 
 
 class InterventionsTodaySensor(WaechterEntity, SensorEntity):
@@ -267,5 +274,8 @@ class InterventionsTodaySensor(WaechterEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        day = self.waechter.counts.get(dt_util.now().strftime("%Y-%m-%d"), {})
-        return {"observed": int(day.get("shadow", 0))}
+        w = self.waechter
+        day = w.counts.get(dt_util.now().strftime("%Y-%m-%d"), {})
+        days = [{"date": d, "real": int(w.counts[d].get("real", 0)), "observed": int(w.counts[d].get("shadow", 0))}
+                for d in sorted(w.counts, reverse=True)[:14]]
+        return {"observed": int(day.get("shadow", 0)), "days": days}

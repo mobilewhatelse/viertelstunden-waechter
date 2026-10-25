@@ -119,3 +119,25 @@ def hourly(series: list[dict[str, Any]]) -> list[dict[str, Any]]:
         out.append({"t": series[i]["t"], "typical": round(sum(q["typical"] for q in chunk) / len(chunk), 2),
                     "high": round(max(q["high"] for q in chunk), 2)})
     return out
+
+
+def weekly_profile(model: LoadModel) -> list[dict[str, Any]]:
+    """Per weekday (0 = Monday) 24 hourly values: `typical` = mean of the four typical quarter hours, `high` = highest
+    `high` of the four. Hours without data are None. For sparkline-like displays of the usual week."""
+    out: list[dict[str, Any]] = []
+    for wd in range(7):
+        typical: list[float | None] = []
+        high: list[float | None] = []
+        for h in range(24):
+            tv: list[float] = []
+            hv: list[float] = []
+            for q in range(4):
+                values = model.slots.get(wd * SLOTS_PER_DAY + h * 4 + q)
+                if values:
+                    s = sorted(values)
+                    tv.append(median(s))
+                    hv.append(s[-2] if len(s) >= 4 else s[-1])
+            typical.append(round(sum(tv) / len(tv), 2) if tv else None)
+            high.append(round(max(hv), 2) if hv else None)
+        out.append({"day": wd, "typical": typical, "high": high})
+    return out

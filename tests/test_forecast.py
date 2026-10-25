@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
-from forecast import MAX_SAMPLES, LoadModel, floor_quarter, hourly, risk_windows, slot_of
+from forecast import MAX_SAMPLES, LoadModel, floor_quarter, hourly, risk_windows, slot_of, weekly_profile
 
 TZ = timezone(timedelta(hours=1))
 SUNDAY = datetime(2027, 1, 10, 0, 0, tzinfo=TZ)  # a Sunday
@@ -68,6 +68,19 @@ class ModelTests(unittest.TestCase):
         m2 = LoadModel.from_dict(m.to_dict())
         self.assertEqual(m2.slots, m.slots)
         self.assertEqual(LoadModel.from_dict({"slots": {"x": [1], "5": ["a"]}}).samples, 0)
+
+
+class ProfileTests(unittest.TestCase):
+    def test_weekly_profile_shows_the_sunday_evening(self):
+        m = LoadModel()
+        learn_weeks(m, 4)
+        prof = weekly_profile(m)
+        self.assertEqual(len(prof), 7)
+        self.assertEqual([len(x["high"]) for x in prof], [24] * 7)
+        self.assertEqual(prof[6]["high"][18], 8.0)       # Sunday 18:00
+        self.assertEqual(prof[0]["high"][18], 0.5)       # Monday 18:00
+        self.assertAlmostEqual(prof[6]["typical"][12], 0.5)
+        self.assertIsNone(weekly_profile(LoadModel())[0]["typical"][3])
 
 
 class WindowTests(unittest.TestCase):
