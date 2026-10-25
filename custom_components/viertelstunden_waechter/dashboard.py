@@ -35,7 +35,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "typical": "typisch", "highest": "höchste", "days": "Mo,Di,Mi,Do,Fr,Sa,So",
         "col_day": "Tag", "col_peak": "höchste ¼ h", "col_at": "um", "col_month": "Monat", "col_without": "ohne Wächter",
         "col_cost": "Kosten", "col_saving": "Ersparnis", "col_real": "echt", "col_observed": "beobachtet",
-        "chart_peaks": "Höchste Viertelstunde je Tag (kW)", "windows": "Risikofenster", "none": "keine",
+        "chart_peaks": "Höchste Viertelstunde je Stunde, letzte 3 Tage (kW)", "windows": "Risikofenster", "none": "keine",
+        "weeks": "Tagesspitzen der letzten 10 Wochen", "day_letters": "MDMDFSS",
+        "weeks_help": "Eine Zeile je Woche (Mo–So), höher = höhere Spitze, ▲ = über der Grenze, · = keine Daten.",
         "enough_data": "Die Tabelle füllt sich mit jeder Viertelstunde.",
         "when_on": "aus ab", "wallbox": "dann 1-phasig", "script": "Skript", "battery": "Batterie ab",
         "setting": "Einstellung ändern", "throttle": "Schritt", "if_only": "eingreifen nur, wenn", "again_only": "wieder an nur, wenn",
@@ -68,7 +70,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "typical": "typical", "highest": "highest", "days": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
         "col_day": "Day", "col_peak": "highest ¼ h", "col_at": "at", "col_month": "Month", "col_without": "without guard",
         "col_cost": "Cost", "col_saving": "Savings", "col_real": "real", "col_observed": "observed",
-        "chart_peaks": "Highest quarter hour per day (kW)", "windows": "Risk windows", "none": "none",
+        "chart_peaks": "Highest quarter hour per hour, last 3 days (kW)", "windows": "Risk windows", "none": "none",
+        "weeks": "Daily peaks of the last 10 weeks", "day_letters": "MTWTFSS",
+        "weeks_help": "One line per week (Mon-Sun), higher = higher peak, ▲ = above the limit, · = no data.",
         "enough_data": "The table fills with every quarter hour.",
         "when_on": "off from", "wallbox": "then 1 phase", "script": "script", "battery": "battery from",
         "setting": "change setting", "throttle": "step", "if_only": "intervene only if", "again_only": "on again only if",
@@ -165,6 +169,22 @@ def _peaks_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% if d %}| " + x["col_day"] + " | " + x["col_peak"] + " | " + x["col_at"] + " |\n|---|---:|---|\n"
         "{% for r in d[:14] %}| {{ r.get('date')[8:10] }}.{{ r.get('date')[5:7] }}. | {{ '%.2f' | format(r.get('kw')) }} kW"
         "{{ ' ⚠️' if r.get('kw') > g else '' }} | {{ r.get('at') }} |\n{% endfor %}{% else %}" + x["enough_data"] + "{% endif %}"
+    )
+
+
+def _weeks_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    s = ids["today_peak"]
+    return (
+        "{% set peaks = state_attr('" + s + "', 'peaks_by_day') or {} %}{% set g = states('" + ids["limit"] + "') | float(10) %}"
+        "{% set blocks = '▁▂▃▄▅▆▇█' %}{% set ns = namespace(vmax=g) %}"
+        "{% for k, v in peaks.items() %}{% if v > ns.vmax %}{% set ns.vmax = v %}{% endif %}{% endfor %}"
+        "{% set today = now().date() %}{% set monday = today - timedelta(days=today.weekday()) %}"
+        "{% if peaks %}" + x["weeks_help"] + " (max. {{ '%.1f' | format(ns.vmax) }} kW, {{ '%.1f' | format(g) }} kW)\n\n```\n"
+        "       " + x["day_letters"] + "\n"
+        "{% for w in range(9, -1, -1) %}{% set ws = monday - timedelta(weeks=w) %}{{ ws.strftime('%d.%m.') }} "
+        "{% for d in range(7) %}{% set day = ws + timedelta(days=d) %}{% set v = peaks.get(day.strftime('%Y-%m-%d')) %}"
+        "{{ '·' if v is none or day > today else ('▲' if v > g else blocks[((v / ns.vmax) * 7) | round(0) | int]) }}{% endfor %}\n{% endfor %}```\n"
+        "{% else %}" + x["enough_data"] + "{% endif %}"
     )
 
 
@@ -273,8 +293,10 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["peaks"], "icon": "mdi:calendar-month"},
                 {"type": "markdown", "content": _peaks_markdown(ids, x)},
+                {"type": "heading", "heading": x["weeks"], "icon": "mdi:calendar-blank-multiple"},
+                {"type": "markdown", "content": _weeks_markdown(ids, x)},
                 {"type": "statistics-graph", "title": x["chart_peaks"], "entities": [ids["last_quarter"]],
-                 "stat_types": ["max"], "period": "day", "days_to_show": 30, "chart_type": "bar"},
+                 "stat_types": ["max"], "period": "hour", "days_to_show": 3, "chart_type": "bar"},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["months"], "icon": "mdi:calendar-range"},
