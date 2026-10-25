@@ -219,9 +219,41 @@ as "charging current setting". The guard then changes the helper and the automat
 
 ### Roadmap
 
-- Real-hardware tests of *Throttle power* and *Change settings* (heat pumps) - until then they are simulator-tested only.
-- Battery reserve before an expected peak, early and gentler intervention based on the forecast, and a daily plan
-  proposed by an AI task (validated against hard limits).
+Nothing in this list is built yet. The order is a proposal, not a promise.
+
+**Planned**
+
+1. **Installation test** on a fresh Home Assistant (hassfest, HACS validation, config flow from scratch) before the
+   integration is offered publicly. So far it has run on one installation only.
+2. **Real-hardware tests** of *Throttle power* and *Change settings* (heat pumps) and of the battery release on other
+   makes - until then they are simulator-tested only. Test reports are welcome (issue template *device test report*).
+3. **Battery reserve before an expected peak:** do not discharge the battery for self-consumption shortly before a
+   forecast risk window, so it can still help in an emergency.
+4. **Charge plan closer to the risk windows:** avoid forecast peaks when placing the charging quarters, and a *daily
+   plan* that combines solar forecast, departure times and the learned load pattern.
+5. **Vehicle is full:** stop counting a car that has reached its target as a load.
+6. **Compact "today" dashboard card** (quarter-hour curve, interventions, forecast) for phones.
+7. **Export and connectors (optional, opt-in):** an export of the quarter-hour load profile (CSV) and, where a platform
+   offers a documented interface, a connector that sends the data there (for example platforms for energy
+   communities). A connector depends entirely on the other platform's interface and is a separate optional part:
+   nothing leaves the installation unless the user sets it up.
+8. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
+
+**Planned: AI features** (optional, **off by default and off after a restart**, with a daily cost limit). The AI is used
+through Home Assistant's *AI task* entity, so every user chooses the model (cloud or local) and no key is built in.
+**The rule: the AI explains, advises and plans - what is switched now is always decided by the fixed rules** (every 20
+seconds, also without internet), and every AI proposal is checked against hard limits before it is used.
+
+| Function | What it does | Risk |
+|---|---|---|
+| **Explainer** | Turns the day's interventions into a short text, optionally as a message ("Pool paused 12 min so the car is full by 7") | none, read only |
+| **Weekly review with suggestions** | "Three tight quarter hours, all Sundays at 18:00 with oven and car. Suggestion: start charging at 20:00." Nothing changes without confirmation | low |
+| **Set-up by conversation** | A sentence like "the pool does not matter, the freezer may be off 30 min at most" becomes a proposal for devices, priorities and maximum off time that the user confirms | low |
+| **Ask the guard** | "Why was the wallbox throttled yesterday evening?" via Assist, chat or the Home Assistant MCP server | none |
+| **Daily plan** | From solar forecast, weather, appointments and the learned load pattern a proposal (e.g. charge the car 11-15 h, battery reserve 30 %), validated by the rules before use | medium, therefore proposal only |
+
+Learning of load patterns (the cooker cycles, the oven on Sundays) already needs no language model: the guard does it
+locally with simple statistics (see *Load forecast*).
 
 ### Cost, savings and optional features
 

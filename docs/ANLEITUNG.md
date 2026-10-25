@@ -538,6 +538,45 @@ hat. Er braucht dann oft weniger zu tun – wichtig sind Abweichungen in Reihenf
 
 ---
 
+## 7a. Geplant (noch nicht gebaut)
+
+Die Reihenfolge ist ein Vorschlag, kein Versprechen.
+
+1. **Installationstest** auf einem frischen Home Assistant (hassfest, HACS-Prüfung, Einrichtung von Grund auf), bevor die Integration
+   öffentlich angeboten wird. Bisher läuft sie auf einer Installation.
+2. **Tests mit echter Hardware** für *Leistung drosseln*, *Einstellungen ändern* (Wärmepumpen) und die Batterie-Freigabe anderer Hersteller;
+   bis dahin nur im Simulator getestet. Testberichte sind willkommen (Vorlage *Gerätetestbericht*).
+3. **Akku-Reserve vor einer erwarteten Spitze:** kurz vor einem Risikofenster den Akku nicht für den Eigenverbrauch entladen, damit er im
+   Notfall helfen kann.
+4. **Ladeplan näher an den Risikofenstern** und ein *Tagesplan* aus Solarprognose, Abfahrtszeiten und dem gelernten Lastmuster.
+5. **Fahrzeug voll:** ein Auto, das sein Ziel erreicht hat, nicht mehr als Last zählen.
+6. **Kompakte „Heute“-Karte** (Viertelstundenkurve, Eingriffe, Prognose) für das Handy.
+7. **Export und Anbindungen (optional, nur auf Wunsch):** ein Export des Viertelstunden-Lastprofils (CSV) und, wo eine Plattform eine
+   dokumentierte Schnittstelle anbietet, ein Connector, der die Daten dorthin sendet (z. B. Plattformen für Energiegemeinschaften). Ein
+   Connector hängt ganz von der Schnittstelle der anderen Plattform ab und ist ein eigener, optionaler Teil: Es verlässt nichts die
+   Installation, solange der Nutzer es nicht einrichtet.
+8. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
+
+### Geplant: KI-Funktionen
+
+Optional, **Standard aus und nach einem Neustart aus**, mit Tageskostengrenze. Die KI wird über die *KI-Aufgabe* (`ai_task`) von Home Assistant
+benutzt: Jeder Nutzer wählt sein Modell (Cloud oder lokal), es ist kein Schlüssel eingebaut. **Die Regel: Die KI erklärt, berät und plant –
+was jetzt geschaltet wird, entscheiden immer die festen Regeln** (alle 20 Sekunden, auch ohne Internet), und jeder KI-Vorschlag wird vor
+der Verwendung gegen harte Grenzen geprüft.
+
+| Funktion | Was sie macht | Risiko |
+|---|---|---|
+| **Erklärer** | macht aus den Eingriffen des Tages einen kurzen Text, auf Wunsch als Meldung („Pool 12 min pausiert, damit das Auto bis 7 Uhr voll wird“) | keines, nur lesen |
+| **Wochenrückblick mit Vorschlägen** | „Dreimal knapp, immer sonntags 18 Uhr mit Backrohr und Auto. Vorschlag: Ladestart auf 20 Uhr.“ Ohne Bestätigung ändert sich nichts | gering |
+| **Einrichtung im Gespräch** | ein Satz wie „Pool ist mir egal, die Kühltruhe darf höchstens 30 min aus sein“ wird zum Vorschlag für Geräte, Prioritäten und höchste Auszeit, den der Nutzer bestätigt | gering |
+| **Frage an den Wächter** | „Warum war gestern Abend die Wallbox gedrosselt?“ per Assist, Chat oder MCP-Server von Home Assistant | keines |
+| **Tagesplan** | aus Solarprognose, Wetter, Terminen und gelerntem Lastmuster ein Vorschlag (z. B. Auto 11–15 Uhr laden, Akku-Reserve 30 %), vor der Verwendung von den Regeln geprüft | mittel, deshalb nur als Vorschlag |
+
+Das Lernen der Lastmuster (Herd taktet, Backrohr am Sonntag) braucht schon heute kein Sprachmodell: Der Wächter macht es lokal mit einfacher
+Statistik (siehe Lastprognose).
+
+---
+
 ## 8. Häufige Fragen
 
 **Nur das Auto?** Nein – überwacht wird der gesamte Netzbezug. Eingreifen kann er bei allen eingetragenen
