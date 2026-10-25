@@ -201,6 +201,29 @@ geplanten Ladeplan, die Akku-Reserve und das frühere Eingreifen.
 
 ---
 
+## 3. Geräte – Anhang: Was gehört zur Integration, was stellen Sie selbst bereit?
+
+**In der Integration** (nichts weiter zu installieren): Entscheidungslogik, Geräteliste mit Prioritäten und
+Strategien, Beobachtungsmodus und Sperre, Sicherheitsregeln, alle Entitäten (Betriebsart, Strategie, Grenze,
+Sicherheitsabstand, Preise, die vier Zusatz-Schalter, alle Sensoren), Kosten und Ersparnis, „bereits erreichte
+Spitze nutzen“, Meldung bei Eingriff, Lastprognose, Diagnose.
+
+**Außerhalb, in Ihrem eigenen Home Assistant** (hängt von Ihrem Haus ab, kann die Integration nicht mitbringen):
+
+| Was | Warum | Üblicher Weg |
+|---|---|---|
+| Sensor für den Netzbezug (und optional der Bezugszähler) | wird von Ihrem Wechselrichter oder Zähler gemessen | Integration des Wechselrichters, ESPHome, Modbus … |
+| Die Entitäten Ihrer Geräte (Ladestrom, Schalter, Leistungssensoren) | gehören zu Ihrer Hardware | die Integrationen der Geräte |
+| **Optionale Bedingungs-Entitäten:** „Nur nötig, solange“, „Aktiv sperren, solange“, „Eingriff nur, solange“, „Nur wieder einschalten, solange“ | Regeln Ihres Haushalts | jede An/Aus-Entität: Vorlage-Helfer, `input_boolean`, Zeitplan. Beispiel: „Küchenstecker nur wieder einschalten, solange sein eigener Zeitplan ihn an haben will“ ist ein Vorlage-Helfer, der diesen Zeitplan liest |
+| **Skripte für eine Notfall-Aktion** (Hausakku) | jeder Akku wird anders gesteuert | zwei kleine Skripte (eingreifen / zurücknehmen), Beispiele oben |
+| Ein Dashboard | Geschmackssache | die Entitäten oben; die Karte zur Konfiguration steht in Abschnitt 5 |
+
+Die Hilfs-Entitäten, die bei einer Installation wie der des Autors vorkommen („Küche darf wieder an“, „Akku-Notfall
+möglich“), gehören also **nicht** zur Integration. Es sind Bedingungen und Skripte, die man für die eigenen Geräte
+anlegt. Die Integration fragt nur an der Stelle danach, an der man ein Gerät einträgt.
+
+---
+
 ## 3a. Kosten, Ersparnis und Zusatzfunktionen
 
 Drei Schalter, **alle standardmäßig an** (nach einem Neustart gilt der letzte Stand):

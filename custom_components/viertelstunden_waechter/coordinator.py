@@ -353,6 +353,7 @@ class Waechter:
                 del fresh.slots[slot][:-8]
             self.model = fresh
             self._bootstrapped = True
+            self._forecast_at = None  # recompute with the filled model right away
             await self._model_store.async_save(self._model_data())
             _LOGGER.info("Load forecast: %s samples from the statistics", self.model.samples)
         except Exception as err:  # noqa: BLE001 - the forecast is optional, the guard must not depend on it

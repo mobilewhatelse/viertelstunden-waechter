@@ -115,6 +115,27 @@ reduced to one of these works.
 Requirements: the device needs a **state** in Home Assistant (on/off) so the guard knows whether it runs; a
 power sensor is optional (otherwise the *assumed power* is used). The guard only touches what you configured.
 
+### What is part of the integration, and what you provide yourself
+
+**Inside the integration** (nothing else to install): the decision engine, the device list with priorities and
+strategies, observe mode and the lock, the safety rules, the entities (mode, strategy, limit, margin, price
+numbers, the four feature switches, all sensors), cost and savings, "use peak already reached", the message on
+intervention, the load forecast, diagnostics.
+
+**Outside, in your own Home Assistant** (it depends on your home, so the integration cannot ship it):
+
+| What | Why | Typical way |
+|---|---|---|
+| Grid import power sensor and optional import counter | measured by your inverter or meter | the integration of your inverter, ESPHome, Modbus … |
+| The entities of your devices (wallbox current, switches, power sensors) | they belong to your hardware | the integrations of the devices |
+| **Optional condition entities**: *only needed while*, *lock entity*, *intervene only while*, *switch on again only while* | rules of your household | any on/off entity: a template helper, an `input_boolean`, a schedule. Example: "switch the kitchen plug on again only while its own schedule wants it on" is a template helper that reads that schedule |
+| **Scripts for an emergency action** (home battery) | every battery is controlled differently | two small scripts (intervene / undo), see the examples in the German guide |
+| A dashboard | your taste | the entities above; the German guide has a card for the configuration |
+
+So the helper entities in an installation like the author's ("kitchen may switch on again", "battery emergency
+possible") are **not** part of the integration: they are conditions and scripts you create for your own devices.
+The integration only asks for them where you enter a device.
+
 ### Wallbox compatibility
 
 What the guard needs from a wallbox integration: a **charging power sensor** and a **settable charging current**
