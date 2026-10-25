@@ -79,7 +79,7 @@ def profile(ids: dict[str, str], day_names: str, hour_label: str, legend: str, n
         "{% set vals = d.get('typical') if panel == 0 else d.get('high') %}"
         "{% for v in vals %}{% set x = L + loop.index0 * cw %}{% set y = oy + 22 + row * rh %}"
         "{% if v is none %}{% set ns.g = ns.g ~ \"<rect x='\" ~ x ~ \"' y='\" ~ y ~ \"' width='\" ~ (cw - 1) ~ \"' height='\" ~ (rh - 1) ~ \"' fill='@GREY@' fill-opacity='0.08'/>\" %}"
-        "{% else %}{% set op = [0.12 + 0.88 * v / ns.vmax, 1] | min %}{% set c = '@RED@' if v > target else '@BLUE@' %}"
+        "{% else %}{% set op = [0.18 + 0.82 * ([v, 0] | max / ns.vmax) ** 0.5, 1] | min %}{% set c = '@RED@' if v > target else '@BLUE@' %}"
         "{% set ns.g = ns.g ~ \"<rect x='\" ~ x ~ \"' y='\" ~ y ~ \"' width='\" ~ (cw - 1) ~ \"' height='\" ~ (rh - 1) ~ \"' fill='\" ~ c ~ \"' fill-opacity='\" ~ op ~ \"'/>\" %}{% endif %}"
         "{% endfor %}{% endfor %}"
         "{% for hh in [0, 6, 12, 18] %}{% set ns.g = ns.g ~ \"<text x='\" ~ (L + hh * cw) ~ \"' y='\" ~ (oy + 22 + 7 * rh + 14) ~ \"' fill='@GREY@'>\" ~ hh ~ \"</text>\" %}{% endfor %}"
