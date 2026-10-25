@@ -575,5 +575,17 @@
         "step_too_big": "Der Schritt ist größer als der Bereich zwischen niedrigstem Wert und Normalwert."
       }
     }
+  },
+  "services": {
+    "create_dashboard": {
+      "name": "Dashboard erstellen",
+      "description": "Baut ein fertiges Dashboard (Übersicht, Statistik und Prognose) mit den Entitäten dieser Installation. Mit einer Dashboard-Adresse wird es in dieses bestehende Dashboard gespeichert (die Ansichten dort werden ersetzt); ohne wird das YAML zurückgegeben und als Benachrichtigung angezeigt.",
+      "fields": {
+        "dashboard": {
+          "name": "Dashboard-Adresse",
+          "description": "URL-Pfad eines bestehenden, leeren Dashboards (z. B. waechter). Leer lassen, um das YAML zu erhalten."
+        }
+      }
+    }
   }
 }

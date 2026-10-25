@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from types import MappingProxyType
+from typing import Any
+
+import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_DEVICES, D_ID, D_KIND, D_NAME, PLATFORMS
+from .const import CONF_DEVICES, D_ID, D_KIND, D_NAME, DOMAIN, PLATFORMS
 from .coordinator import Waechter
 
 type WaechterEntry = ConfigEntry[Waechter]
@@ -42,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await waechter.async_start()
     entry.async_on_unload(entry.add_update_listener(_reload))
+    _register_services(hass)
     return True
 
 
@@ -52,3 +58,64 @@ async def async_unload_entry(hass: HomeAssistant, entry: WaechterEntry) -> bool:
 
 async def _reload(hass: HomeAssistant, entry: WaechterEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+SERVICE_CREATE_DASHBOARD = "create_dashboard"
+
+
+def _register_services(hass: HomeAssistant) -> None:
+    if hass.services.has_service(DOMAIN, SERVICE_CREATE_DASHBOARD):
+        return
+
+    async def handle(call: ServiceCall) -> dict[str, Any]:
+        return await _create_dashboard(hass, call.data.get("dashboard"))
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_CREATE_DASHBOARD, handle,
+        schema=vol.Schema({vol.Optional("dashboard"): cv.string}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+
+async def _create_dashboard(hass: HomeAssistant, url_path: str | None) -> dict[str, Any]:
+    """Build the dashboard with this installation's entity ids; save it into an existing storage dashboard or
+    return it as YAML (also as a persistent notification) to paste into the raw configuration editor."""
+    from homeassistant.helpers import entity_registry as er
+    from homeassistant.util import yaml as ha_yaml
+
+    from .dashboard import ENTITY_KEYS, build_views
+
+    entries = hass.config_entries.async_entries(DOMAIN)
+    if not entries:
+        raise ServiceValidationError("The guard is not set up")
+    registry = er.async_get(hass)
+    ids: dict[str, str] = {}
+    for key, domain in ENTITY_KEYS.items():
+        entity_id = registry.async_get_entity_id(domain, DOMAIN, f"{entries[0].entry_id}_{key}")
+        if entity_id is None:
+            raise ServiceValidationError(f"Entity '{key}' not found - restart Home Assistant after the update")
+        ids[key] = entity_id
+    config = {"views": build_views(ids, hass.config.language)}
+
+    if url_path:
+        try:
+            from homeassistant.components.lovelace.const import LOVELACE_DATA
+
+            dashboard = hass.data[LOVELACE_DATA].dashboards.get(url_path)
+        except (ImportError, KeyError, AttributeError):
+            dashboard = None
+        if dashboard is None or not hasattr(dashboard, "async_save"):
+            raise ServiceValidationError(
+                f"Dashboard '{url_path}' not found or not a storage dashboard. Create an empty dashboard first "
+                "(Settings > Dashboards > Add) or call the service without a dashboard to get the YAML."
+            )
+        await dashboard.async_save(config)
+        return {"saved": url_path, "views": [v["title"] for v in config["views"]]}
+
+    text = ha_yaml.dump(config)
+    await hass.services.async_call(
+        "persistent_notification", "create",
+        {"title": entries[0].title, "notification_id": f"{DOMAIN}_dashboard",
+         "message": "Paste this into a new dashboard (three dots > Edit > Raw configuration editor):\n\n```yaml\n" + text + "```"},
+    )
+    return {"yaml": text}

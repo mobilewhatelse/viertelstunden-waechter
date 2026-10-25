@@ -3,7 +3,7 @@
   "name": "Viertelstunden-Wächter",
   "codeowners": ["@mobilewhatelse"],
   "config_flow": true,
-  "after_dependencies": ["recorder"],
+  "after_dependencies": ["recorder", "lovelace", "persistent_notification"],
   "dependencies": [],
   "documentation": "https://github.com/mobilewhatelse/viertelstunden-waechter",
   "integration_type": "service",
@@ -11,5 +11,5 @@
   "issue_tracker": "https://github.com/mobilewhatelse/viertelstunden-waechter/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.7.0"
+  "version": "0.8.0"
 }

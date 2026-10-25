@@ -1,0 +1,7 @@
+create_dashboard:
+  fields:
+    dashboard:
+      required: false
+      example: "waechter"
+      selector:
+        text:
