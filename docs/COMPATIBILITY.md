@@ -2,20 +2,22 @@
 
 The guard knows no brands, only roles (see the README). Whether **your** device works depends on which entities
 its Home Assistant integration offers. This page lists what we checked and what still needs help from the
-community. *State of the check: 2026-10-25, integration version 0.6.0.*
+community. *State of the check: 2026-10-25, integration version 0.12.0 (the Wattpilot test ran on 0.11.0).*
 
 ## Status legend
 
 | Symbol | Meaning |
 |---|---|
+| ✅ | **Tested.** At least one evening in the mode *Active* with a real intervention and the real take-back observed, on real hardware, reported with the version number (see below). |
 | 🟡 | **In use by the authors.** Their hardware, observe mode with this integration (the release path was not yet triggered in real operation), or the same entities are used by the authors' own automations / the predecessor script. |
 | 🔍 | **Entity types verified in the source code** of the integration (version in the Home Assistant release 2026.10). *Not* tested on hardware; whether your model or firmware supports the function is open. |
 | ❔ | **Not checked / help wanted.** The integration has the platforms (`number`, `select`, `switch`), but the entities are generated from device definitions or were not looked at. Please test and report. |
 | ❌ | **No suitable entity found** in the source check (nothing writable that lowers power or changes the mode). Use a script or an on/off switch. |
 
 **"Tested" means:** at least one evening in the mode **Active** with a real intervention *and* the real take-back
-observed, on real hardware, reported with the version number. Nobody has reached this level yet for the new
-device types. Please be the first - see "How to report a test" below.
+observed, on real hardware, reported with the version number. So far only the Wattpilot has reached this level
+(by the authors, 2026-10-25); the other device types - throttle power, change settings, battery release - have not.
+Please be the first - see "How to report a test" below.
 
 ## Wallboxes (device type *Wallbox*)
 
@@ -23,7 +25,7 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 
 | Integration | Charging current | Status |
 |---|---|---|
-| Wattpilot (HACS, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | 🟡 throttled live by the predecessor script; integration in observe mode |
+| Wattpilot (HACS, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | ✅ authors, 2026-10-25, 0.11.0: car charging with 11 kW, cooker and oven added; lowered 16 → 12 → 10 → 8 → 6 A in steps, raised again step by step, "back to 16 A" logged; charging never stopped, the quarter hour stayed below the target. Not yet seen: 1-phase switching |
 | Wallbox (core) | `number` "Maximum charging current" | 🔍 |
 | OpenEVSE (core) | `number` "Charge rate" (A) | 🔍 |
 | Zaptec (HACS) | `number` "charger_max_current" | 🔍 |

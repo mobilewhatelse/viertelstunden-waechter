@@ -2,20 +2,22 @@
 
 Der Wächter kennt keine Marken, nur Rollen (siehe README). Ob **Ihr** Gerät funktioniert, hängt davon ab, welche
 Entitäten die Home-Assistant-Integration des Geräts anbietet. Diese Seite zeigt, was geprüft wurde und wobei wir
-die Hilfe der Community brauchen. *Stand der Prüfung: 25.10.2026, Integrationsversion 0.6.0.*
+die Hilfe der Community brauchen. *Stand der Prüfung: 25.10.2026, Integrationsversion 0.12.0 (der Wattpilot-Test lief mit 0.11.0).*
 
 ## Bedeutung der Symbole
 
 | Symbol | Bedeutung |
 |---|---|
+| ✅ | **Getestet.** Mindestens ein Abend im Modus *Aktiv* mit einem echten Eingriff und beobachtetem echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer (siehe unten). |
 | 🟡 | **Bei den Autoren im Einsatz.** Ihre Hardware, Beobachtungsmodus mit dieser Integration (der Freigabe-Weg wurde im echten Betrieb noch nicht ausgelöst), oder dieselben Entitäten werden von den eigenen Automationen bzw. dem Vorgänger-Skript benutzt. |
 | 🔍 | **Entitätstypen im Quelltext der Integration bestätigt** (Version aus Home Assistant 2026.10). Auf Hardware **nicht** getestet; ob Ihr Modell oder Ihre Firmware die Funktion unterstützt, ist offen. |
 | ❔ | **Nicht geprüft / Hilfe gesucht.** Die Integration hat die Plattformen (`number`, `select`, `switch`), die Entitäten entstehen aber aus Gerätedefinitionen oder wurden nicht angesehen. Bitte testen und melden. |
 | ❌ | **Keine passende Entität gefunden** (nichts Schreibbares, das die Leistung senkt oder den Modus ändert). Skript oder Ein/Aus-Schalter verwenden. |
 
 **„Getestet“ heißt:** mindestens ein Abend im Modus **Aktiv** mit einem echten Eingriff **und** beobachtetem
-echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Diese Stufe hat für die neuen Gerätetypen
-noch niemand erreicht. Seien Sie der Erste – siehe „So melden Sie einen Test“.
+echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher hat nur der Wattpilot diese Stufe
+erreicht (durch die Autoren, 25.10.2026); die anderen Gerätetypen – Leistung drosseln, Einstellung ändern, Batterie-Freigabe – noch nicht.
+Seien Sie der Erste – siehe „So melden Sie einen Test“.
 
 ## Wallboxen (Gerätetyp *Wallbox*)
 
@@ -23,7 +25,7 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 
 | Integration | Ladestrom | Status |
 |---|---|---|
-| Wattpilot (HACS, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | 🟡 live vom Vorgänger-Skript gedrosselt; Integration im Beobachtungsmodus |
+| Wattpilot (HACS, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | ✅ Autoren, 25.10.2026, 0.11.0: Auto lädt mit 11 kW, Herd und Backrohr dazu; in Stufen 16 → 12 → 10 → 8 → 6 A gesenkt, schrittweise wieder angehoben, „wieder 16 A“ protokolliert; Laden nie gestoppt, Viertelstunde unter dem Ziel. Noch nicht gesehen: Umschalten auf 1 Phase |
 | Wallbox (Home Assistant) | `number` „Maximum charging current“ | 🔍 |
 | OpenEVSE (Home Assistant) | `number` „Charge rate“ (A) | 🔍 |
 | Zaptec (HACS) | `number` „charger_max_current“ | 🔍 |
