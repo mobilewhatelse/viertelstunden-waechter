@@ -61,11 +61,24 @@ async def _reload(hass: HomeAssistant, entry: WaechterEntry) -> None:
 
 
 SERVICE_CREATE_DASHBOARD = "create_dashboard"
+SERVICE_IMPORT_HISTORY = "import_history"
 
 
 def _register_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, SERVICE_CREATE_DASHBOARD):
         return
+
+    async def handle_import(call: ServiceCall) -> dict[str, Any]:
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries or getattr(entries[0], "runtime_data", None) is None:
+            raise ServiceValidationError("The guard is not set up")
+        return entries[0].runtime_data.import_history(call.data.get("days", []), call.data.get("months", []))
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_IMPORT_HISTORY, handle_import,
+        schema=vol.Schema({vol.Optional("days", default=[]): list, vol.Optional("months", default=[]): list}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
     async def handle(call: ServiceCall) -> dict[str, Any]:
         return await _create_dashboard(hass, call.data.get("dashboard"))

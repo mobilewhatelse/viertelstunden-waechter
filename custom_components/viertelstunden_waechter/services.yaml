@@ -5,3 +5,15 @@ create_dashboard:
       example: "waechter"
       selector:
         text:
+import_history:
+  fields:
+    days:
+      required: false
+      example: '[{"date": "2026-10-01", "kw": 7.8, "at": "18:15"}]'
+      selector:
+        object:
+    months:
+      required: false
+      example: '[{"month": "2026-10", "peak_kw": 9.1}]'
+      selector:
+        object:

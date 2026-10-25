@@ -336,6 +336,24 @@ weekly profile, peaks of the last days, months, interventions per day, charge pl
 - Without a URL: the YAML is returned and shown as a notification; paste it into a new dashboard (three dots > Edit >
   Raw configuration editor). This is the more robust way if Home Assistant changes internally.
 
+### Importing earlier measurements
+
+Service **Import history** (`viertelstunden_waechter.import_history`) seeds the day and month peaks from an earlier
+measurement (a spreadsheet, an older script) so that statistics, the monthly cost and the "use peak already reached"
+function know the past. It only raises values (a day or month that already has a higher peak keeps it); values taken
+from hourly data are lower bounds.
+
+```yaml
+action: viertelstunden_waechter.import_history
+data:
+  days: [{date: "2026-10-01", kw: 7.8, at: "18:15"}]   # at is optional
+  months: [{month: "2026-10", peak_kw: 9.1}]
+```
+
+The daily peaks of the last 400 days are available as the attribute `peaks_by_day` ({date: kW}) of the sensor *Peak
+today*, for other automations and scripts. Large attributes (profile, hours, windows, days, months, ...) are excluded
+from the database to keep it small.
+
 ### Seeing what is configured
 
 - The **integration page** lists all devices; the gear icon holds the general settings.

@@ -697,6 +697,20 @@
           "description": "URL-Pfad eines bestehenden, leeren Dashboards (z. B. waechter). Leer lassen, um das YAML zu erhalten."
         }
       }
+    },
+    "import_history": {
+      "name": "Verlauf importieren",
+      "description": "Übernimmt Tages- und Monatsspitzen aus einer früheren Messung (Tabelle, älteres Skript). Hebt nur Werte an; Werte aus Stundendaten sind Untergrenzen.",
+      "fields": {
+        "days": {
+          "name": "Tage",
+          "description": "Liste von {date, kw, at}."
+        },
+        "months": {
+          "name": "Monate",
+          "description": "Liste von {month, peak_kw}."
+        }
+      }
     }
   }
 }

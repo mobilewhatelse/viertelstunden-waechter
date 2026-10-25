@@ -44,7 +44,7 @@ def _same_value(state: str, wanted: str) -> bool:
     except ValueError:
         return False
 LOG_KEEP = 200
-DAYS_KEEP = 62
+DAYS_KEEP = 400
 CALL_TIMEOUT_S = 15
 
 
@@ -670,6 +670,32 @@ class Waechter:
             "notify": self.cfg.get(CONF_NOTIFY),
             "devices": [{k: v for k, v in d.items() if k != D_ID} for d in devices],
         }
+
+    def import_history(self, days: list[dict[str, Any]], months: list[dict[str, Any]]) -> dict[str, int]:
+        """Seed the peaks from an earlier measurement (e.g. a spreadsheet or an older script). Only raises values:
+        a day or month that already has a higher peak keeps it. Values from hourly data are lower bounds."""
+        n_days = n_months = 0
+        for d in days:
+            date, kw = str(d.get("date", ""))[:10], float(d.get("kw", 0.0))
+            if len(date) == 10 and kw > 0 and kw > float(self.day_peaks.get(date, {}).get("kw") or 0.0):
+                self.day_peaks[date] = {"kw": round(kw, 3), "at": str(d.get("at") or "")}
+                n_days += 1
+        for k in sorted(self.day_peaks)[:-DAYS_KEEP]:
+            del self.day_peaks[k]
+        for m in months:
+            month, kw = str(m.get("month", ""))[:7], float(m.get("peak_kw", 0.0))
+            if len(month) == 7 and kw > 0:
+                cur = self.months.setdefault(month, {"kw": 0.0, "ug": 0.0})
+                if kw > float(cur.get("kw") or 0.0):
+                    cur["kw"] = round(kw, 3)
+                    n_months += 1
+                cur["ug"] = max(float(cur.get("ug") or 0.0), float(cur["kw"]))
+                if self.month_peak.get("month") == month and kw > float(self.month_peak.get("kw") or 0.0):
+                    self.month_peak = {"month": month, "kw": round(kw, 3), "at": None}
+        for k in sorted(self.months)[:-15]:
+            del self.months[k]
+        self._store.async_delay_save(self._data, 1)
+        return {"days": n_days, "months": n_months}
 
     def intervention_names(self) -> list[str]:
         return [self.raw_devices[i].get("name", i) for i in self.guard.interventions if i in self.raw_devices]

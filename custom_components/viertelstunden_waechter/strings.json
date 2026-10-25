@@ -697,6 +697,20 @@
           "description": "URL path of an existing, empty storage dashboard (e.g. waechter). Leave empty to get the YAML."
         }
       }
+    },
+    "import_history": {
+      "name": "Import history",
+      "description": "Seeds the day and month peaks from an earlier measurement (a spreadsheet, an older script). Only raises values; values from hourly data are lower bounds.",
+      "fields": {
+        "days": {
+          "name": "Days",
+          "description": "List of {date, kw, at}."
+        },
+        "months": {
+          "name": "Months",
+          "description": "List of {month, peak_kw}."
+        }
+      }
     }
   }
 }
