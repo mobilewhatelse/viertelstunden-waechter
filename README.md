@@ -282,7 +282,7 @@ target by the next departure, and shows the plan. **Carrying it out is a separat
 **What you enter:** the car's state of charge (sensor, %), the target (fixed percentage, optionally from a sensor
 such as the car's charge limit), the battery capacity (kWh), the next departure (a *time* entity - the next
 occurrence is used - or a date-time entity / `input_datetime` / timestamp sensor), the highest and lowest charging
-power of the wallbox, the house base load, optionally a "car plugged in" entity, and optionally the commands to
+power of the wallbox, the house base load and charging efficiency, optionally a "car plugged in" entity, and optionally the commands to
 **allow** and **pause** charging (a button, switch, selection or number).
 
 **How it plans** (`plan.py`, tested):
@@ -295,6 +295,11 @@ power of the wallbox, the house base load, optionally a "car plugged in" entity,
    the peak target.
 4. If the target cannot be reached by departure the state is **Target not reachable** and the missing kWh are shown.
    The plan never pretends.
+
+**Setting up the solar forecast:** Settings > Dashboards > **Energy** > edit your solar panels > switch on
+**"Forecast production"** > choose the forecast integration (e.g. *Forecast.Solar*, set up beforehand under Settings >
+Devices & services) > Save. Without this step the plan does not know the sun, even if the forecast integration is
+installed.
 
 **The solar forecast is optional and comes from the Energy dashboard.** The plan uses the solar forecast that is set
 up there (Settings > Dashboards > Energy > Solar panels > *forecast*; integrations that provide one include

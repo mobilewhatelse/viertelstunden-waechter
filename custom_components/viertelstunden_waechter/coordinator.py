@@ -16,10 +16,10 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
+    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_VOLTAGE,
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
-    D_BASE, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
+    D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
 )
@@ -60,7 +60,8 @@ class Waechter:
             for sid, sub in entry.subentries.items()
         }
         self.guard = Guard(
-            [DeviceConfig.from_dict(d) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT
+            [DeviceConfig.from_dict(d) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT,
+            float(self.cfg.get(CONF_VOLTAGE, 230.0)),
         )
         self.mode = MODE_OBSERVE
         self.limit_kw = float(self.cfg.get(CONF_LIMIT, 10.0))
@@ -492,6 +493,7 @@ class Waechter:
         plan = make_plan(
             now, departure, soc, target, float(v.get(D_CAPACITY, 60)), float(v.get(D_CHARGE_MAX, 11)),
             float(v.get(D_CHARGE_MIN, 1.4)), target_kw, series, solar, float(v.get(D_BASE, 0.5)),
+            float(v.get(D_EFFICIENCY, 90.0)) / 100.0,
         )
         plan["soc"], plan["target_soc"] = soc, target
         self.plan = plan

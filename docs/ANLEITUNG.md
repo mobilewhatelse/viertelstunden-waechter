@@ -267,12 +267,12 @@ Spitze nutzen“, Meldung bei Eingriff, Lastprognose, Diagnose.
 |---|---|---|
 | Sensor für den Netzbezug (und optional der Bezugszähler) | wird von Ihrem Wechselrichter oder Zähler gemessen | Integration des Wechselrichters, ESPHome, Modbus … |
 | Die Entitäten Ihrer Geräte (Ladestrom, Schalter, Leistungssensoren) | gehören zu Ihrer Hardware | die Integrationen der Geräte |
-| **Optionale Bedingungs-Entitäten:** „Nur nötig, solange“, „Aktiv sperren, solange“, „Eingriff nur, solange“, „Nur wieder einschalten, solange“ | Regeln Ihres Haushalts | jede An/Aus-Entität: Vorlage-Helfer, `input_boolean`, Zeitplan. Beispiel: „Küchenstecker nur wieder einschalten, solange sein eigener Zeitplan ihn an haben will“ ist ein Vorlage-Helfer, der diesen Zeitplan liest |
+| **Optionale Bedingungs-Entitäten:** „Nur nötig, solange“, „Aktiv sperren, solange“, „Eingriff nur, solange“, „Nur wieder einschalten, solange“ | Regeln Ihres Haushalts | jede An/Aus-Entität: Vorlage-Helfer, `input_boolean`, Zeitplan. Beispiel: „Gerät nur wieder einschalten, solange sein eigener Zeitplan es an haben will“ ist ein Vorlage-Helfer, der diesen Zeitplan liest |
 | Skripte für eine Notfall-Aktion | nur für das, was die anderen Gerätetypen nicht können | zwei kleine Skripte (eingreifen / zurücknehmen); ein Hausakku braucht keine: Gerätetyp **Batterie** |
 | Ein Dashboard | Geschmackssache | die Entitäten oben; die Karte zur Konfiguration steht in Abschnitt 5 |
 
-Die Hilfs-Entitäten, die bei einer Installation wie der des Autors vorkommen („Küche darf wieder an“, „Akku-Notfall
-möglich“), gehören also **nicht** zur Integration. Es sind Bedingungen und Skripte, die man für die eigenen Geräte
+Hilfs-Entitäten wie „Gerät darf wieder an“ (ein Vorlage-Helfer, der einen Zeitplan liest) oder „Notfall möglich“
+gehören also **nicht** zur Integration. Es sind Bedingungen und Skripte, die man für die eigenen Geräte
 anlegt. Die Integration fragt nur an der Stelle danach, an der man ein Gerät einträgt.
 
 ---
@@ -297,8 +297,8 @@ darüber mit dem zweiten:
 Kosten = ( min(Spitze, Schwelle) × Preis_niedrig + max(Spitze − Schwelle, 0) × Preis_hoch ) / 12
 ```
 
-Beispiel: 13,1 kW ohne Wächter, 9,4 kW mit Wächter, Preise 33,82 und 67,64 €/kW/Jahr: 45,66 € statt 26,49 €
-im Monat, gespart **19,16 €**.
+Beispiel: 13,1 kW ohne Wächter, 9,4 kW mit Wächter, Preise 30 und 60 pro kW und Jahr: 40,50 statt 23,50
+im Monat, gespart **17,00**.
 
 Sensoren: **Leistungspreis diesen Monat**, **… ohne Wächter (Schätzung)**, **Ersparnis diesen Monat / dieses Jahr
 (Schätzung)** (Attribut `months`), **Entlastung jetzt (Schätzung)**.
@@ -320,7 +320,7 @@ Abfahrt sein Ziel erreicht, und zeigt den Plan an. **Das Ausführen ist ein eige
 **Was Sie eintragen:** Ladestand des Autos (Sensor, %), Ziel (fester Prozentwert, optional aus einem Sensor wie dem
 Ladelimit des Autos), Batteriekapazität (kWh), nächste Abfahrt (eine *Uhrzeit*-Entität – genommen wird das nächste
 Auftreten – oder eine Datum-Uhrzeit-Entität / `input_datetime` / Zeitstempel-Sensor), höchste und niedrigste
-Ladeleistung der Wallbox, Grundlast des Hauses, optional eine Entität „Auto angesteckt“ und optional die Befehle zum
+Ladeleistung der Wallbox, Grundlast des Hauses und Ladewirkungsgrad, optional eine Entität „Auto angesteckt“ und optional die Befehle zum
 **Erlauben** und **Pausieren** des Ladens (Knopf, Schalter, Auswahl oder Zahl).
 
 **So plant er** (`plan.py`, mit Tests):
@@ -334,6 +334,11 @@ Ladeleistung der Wallbox, Grundlast des Hauses, optional eine Entität „Auto a
    unter dem Spitzenziel bleibt.
 4. Schafft das Auto sein Ziel bis zur Abfahrt nicht, steht der Zustand auf **Ziel nicht erreichbar**, und die fehlenden
    kWh werden angezeigt. Der Plan tut nie so, als ginge es.
+
+**So richten Sie die Solarprognose ein:** Einstellungen > Dashboards > **Energie** > bei Ihrer Solaranlage (Solarmodule)
+auf **Bearbeiten** > Schalter **„Solarproduktion vorhersagen“** einschalten > die Prognose-Integration wählen (z. B. die
+Integration *Forecast.Solar*, die Sie vorher unter Einstellungen > Geräte & Dienste einrichten) > Speichern. Ohne diesen
+Schritt kennt der Plan die Sonne nicht, auch wenn die Prognose-Integration installiert ist.
 
 **Die Solarprognose ist optional und kommt aus dem Energie-Dashboard.** Der Plan benutzt die Solarprognose, die dort
 eingerichtet ist (Einstellungen > Dashboards > Energie > Solarmodule > *Prognose*; Integrationen mit Prognose sind
@@ -388,6 +393,7 @@ benutzt.
 | **„Aktiv“ sperren, solange** | Läuft noch ein alter Wächter oder eine Automation, die dieselben Geräte steuert: „Aktiv“ wird verweigert. |
 | **Benachrichtigungsdienste** | z. B. `notify.mobile_app_handy` – Meldung, wenn die Grenze trotz aller Hebel nicht zu halten ist |
 | **Betriebsart nach Neustart** | Wiederherstellen / Beobachten / Aktiv / Aus |
+| **Netzspannung** | Spannung einer Phase, Standard 230 V (Europa); damit werden Ampere in Kilowatt umgerechnet |
 
 Sofort änderbar (Gerät des Wächters oder Dashboard): **Betriebsart**, **Strategie**, **Grenze**,
 **Sicherheitsabstand**.

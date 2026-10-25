@@ -15,6 +15,7 @@ CONF_CONDITION = "condition_entity"     # optional: guard only works while this 
 CONF_LOCK = "lock_entity"               # optional: "active" is refused while this is on (e.g. an older guard)
 CONF_NOTIFY = "notify_services"         # optional: comma-separated notify services
 CONF_STARTUP_MODE = "startup_mode"
+CONF_VOLTAGE = "mains_voltage"          # voltage of one phase, default 230 V
 CONF_DEVICES = "devices"
 
 # device settings
@@ -58,6 +59,7 @@ D_DEPARTURE = "departure_entity"        # vehicle: time / datetime of the next d
 D_CONNECTED = "connected_entity"        # vehicle: optional, on = car is plugged in
 D_CHARGE_MAX = "charge_kw_max"          # vehicle: what the wallbox can deliver
 D_CHARGE_MIN = "charge_kw_min"          # vehicle: lowest charging power (1 phase, 6 A = 1.4 kW)
+D_EFFICIENCY = "charge_efficiency"     # vehicle: share of the wallbox energy that reaches the battery (%)
 D_BASE = "house_base_kw"                # vehicle: house base load that the solar surplus must cover first
 D_START = "start_entity"                # vehicle: command that allows charging ...
 D_START_VALUE = "start_value"

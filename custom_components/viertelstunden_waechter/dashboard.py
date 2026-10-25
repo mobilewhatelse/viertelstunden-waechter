@@ -18,8 +18,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
         "mode": "Betriebsart", "strategy": "Strategie", "limit": "Grenze (kW)", "margin": "Sicherheitsabstand (kW)",
         "paid_peak": "Bereits erreichte Spitze nutzen", "notify": "Meldung bei Eingriff", "costs_on": "Kosten und Ersparnis berechnen",
-        "forecast_on": "Lastprognose lernen und anzeigen", "price_low": "Leistungspreis bis zur Schwelle (€/kW/Jahr)",
-        "price_high": "Leistungspreis über der Schwelle (€/kW/Jahr)", "threshold": "Preisschwelle (kW)",
+        "forecast_on": "Lastprognose lernen und anzeigen", "price_low": "Leistungspreis bis zur Schwelle (pro kW und Jahr)",
+        "price_high": "Leistungspreis über der Schwelle (pro kW und Jahr)", "threshold": "Preisschwelle (kW)",
         "status": "Status", "prognosis": "Prognose Viertelstunde", "allowed": "Erlaubt jetzt", "so_far": "Viertelstunde bisher",
         "last": "Letzte Viertelstunde", "peak_today": "Spitze heute", "peak_month": "Spitze im Monat", "iv_today": "Eingriffe heute",
         "cost_month": "Leistungspreis diesen Monat", "cost_without": "Ohne Wächter (Schätzung)", "saving_month": "Ersparnis Monat",
@@ -51,8 +51,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
         "mode": "Mode", "strategy": "Strategy", "limit": "Limit (kW)", "margin": "Safety margin (kW)",
         "paid_peak": "Use peak already reached", "notify": "Message on intervention", "costs_on": "Calculate cost and savings",
-        "forecast_on": "Learn and show the load forecast", "price_low": "Demand charge up to the threshold (EUR/kW/year)",
-        "price_high": "Demand charge above the threshold (EUR/kW/year)", "threshold": "Price threshold (kW)",
+        "forecast_on": "Learn and show the load forecast", "price_low": "Demand charge up to the threshold (per kW and year)",
+        "price_high": "Demand charge above the threshold (per kW and year)", "threshold": "Price threshold (kW)",
         "status": "Status", "prognosis": "Quarter-hour forecast", "allowed": "Allowed now", "so_far": "Quarter hour so far",
         "last": "Last quarter hour", "peak_today": "Peak today", "peak_month": "Peak this month", "iv_today": "Interventions today",
         "cost_month": "Demand charge this month", "cost_without": "Without the guard (estimate)", "saving_month": "Savings this month",
@@ -176,8 +176,8 @@ def _months_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "|---|---:|---:|---:|---:|\n"
         "{% for r in m | reverse %}| {{ r.get('month') }} | {{ '%.2f' | format(r.get('peak_kw') or 0) }} kW | "
         "{{ '%.2f' | format(r.get('peak_without_kw') or 0) }} kW | "
-        "{{ '%.2f €' | format(r.get('cost')) if r.get('cost') is not none else '–' }} | "
-        "{{ '%.2f €' | format(r.get('saving')) if r.get('saving') is not none else '–' }} |\n{% endfor %}"
+        "{{ '%.2f' | format(r.get('cost')) if r.get('cost') is not none else '–' }} | "
+        "{{ '%.2f' | format(r.get('saving')) if r.get('saving') is not none else '–' }} |\n{% endfor %}"
         "{% else %}" + x["enough_data"] + "{% endif %}"
     )
 

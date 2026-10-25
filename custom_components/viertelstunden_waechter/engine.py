@@ -137,7 +137,9 @@ def _clamp(v: int, lo: int, hi: int) -> int:
 class Guard:
     """Keeps the quarter-hour average of the grid import below a target."""
 
-    def __init__(self, devices: list[DeviceConfig], strategy: str = STRATEGY_COMFORT) -> None:
+    def __init__(self, devices: list[DeviceConfig], strategy: str = STRATEGY_COMFORT, voltage: float = V1) -> None:
+        self.v1 = float(voltage)          # voltage of one phase (230 V in Europe)
+        self.v3 = 3.0 * float(voltage)    # three phases
         self.devices: dict[str, DeviceConfig] = {d.id: d for d in devices}
         self.strategy = strategy
         self.interventions: dict[str, dict[str, Any]] = {}
@@ -306,8 +308,8 @@ class Guard:
                 orig = float(iv.get("orig_current") or dev.max_current)
                 phases = self._phases(dev, r)
                 orig_phases = 3 if iv.get("switched") else phases
-                orig_kw = orig * (V3 if orig_phases == 3 else V1) / 1000.0
-                cur_kw = cur * (V3 if phases == 3 else V1) / 1000.0
+                orig_kw = orig * (self.v3 if orig_phases == 3 else self.v1) / 1000.0
+                cur_kw = cur * (self.v3 if phases == 3 else self.v1) / 1000.0
                 total += max(0.0, orig_kw - max(cur_kw, p))
             elif dev.kind == KIND_SWITCH:
                 if r.is_on is False:
@@ -506,14 +508,14 @@ class Guard:
         t = self._wbt(dev.id)
         if self._phases(dev, r) == 3:
             if cur > dev.min_current:
-                return max(0.0, p_wb - dev.min_current * V3 / 1000.0)
+                return max(0.0, p_wb - dev.min_current * self.v3 / 1000.0)
             if t["too_little"] is None:
                 t["too_little"] = now
             if dev.one_phase_option and _secs(t["too_little"], now) >= TO_ONE_PHASE_AFTER_S:
-                return max(0.0, p_wb - dev.min_current * V1 / 1000.0)
+                return max(0.0, p_wb - dev.min_current * self.v1 / 1000.0)
             return 0.0  # wait: maybe only the microwave; other devices may help meanwhile
         if cur > dev.min_current:
-            return max(0.0, p_wb - dev.min_current * V1 / 1000.0)
+            return max(0.0, p_wb - dev.min_current * self.v1 / 1000.0)
         return 0.0
 
     def _wb_reduce(self, dev: DeviceConfig, r: Reading, want_kw: float, now: datetime, excess: float) -> list[Action]:
@@ -524,7 +526,7 @@ class Guard:
         goal = p_wb - want_kw
         acts: list[Action] = []
         if phases == 3:
-            a = int(goal * 1000.0 / V3)
+            a = int(goal * 1000.0 / self.v3)
             if a >= dev.min_current:
                 if a < cur:
                     acts = [Action(dev.id, "set_current", a, f"{dev.name} {cur} A -> {a} A (3-phasig, {excess:.1f} kW zu viel)")]
@@ -533,14 +535,14 @@ class Guard:
                 acts = [Action(dev.id, "set_current", dev.min_current,
                                f"{dev.name} {cur} A -> {dev.min_current} A (3-phasig, {excess:.1f} kW zu viel)")]
             elif dev.one_phase_option:
-                a1 = _clamp(int(goal * 1000.0 / V1), dev.min_current, dev.max_current)
+                a1 = _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)
                 acts = [Action(dev.id, "set_current", a1, ""),
                         Action(dev.id, "set_phase", dev.one_phase_option,
                                f"{dev.name} auf 1-phasig {a1} A ({excess:.1f} kW zu viel), kurze Ladepause durch Phasenwechsel")]
                 t["too_little"] = None
                 t["phase"] = now
         else:
-            a1 = _clamp(int(goal * 1000.0 / V1), dev.min_current, dev.max_current)
+            a1 = _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)
             if a1 < cur:
                 acts = [Action(dev.id, "set_current", a1, f"{dev.name} 1-phasig {cur} A -> {a1} A")]
         if acts:
@@ -570,7 +572,7 @@ class Guard:
             return []
         if iv.get("one_phase"):
             p_wb = (r.power_w or 0.0) / 1000.0
-            if iv.get("switched") and iv.get("orig_phase") and room > (dev.min_current * V3 / 1000.0 - p_wb) + 0.5:
+            if iv.get("switched") and iv.get("orig_phase") and room > (dev.min_current * self.v3 / 1000.0 - p_wb) + 0.5:
                 if t["room3"] is None:
                     t["room3"] = now
                 if _secs(t["room3"], now) < TO_THREE_PHASE_AFTER_S:
@@ -583,16 +585,16 @@ class Guard:
                                f"{dev.name} wieder 3-phasig ({dev.min_current} A), kurze Ladepause durch Phasenwechsel", False)]
             t["room3"] = None
             top = dev.max_current if iv.get("switched") else orig
-            if cur < top and room > V1 / 1000.0 + 0.15:
-                new = min(top, cur + max(1, int((room - 0.15) * 1000.0 / V1)))
+            if cur < top and room > self.v1 / 1000.0 + 0.15:
+                new = min(top, cur + max(1, int((room - 0.15) * 1000.0 / self.v1)))
                 t["changed"] = now
                 acts = [Action(dev.id, "set_current", new, f"{dev.name} 1-phasig {cur} A -> {new} A (wieder mehr Luft)", False)]
                 if not iv.get("switched") and new >= orig:
                     del self.interventions[dev.id]
                 return acts
             return []
-        if room > V3 / 1000.0 + 0.15 and cur < orig:
-            new = min(orig, cur + max(1, int((room - 0.15) * 1000.0 / V3)))
+        if room > self.v3 / 1000.0 + 0.15 and cur < orig:
+            new = min(orig, cur + max(1, int((room - 0.15) * 1000.0 / self.v3)))
             t["changed"] = now
             acts = [Action(dev.id, "set_current", new, f"{dev.name} {cur} A -> {new} A (wieder mehr Luft)", False)]
             if new >= orig:

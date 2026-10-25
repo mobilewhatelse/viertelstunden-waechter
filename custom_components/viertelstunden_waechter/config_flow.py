@@ -20,10 +20,10 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_NOTIFY,
-    CONF_STARTUP_MODE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
+    CONF_STARTUP_MODE, CONF_VOLTAGE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
     D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
-    D_BASE, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
+    D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_COMFORT_MIN, D_HOLD, D_MAX_VALUE, D_MIN_SOC, D_MIN_VALUE, D_PAUSE, D_REL1, D_REL1_VALUE, D_REL2,
     D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_STEP, D_VALUE,
@@ -65,6 +65,7 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
         s[_opt(CONF_CONDITION, d)] = _ent(ON_OFF_DOMAINS)
         s[_opt(CONF_LOCK, d)] = _ent(ON_OFF_DOMAINS)
         s[_opt(CONF_NOTIFY, d)] = TextSelector()
+        s[vol.Required(CONF_VOLTAGE, default=d.get(CONF_VOLTAGE, 230))] = _num(100, 260, 1, "V")
         s[vol.Required(CONF_STARTUP_MODE, default=d.get(CONF_STARTUP_MODE, STARTUP_RESTORE))] = SelectSelector(
             SelectSelectorConfig(options=STARTUP_MODES, translation_key=CONF_STARTUP_MODE)
         )
@@ -85,6 +86,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_CHARGE_MAX, default=d.get(D_CHARGE_MAX, 11))] = _num(1.4, 50, 0.1, "kW")
         s[vol.Required(D_CHARGE_MIN, default=d.get(D_CHARGE_MIN, 1.4))] = _num(0.5, 20, 0.1, "kW")
         s[vol.Required(D_BASE, default=d.get(D_BASE, 0.5))] = _num(0, 20, 0.1, "kW")
+        s[vol.Required(D_EFFICIENCY, default=d.get(D_EFFICIENCY, 90))] = _num(50, 100, 1, "%")
         s[_opt(D_START, d)] = _ent(COMMAND_DOMAINS)
         s[_opt(D_START_VALUE, d)] = TextSelector()
         s[_opt(D_STOP, d)] = _ent(COMMAND_DOMAINS)

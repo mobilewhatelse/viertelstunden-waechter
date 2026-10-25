@@ -16,8 +16,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
     add([
         KwNumber(w, "limit", "limit_kw", 1.0, 50.0),
         KwNumber(w, "margin", "margin_kw", 0.0, 5.0),
-        PriceNumber(w, "price_low", "price_low", 0.0, 500.0, "€/kW/a", 0.01),
-        PriceNumber(w, "price_high", "price_high", 0.0, 500.0, "€/kW/a", 0.01),
+        PriceNumber(w, "price_low", "price_low", 0.0, 5000.0, f"{w.hass.config.currency}/kW/a", 0.01),
+        PriceNumber(w, "price_high", "price_high", 0.0, 5000.0, f"{w.hass.config.currency}/kW/a", 0.01),
         PriceNumber(w, "price_threshold", "price_threshold", 1.0, 100.0, "kW", 0.1),
     ])
 

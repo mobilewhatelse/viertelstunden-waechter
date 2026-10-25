@@ -34,13 +34,15 @@
           "condition_entity": "Nur nötig, solange",
           "lock_entity": "„Aktiv“ sperren, solange",
           "notify_services": "Benachrichtigungsdienste",
-          "startup_mode": "Betriebsart nach Neustart"
+          "startup_mode": "Betriebsart nach Neustart",
+          "mains_voltage": "Netzspannung"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
           "lock_entity": "Optional. Solange sie an ist, wird „Aktiv“ verweigert und der Wächter beobachtet nur (z. B. ein älterer Wächter, der noch läuft).",
           "notify_services": "Optional, mit Komma getrennt, z. B. notify.mobile_app_handy. Für den Fall, dass die Grenze nicht zu halten ist.",
-          "startup_mode": "Wiederherstellen = die Betriebsart von vor dem Neustart."
+          "startup_mode": "Wiederherstellen = die Betriebsart von vor dem Neustart.",
+          "mains_voltage": "Spannung einer Phase (230 V in Europa). Damit werden Ampere in Kilowatt umgerechnet."
         }
       }
     }
@@ -617,7 +619,8 @@
             "start_entity": "Befehl: Laden erlauben (optional)",
             "start_value": "Wert für „erlauben“",
             "stop_entity": "Befehl: Laden pausieren (optional)",
-            "stop_value": "Wert für „pausieren“"
+            "stop_value": "Wert für „pausieren“",
+            "charge_efficiency": "Ladewirkungsgrad"
           },
           "data_description": {
             "soc_entity": "Sensor mit dem Ladestand des Autos in %.",
@@ -632,7 +635,8 @@
             "start_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Auto laden lässt.",
             "start_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig).",
             "stop_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert. Ohne sie bleibt der Plan ein Vorschlag.",
-            "stop_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig)."
+            "stop_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig).",
+            "charge_efficiency": "Anteil der Wallbox-Energie, der in der Batterie ankommt (etwa 90 %)."
           }
         },
         "reconfigure": {
@@ -652,7 +656,8 @@
             "start_entity": "Befehl: Laden erlauben (optional)",
             "start_value": "Wert für „erlauben“",
             "stop_entity": "Befehl: Laden pausieren (optional)",
-            "stop_value": "Wert für „pausieren“"
+            "stop_value": "Wert für „pausieren“",
+            "charge_efficiency": "Ladewirkungsgrad"
           },
           "data_description": {
             "soc_entity": "Sensor mit dem Ladestand des Autos in %.",
@@ -667,7 +672,8 @@
             "start_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Auto laden lässt.",
             "start_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig).",
             "stop_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert. Ohne sie bleibt der Plan ein Vorschlag.",
-            "stop_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig)."
+            "stop_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig).",
+            "charge_efficiency": "Anteil der Wallbox-Energie, der in der Batterie ankommt (etwa 90 %)."
           }
         }
       },

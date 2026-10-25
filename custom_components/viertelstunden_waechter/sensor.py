@@ -205,12 +205,12 @@ class CostSensor(WaechterEntity, SensorEntity):
     """Cost of this month's peak with the guard, without it (estimate) or the difference. Needs the prices."""
 
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_native_unit_of_measurement = "EUR"
     _attr_suggested_display_precision = 2
 
     def __init__(self, w, key: str, field: str) -> None:
         super().__init__(w, key)
         self._field = field
+        self._attr_native_unit_of_measurement = w.hass.config.currency
 
     @property
     def native_value(self) -> float | None:
@@ -224,12 +224,12 @@ class CostSensor(WaechterEntity, SensorEntity):
 
 class SavingsYearSensor(WaechterEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_native_unit_of_measurement = "EUR"
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:piggy-bank"
 
     def __init__(self, w) -> None:
         super().__init__(w, "savings_year")
+        self._attr_native_unit_of_measurement = w.hass.config.currency
 
     @property
     def native_value(self) -> float | None:

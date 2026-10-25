@@ -91,15 +91,15 @@ class PricingTests(unittest.TestCase):
     def test_monthly_cost(self):
         from pricing import monthly_cost  # noqa: PLC0415
 
-        self.assertAlmostEqual(monthly_cost(9.4, 33.82, 67.64, 10.0), 9.4 * 33.82 / 12)
-        self.assertAlmostEqual(monthly_cost(13.1, 33.82, 67.64, 10.0), (10 * 33.82 + 3.1 * 67.64) / 12)
-        self.assertEqual(monthly_cost(0.0, 33.82, 67.64, 10.0), 0.0)
-        self.assertEqual(monthly_cost(-1.0, 33.82, 67.64, 10.0), 0.0)
+        self.assertAlmostEqual(monthly_cost(9.4, 30.0, 60.0, 10.0), 9.4 * 30.0 / 12)
+        self.assertAlmostEqual(monthly_cost(13.1, 30.0, 60.0, 10.0), (10 * 30.0 + 3.1 * 60.0) / 12)
+        self.assertEqual(monthly_cost(0.0, 30.0, 60.0, 10.0), 0.0)
+        self.assertEqual(monthly_cost(-1.0, 30.0, 60.0, 10.0), 0.0)
 
     def test_saving_example(self):
         from pricing import monthly_cost  # noqa: PLC0415
 
-        saved = monthly_cost(13.1, 33.82, 67.64, 10.0) - monthly_cost(9.4, 33.82, 67.64, 10.0)
+        saved = monthly_cost(13.1, 30.0, 60.0, 10.0) - monthly_cost(9.4, 30.0, 60.0, 10.0)
         self.assertGreater(saved, 15.0)
 
 

@@ -34,13 +34,15 @@
           "condition_entity": "Only needed while",
           "lock_entity": "Block active mode while",
           "notify_services": "Notify services",
-          "startup_mode": "Mode after a restart"
+          "startup_mode": "Mode after a restart",
+          "mains_voltage": "Mains voltage"
         },
         "data_description": {
           "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
           "lock_entity": "Optional. While this is on, active mode is refused and the guard only observes (e.g. an older guard that is still running).",
           "notify_services": "Optional, comma-separated, e.g. notify.mobile_app_phone. Used when the limit cannot be held.",
-          "startup_mode": "Restore = the mode it had before the restart."
+          "startup_mode": "Restore = the mode it had before the restart.",
+          "mains_voltage": "Voltage of one phase (230 V in Europe). Used to convert amps into kilowatts."
         }
       }
     }
@@ -617,7 +619,8 @@
             "start_entity": "Command: allow charging (optional)",
             "start_value": "Value for \"allow\"",
             "stop_entity": "Command: pause charging (optional)",
-            "stop_value": "Value for \"pause\""
+            "stop_value": "Value for \"pause\"",
+            "charge_efficiency": "Charging efficiency"
           },
           "data_description": {
             "soc_entity": "Sensor with the car's state of charge in %.",
@@ -632,7 +635,8 @@
             "start_entity": "A button (pressed), switch, selection or number that lets the car charge.",
             "start_value": "The option text, on/off or number for \"allow\" (not needed for a button).",
             "stop_entity": "A button (pressed), switch, selection or number that pauses the charging. Without it the plan stays advice.",
-            "stop_value": "The option text, on/off or number for \"pause\" (not needed for a button)."
+            "stop_value": "The option text, on/off or number for \"pause\" (not needed for a button).",
+            "charge_efficiency": "Share of the wallbox energy that reaches the battery (about 90 %)."
           }
         },
         "reconfigure": {
@@ -652,7 +656,8 @@
             "start_entity": "Command: allow charging (optional)",
             "start_value": "Value for \"allow\"",
             "stop_entity": "Command: pause charging (optional)",
-            "stop_value": "Value for \"pause\""
+            "stop_value": "Value for \"pause\"",
+            "charge_efficiency": "Charging efficiency"
           },
           "data_description": {
             "soc_entity": "Sensor with the car's state of charge in %.",
@@ -667,7 +672,8 @@
             "start_entity": "A button (pressed), switch, selection or number that lets the car charge.",
             "start_value": "The option text, on/off or number for \"allow\" (not needed for a button).",
             "stop_entity": "A button (pressed), switch, selection or number that pauses the charging. Without it the plan stays advice.",
-            "stop_value": "The option text, on/off or number for \"pause\" (not needed for a button)."
+            "stop_value": "The option text, on/off or number for \"pause\" (not needed for a button).",
+            "charge_efficiency": "Share of the wallbox energy that reaches the battery (about 90 %)."
           }
         }
       },
