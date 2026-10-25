@@ -27,6 +27,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         CostSensor(w, "cost_without", "cost_without"),
         CostSensor(w, "savings_month", "saving"),
         SavingsYearSensor(w),
+        ForecastNowSensor(w),
+        ForecastPeakSensor(w),
+        NextRiskSensor(w),
         LastQuarterSensor(w),
         TodayPeakSensor(w),
         MonthPeakSensor(w),
@@ -80,6 +83,78 @@ class ValueSensor(WaechterEntity, SensorEntity):
     def last_reset(self):
         return self.waechter.guard.values.get("quarter") if self._value_key == "quarter_energy_kwh" else None
 
+
+class ForecastNowSensor(WaechterEntity, SensorEntity):
+    """Typical grid import for the running quarter hour, learned from the same weekday and time of day."""
+
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.KILO_WATT
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:chart-timeline-variant"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "forecast_now")
+
+    @property
+    def native_value(self) -> float | None:
+        return (self.waechter.forecast.get("now") or {}).get("typical")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        f = self.waechter.forecast
+        now = f.get("now") or {}
+        return {"high_kw": now.get("high"), "samples_here": now.get("n"), "samples_total": f.get("samples"),
+                "learned_slots": f.get("slots"), "history_read": self.waechter._bootstrapped}
+
+
+class ForecastPeakSensor(WaechterEntity, SensorEntity):
+    """Highest expected quarter hour in the next 24 hours; attributes: risk windows and hourly series."""
+
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.KILO_WATT
+    _attr_suggested_display_precision = 1
+    _attr_icon = "mdi:chart-bell-curve"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "forecast_peak")
+
+    @property
+    def native_value(self) -> float | None:
+        return self.waechter.forecast.get("peak")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        f = self.waechter.forecast
+        return {
+            "target_kw": f.get("target"),
+            "windows": [{"start": x["start"].isoformat(), "end": x["end"].isoformat(),
+                         "high_kw": x["high_kw"], "typical_kw": x["typical_kw"]} for x in f.get("windows", [])],
+            "hours": [{"t": x["t"].isoformat(), "typical": x["typical"], "high": x["high"]} for x in f.get("hours", [])],
+        }
+
+
+class NextRiskSensor(WaechterEntity, SensorEntity):
+    """Start of the next (or running) window in which a peak is to be expected."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:alert-circle-outline"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "next_risk")
+
+    def _window(self):
+        windows = self.waechter.forecast.get("windows") or []
+        return windows[0] if windows else None
+
+    @property
+    def native_value(self):
+        w = self._window()
+        return w["start"] if w else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        w = self._window()
+        return {"until": w["end"].isoformat(), "high_kw": w["high_kw"], "typical_kw": w["typical_kw"]} if w else {}
 
 class CostSensor(WaechterEntity, SensorEntity):
     """Cost of this month's peak with the guard, without it (estimate) or the difference. Needs the prices."""

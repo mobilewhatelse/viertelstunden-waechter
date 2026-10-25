@@ -139,6 +139,15 @@
       },
       "savings_year": {
         "name": "Savings this year (estimate)"
+      },
+      "forecast_now": {
+        "name": "Typical import now (forecast)"
+      },
+      "forecast_peak": {
+        "name": "Expected peak in 24 h (forecast)"
+      },
+      "next_risk": {
+        "name": "Next peak risk"
       }
     },
     "switch": {
@@ -150,6 +159,9 @@
       },
       "costs_enabled": {
         "name": "Calculate cost and savings"
+      },
+      "forecast_enabled": {
+        "name": "Learn and show the load forecast"
       }
     }
   },

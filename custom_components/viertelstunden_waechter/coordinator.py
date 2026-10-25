@@ -20,6 +20,7 @@ from .const import (
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
 )
+from .forecast import LoadModel, hourly, risk_windows
 from .pricing import monthly_cost
 from .engine import (
     KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX, STRATEGY_COMFORT, Action, DeviceConfig, Guard, Reading,
@@ -64,6 +65,15 @@ class Waechter:
         self.price_high = 0.0            # EUR per kW and year above the threshold
         self.price_threshold = 10.0      # kW
         self._last_push: datetime | None = None
+        # load forecast: learned typical grid import per weekday and quarter hour
+        self.forecast_enabled = True
+        self.model = LoadModel()
+        self.forecast: dict[str, Any] = {}
+        self._forecast_at: datetime | None = None
+        self._bootstrapped = False
+        self._bootstrapping = False
+        self._bootstrap_failed = False
+        self._model_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.model")
         self._store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self._unsub = None
         self._lock = asyncio.Lock()
@@ -85,6 +95,9 @@ class Waechter:
             kw = float(self.month_peak.get("kw") or 0.0)  # taken over from version 0.2
             self.months[self.month_peak["month"]] = {"kw": kw, "ug": kw}
         self.last_quarter_kw = data.get("last_quarter_kw")
+        model_data = await self._model_store.async_load() or {}
+        self.model = LoadModel.from_dict(model_data)
+        self._bootstrapped = bool(model_data.get("bootstrapped"))
         if data.get("executing") and data.get("interventions"):
             # Home Assistant restarted while the guard had changed devices: give them back first
             self.guard.load({"interventions": data["interventions"]})
@@ -203,6 +216,8 @@ class Waechter:
                 await self._push_intervention(acts, now)
             if self.guard.finished_quarter_kw is not None:
                 self._quarter_done(self.guard.finished_quarter_kw, self.guard.finished_unguarded_kw, now)
+            self._maybe_bootstrap()
+            self._update_forecast(now)
             self.status = self._status(locked, needed)
             self._store.async_delay_save(self._data, 10)
         async_dispatcher_send(self.hass, self.signal)
@@ -271,6 +286,9 @@ class Waechter:
         m["ug"] = max(float(m.get("ug") or 0.0), kw, unguarded_kw or 0.0)
         for k in sorted(self.months)[:-15]:
             del self.months[k]
+        if self.forecast_enabled:  # learn what the load would be without the guard
+            self.model.add(start, unguarded_kw if unguarded_kw is not None else kw)
+            self._model_store.async_delay_save(self._model_data, 120)
         if self.month_peak.get("month") != month or kw > float(self.month_peak.get("kw") or 0.0):
             self.month_peak = {"month": month, "kw": kw, "at": start.isoformat()}
         day = start.strftime("%Y-%m-%d")
@@ -278,6 +296,70 @@ class Waechter:
             self.day_peaks[day] = {"kw": kw, "at": start.strftime("%H:%M")}
         for k in sorted(self.day_peaks)[:-DAYS_KEEP]:
             del self.day_peaks[k]
+
+    # ---------- load forecast ----------
+
+    def _model_data(self) -> dict[str, Any]:
+        return {**self.model.to_dict(), "bootstrapped": self._bootstrapped}
+
+    def _update_forecast(self, now: datetime) -> None:
+        if not self.forecast_enabled:
+            self.forecast = {}
+            return
+        if self._forecast_at is not None and (now - self._forecast_at) < timedelta(minutes=5):
+            return
+        self._forecast_at = now
+        target = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
+        series = self.model.horizon(now, 24)
+        highs = [q["high"] for q in series if q["high"] is not None]
+        self.forecast = {
+            "target": target,
+            "now": series[0],
+            "peak": max(highs) if highs else None,
+            "windows": risk_windows(series, target),
+            "hours": hourly(series),
+            "samples": self.model.samples,
+            "slots": self.model.slots_with_data,
+        }
+
+    def _maybe_bootstrap(self) -> None:
+        """Once: fill the model from the hourly statistics of the grid import counter (lower bounds)."""
+        if (not self.forecast_enabled or self._bootstrapped or self._bootstrapping or self._bootstrap_failed
+                or not self.cfg.get(CONF_GRID_ENERGY)):
+            return
+        self._bootstrapping = True
+        self.entry.async_create_background_task(self.hass, self._bootstrap(), f"{DOMAIN} history")
+
+    async def _bootstrap(self) -> None:
+        try:
+            from homeassistant.components.recorder import get_instance
+            from homeassistant.components.recorder.statistics import statistics_during_period
+
+            eid = self.cfg[CONF_GRID_ENERGY]
+            st = self.hass.states.get(eid)
+            unit = ((st.attributes.get("unit_of_measurement") if st else None) or "kWh").strip()
+            factor = {"Wh": 0.001, "kWh": 1.0, "MWh": 1000.0}.get(unit, 1.0)
+            end = dt_util.now()
+            stats = await get_instance(self.hass).async_add_executor_job(
+                statistics_during_period, self.hass, end - timedelta(days=84), end, {eid}, "hour", None, {"change"}
+            )
+            fresh = LoadModel()
+            for row in stats.get(eid, []):
+                if row.get("change") is None:
+                    continue
+                fresh.add_hourly(dt_util.as_local(dt_util.utc_from_timestamp(row["start"])), float(row["change"]) * factor)
+            for slot, values in self.model.slots.items():  # samples measured meanwhile are newer: keep them last
+                fresh.slots.setdefault(slot, []).extend(values)
+                del fresh.slots[slot][:-8]
+            self.model = fresh
+            self._bootstrapped = True
+            await self._model_store.async_save(self._model_data())
+            _LOGGER.info("Load forecast: %s samples from the statistics", self.model.samples)
+        except Exception as err:  # noqa: BLE001 - the forecast is optional, the guard must not depend on it
+            self._bootstrap_failed = True
+            _LOGGER.warning("Load forecast: history could not be read: %s", err)
+        finally:
+            self._bootstrapping = False
 
     # ---------- executing ----------
 

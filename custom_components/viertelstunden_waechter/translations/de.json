@@ -139,6 +139,15 @@
       },
       "savings_year": {
         "name": "Ersparnis dieses Jahr (Schätzung)"
+      },
+      "forecast_now": {
+        "name": "Typischer Bezug jetzt (Prognose)"
+      },
+      "forecast_peak": {
+        "name": "Erwartete Spitze in 24 h (Prognose)"
+      },
+      "next_risk": {
+        "name": "Nächstes Spitzenrisiko"
       }
     },
     "switch": {
@@ -150,6 +159,9 @@
       },
       "costs_enabled": {
         "name": "Kosten und Ersparnis berechnen"
+      },
+      "forecast_enabled": {
+        "name": "Lastprognose lernen und anzeigen"
       }
     }
   },

@@ -170,7 +170,34 @@ gibt es weiter.
 **Noch nicht gebaut (Ausblick):** ein Gerätetyp **„Leistung drosseln“**, der eine Zahl (Heizstableistung,
 Akku-Ladeleistung) stufenweise absenkt und zurückgibt, wie bei der Wallbox. Er wird ergänzt, sobald ihn jemand
 braucht und an echter Hardware testen kann. Außerdem geplant: Lastprognose, Ladeplan fürs Auto, Akku-Reserve
-vor einem erwarteten Spitzenabend und ein Tagesplan als Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
+vor einem erwarteten Spitzenabend, früheres und sanfteres Eingreifen anhand der Prognose und ein Tagesplan als
+Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
+
+---
+
+## 3b. Lastprognose
+
+Schalter **Lastprognose lernen und anzeigen** (standardmäßig an). Der Wächter lernt, wie hoch der Netzbezug
+typischerweise je Wochentag und Viertelstunde ist: Jede fertige Viertelstunde fügt ihrem Platz einen Messwert
+hinzu (der Bezug, der **ohne Wächter** entstanden wäre); je Platz bleiben die letzten 8 Werte. Pro Platz gilt:
+**typisch** = Median, **hoch** = der zweithöchste Wert (bei weniger als vier Werten der höchste).
+Eine Viertelstunde ist ein **Risiko**, wenn ihr „hoch“ über dem aktuellen Ziel liegt und mindestens zwei Werte
+vorliegen.
+
+Beim ersten Start wird das Modell aus den **Stundenstatistiken des Bezugszählers** gefüllt (bis zu 12 Wochen),
+damit die Prognose sofort brauchbar ist. Ein Stundenmittel ist nur eine Untergrenze für seine vier Viertelstunden:
+Spitzen werden anfangs unterschätzt und werden mit den laufenden Messwerten genauer. Voraussetzung: Der Zähler ist
+in den allgemeinen Einstellungen eingetragen und der Recorder läuft.
+
+Sensoren:
+
+- **Typischer Bezug jetzt (Prognose)** – Attribute `high_kw`, `samples_here`, `samples_total`, `learned_slots`
+- **Erwartete Spitze in 24 h (Prognose)** – Attribute `windows` (Risikofenster mit Beginn, Ende, `high_kw`) und
+  `hours` (stündlich `typical` / `high`, für Diagramme und Karten)
+- **Nächstes Spitzenrisiko** – Zeitpunkt des nächsten oder laufenden Risikofensters (Attribute `until`, `high_kw`)
+
+Die Prognose wird bisher nur angezeigt, sie verändert nicht, was der Wächter tut. Sie ist die Grundlage für den
+geplanten Ladeplan, die Akku-Reserve und das frühere Eingreifen.
 
 ---
 

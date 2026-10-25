@@ -146,8 +146,8 @@ as "charging current setting". The guard then changes the helper and the automat
 - **Power throttle** device type: lowers a `number` (heating element power, battery charge power) stepwise
   between a minimum and a maximum, like the wallbox current, and gives it back stepwise. Not built yet – it is
   added when someone needs it and can test it on real hardware.
-- Load forecast from the history, charge plan for the car, battery reserve before an expected peak, and a daily
-  plan proposed by an AI task (validated against hard limits).
+- Charge plan for the car, battery reserve before an expected peak, early and gentler intervention based on the
+  forecast, and a daily plan proposed by an AI task (validated against hard limits).
 
 ### Cost, savings and optional features
 
@@ -177,6 +177,29 @@ allowed at the original current minus what it can draw now (never less than it r
 the power it had when it was switched off, while it is off; emergency action: the configured expected reduction.
 The highest of these "unguarded" quarter hours of the month is billed with the tariff. This is an estimate, not a
 measurement.
+
+### Load forecast
+
+Switch **Learn and show the load forecast** (default on). The guard learns the typical grid import for every
+weekday and quarter hour of the day: each finished quarter hour adds a sample to its slot (what the import would
+have been without the guard), a slot keeps the latest 8 samples. Per slot: *typical* = median, *high* = second
+highest sample (the highest if fewer than four samples). A quarter hour is a **risk** if its *high* exceeds the
+current target and at least two samples exist.
+
+On the first start the model is filled from the **hourly statistics of the import counter** (up to 12 weeks, so
+the forecast is useful right away). An hourly mean is a lower bound for its four quarter hours, so peaks are
+underestimated at first and become accurate with the live samples. Needs the counter in the general settings and
+the recorder.
+
+Sensors:
+
+- *Typical import now (forecast)* – attributes `high_kw`, `samples_here`, `samples_total`, `learned_slots`
+- *Expected peak in 24 h (forecast)* – attributes `windows` (risk windows with start, end, `high_kw`) and `hours`
+  (hourly `typical` / `high`, for charts and cards)
+- *Next peak risk* – timestamp of the next or running risk window (attributes `until`, `high_kw`)
+
+The forecast is displayed only for now; it does not change what the guard does. It is the basis for the planned
+charge plan, battery reserve and early intervention.
 
 ### Seeing what is configured
 
@@ -208,6 +231,8 @@ measurement.
 | `number` Demand charge up to / above the threshold, Price threshold | EUR/kW/year and kW |
 | `switch` Use peak already reached, Message on intervention, Calculate cost and savings | default on |
 | `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
+| `switch` Learn and show the load forecast | default on |
+| `sensor` Typical import now, Expected peak in 24 h, Next peak risk | forecast, attributes `windows`, `hours` |
 
 ## Development
 

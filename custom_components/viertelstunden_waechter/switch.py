@@ -17,6 +17,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         FeatureSwitch(w, "paid_peak", "paid_peak", "mdi:cash-check"),
         FeatureSwitch(w, "notify_intervention", "notify_intervention", "mdi:bell-ring"),
         FeatureSwitch(w, "costs_enabled", "costs_enabled", "mdi:currency-eur"),
+        FeatureSwitch(w, "forecast_enabled", "forecast_enabled", "mdi:chart-timeline-variant"),
     ])
 
 
