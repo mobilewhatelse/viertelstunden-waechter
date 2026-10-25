@@ -147,7 +147,7 @@ Sofort änderbar (Gerät des Wächters oder Dashboard): **Betriebsart**, **Strat
 
 ```
 {% set c = state_attr('sensor.viertelstunden_wachter_status', 'configuration') %}
-{% macro n(e) %}{{ state_attr(e, 'friendly_name') or e }}{% endmacro %}
+{% macro n(e) %}{% set s = states[e] if e else none %}{{ s.name if s else (e or '–') }}{% endmacro %}
 {% if c %}**Messung:** {{ n(c.grid_power) }} · {{ n(c.grid_energy) }}
 
 | Prio | Gerät | Steuert |
