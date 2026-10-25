@@ -74,7 +74,12 @@ statistics, far too late for control.
 HACS → ⋮ → Custom repositories → this repository, category *Integration* → install → restart Home Assistant →
 Settings → Devices & services → Add integration → *Viertelstunden-Wächter*.
 
-Then **Configure**:
+Then add the devices **on the integration page**: the buttons *Add wallbox / switchable device / emergency
+action* create one entry per device; each entry has ⋮ → *Reconfigure* / *Delete*. The gear icon opens the
+general settings. (Devices are config subentries; version 0.1 stored them in the options and migrates
+automatically.)
+
+The device types:
 
 | Device type | What the guard does | Needs |
 |---|---|---|
@@ -92,7 +97,7 @@ stopped).
 
 ### Seeing what is configured
 
-- **Configure** shows the sources and all devices in priority order above the menu.
+- The **integration page** lists all devices; the gear icon holds the general settings.
 - The status sensor carries the attribute `configuration` (for a dashboard card, example in the German guide).
 - ⋮ → **Download diagnostics**: configuration, current values, interventions and the recent log.
 

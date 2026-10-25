@@ -1,23 +1,28 @@
-"""Set-up dialog and options: general settings and the list of devices the guard may use."""
+"""Set-up dialog, general settings (options) and the devices as config subentries.
+
+Devices are subentries: Home Assistant lists them on the integration page with "Add", "Reconfigure" and
+"Delete" - no custom menu needed.
+"""
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    ConfigEntry, ConfigFlow, ConfigFlowResult, ConfigSubentryFlow, OptionsFlow, SubentryFlowResult,
+)
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
-    EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig,
-    NumberSelectorMode, SelectOptionDict, SelectSelector, SelectSelectorConfig, TextSelector,
+    EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
+    SelectSelector, SelectSelectorConfig, TextSelector,
 )
 
 from .const import (
-    CONF_CONDITION, CONF_DEVICES, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
-    CONF_NOTIFY, CONF_STARTUP_MODE, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_MAX_CURRENT, D_MAX_OFF,
-    D_MIN_CURRENT, D_MIN_POWER, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER,
-    D_POWER_W, D_PRIORITY, D_RESTORE, D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
+    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_NOTIFY,
+    CONF_STARTUP_MODE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
+    D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
+    D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
 )
 from .engine import KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX
 
@@ -89,123 +94,76 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
 
 
 class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY) if user_input.get(k)}
-            options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN], CONF_DEVICES: []}
+            options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN]}
             return self.async_create_entry(title=user_input["name"], data=data, options=options)
         return self.async_show_form(step_id="user", data_schema=_general_schema({}, True))
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry) -> OptionsFlow:
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return WaechterOptionsFlow()
+
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
+        return {KIND_WALLBOX: WallboxFlow, KIND_SWITCH: SwitchFlow, KIND_SCRIPT: ScriptFlow}
 
 
 class WaechterOptionsFlow(OptionsFlow):
-    def __init__(self) -> None:
-        self._opts: dict[str, Any] | None = None
-        self._edit_id: str | None = None
-
-    @property
-    def opts(self) -> dict[str, Any]:
-        if self._opts is None:
-            self._opts = {**self.config_entry.data, **self.config_entry.options}
-            self._opts[CONF_DEVICES] = [dict(d) for d in self._opts.get(CONF_DEVICES, [])]
-        return self._opts
-
-    def _save(self) -> ConfigFlowResult:
-        return self.async_create_entry(data=self.opts)
-
-    def _device(self, dev_id: str | None) -> dict[str, Any]:
-        return next((d for d in self.opts[CONF_DEVICES] if d[D_ID] == dev_id), {})
+    """General settings (gear icon). Devices are subentries on the integration page."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        menu = ["settings", "add_wallbox", "add_switch", "add_script"]
-        if self.opts[CONF_DEVICES]:
-            menu += ["edit_device", "remove_device"]
-        return self.async_show_menu(step_id="init", menu_options=menu, description_placeholders=self._summary())
-
-    def _name(self, eid: str | None) -> str:
-        if not eid:
-            return "–"
-        st = self.hass.states.get(eid)
-        name = st.attributes.get("friendly_name") if st else None
-        return f"{name} (`{eid}`)" if name else f"`{eid}`"
-
-    def _summary(self) -> dict[str, str]:
-        """Overview shown above the menu: sources and devices in priority order."""
-        lines = []
-        for d in sorted(self.opts[CONF_DEVICES], key=lambda x: int(x.get(D_PRIORITY, 5))):
-            kind = d[D_KIND]
-            if kind == KIND_WALLBOX:
-                what = f"{int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A" + (" → 1~" if d.get(D_ONE_PHASE) else "")
-                ent = d.get(D_CURRENT)
-            elif kind == KIND_SWITCH:
-                what = "⏻" + (f" ≤ {int(d.get(D_MAX_OFF, 0))} min" if d.get(D_MAX_OFF) else "")
-                ent = d.get(D_SWITCH)
-            else:
-                what = f"▶ ≈ {int(d.get(D_POWER_W, 0))} W"
-                ent = d.get(D_ON_SCRIPT)
-            lines.append(f"- **{int(d.get(D_PRIORITY, 5))} · {d.get(D_NAME)}**: {what} – {self._name(ent)}")
-        return {
-            "grid_power": self._name(self.opts.get(CONF_GRID_POWER)),
-            "grid_energy": self._name(self.opts.get(CONF_GRID_ENERGY)),
-            "lock": self._name(self.opts.get(CONF_LOCK)),
-            "devices": "\n".join(lines) or "–",
-        }
-
-    async def async_step_settings(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        current = {**self.config_entry.data, **self.config_entry.options}
         if user_input is not None:
-            for k in (CONF_GRID_ENERGY, CONF_CONDITION, CONF_LOCK, CONF_NOTIFY):
-                self.opts.pop(k, None)
-            self.opts.update({k: v for k, v in user_input.items() if v not in (None, "")})
-            return self._save()
-        return self.async_show_form(step_id="settings", data_schema=_general_schema(self.opts, False))
+            keep = {k: v for k, v in self.config_entry.options.items() if k in (CONF_LIMIT, CONF_MARGIN)}
+            keep.update({k: v for k, v in user_input.items() if v not in (None, "")})
+            if not user_input.get(CONF_GRID_ENERGY):
+                keep[CONF_GRID_ENERGY] = ""  # cleared on purpose; overrides the value from set-up
+            return self.async_create_entry(data=keep)
+        return self.async_show_form(step_id="init", data_schema=_general_schema(current, False))
 
-    async def async_step_add_wallbox(self, user_input=None) -> ConfigFlowResult:
-        self._edit_id = None
-        return await self.async_step_wallbox()
 
-    async def async_step_add_switch(self, user_input=None) -> ConfigFlowResult:
-        self._edit_id = None
-        return await self.async_step_switch()
+class _DeviceFlow(ConfigSubentryFlow):
+    kind: str
 
-    async def async_step_add_script(self, user_input=None) -> ConfigFlowResult:
-        self._edit_id = None
-        return await self.async_step_script()
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        return await self._form(user_input, {})
 
-    async def async_step_wallbox(self, user_input=None) -> ConfigFlowResult:
-        return await self._device_step(KIND_WALLBOX, user_input)
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        return await self._form(user_input, dict(self._get_reconfigure_subentry().data))
 
-    async def async_step_switch(self, user_input=None) -> ConfigFlowResult:
-        return await self._device_step(KIND_SWITCH, user_input)
-
-    async def async_step_script(self, user_input=None) -> ConfigFlowResult:
-        return await self._device_step(KIND_SCRIPT, user_input)
-
-    async def _device_step(self, kind: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
+    async def _form(self, user_input: dict[str, Any] | None, current: dict[str, Any]) -> SubentryFlowResult:
         errors: dict[str, str] = {}
-        current = self._device(self._edit_id)
         if user_input is not None:
-            errors = self._validate(kind, user_input)
+            errors = self._validate(user_input)
             if not errors:
-                dev = {D_ID: self._edit_id or uuid.uuid4().hex[:8], D_KIND: kind}
-                dev.update({k: v for k, v in user_input.items() if v not in (None, "")})
+                data = {k: v for k, v in user_input.items() if v not in (None, "")}
                 for k in (D_PRIORITY, D_MIN_CURRENT, D_MAX_CURRENT):
-                    if k in dev:
-                        dev[k] = int(dev[k])
-                devs = [d for d in self.opts[CONF_DEVICES] if d[D_ID] != dev[D_ID]]
-                self.opts[CONF_DEVICES] = devs + [dev]
-                return self._save()
+                    if k in data:
+                        data[k] = int(data[k])
+                data[D_KIND] = self.kind
+                if self.source == "user":
+                    return self.async_create_entry(title=data[D_NAME], data=data)
+                return self.async_update_and_abort(
+                    self._get_entry(), self._get_reconfigure_subentry(), title=data[D_NAME], data=data
+                )
             current = user_input
-        return self.async_show_form(step_id=kind, data_schema=_device_schema(kind, current), errors=errors)
+        step = "user" if self.source == "user" else "reconfigure"
+        return self.async_show_form(step_id=step, data_schema=_device_schema(self.kind, current), errors=errors)
 
-    def _validate(self, kind: str, u: dict[str, Any]) -> dict[str, str]:
-        if kind != KIND_WALLBOX:
-            return {}
+    def _validate(self, u: dict[str, Any]) -> dict[str, str]:
+        return {}
+
+
+class WallboxFlow(_DeviceFlow):
+    kind = KIND_WALLBOX
+
+    def _validate(self, u: dict[str, Any]) -> dict[str, str]:
         if int(u.get(D_MIN_CURRENT, 6)) > int(u.get(D_MAX_CURRENT, 16)):
             return {D_MIN_CURRENT: "min_above_max"}
         phase, option = u.get(D_PHASE), (u.get(D_ONE_PHASE) or "").strip()
@@ -218,23 +176,10 @@ class WaechterOptionsFlow(OptionsFlow):
                 return {D_ONE_PHASE: "unknown_option"}
         return {}
 
-    async def async_step_edit_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if user_input is not None:
-            self._edit_id = user_input[D_ID]
-            kind = self._device(self._edit_id)[D_KIND]
-            return await getattr(self, f"async_step_{kind}")()
-        return self.async_show_form(step_id="edit_device", data_schema=vol.Schema({vol.Required(D_ID): self._device_picker(False)}))
 
-    async def async_step_remove_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if user_input is not None:
-            gone = set(user_input[D_ID])
-            self.opts[CONF_DEVICES] = [d for d in self.opts[CONF_DEVICES] if d[D_ID] not in gone]
-            return self._save()
-        return self.async_show_form(step_id="remove_device", data_schema=vol.Schema({vol.Required(D_ID): self._device_picker(True)}))
+class SwitchFlow(_DeviceFlow):
+    kind = KIND_SWITCH
 
-    def _device_picker(self, multiple: bool) -> SelectSelector:
-        options = [
-            SelectOptionDict(value=d[D_ID], label=f"{d.get(D_NAME, d[D_ID])} ({d[D_KIND]}, Priorität {int(d.get(D_PRIORITY, 5))})")
-            for d in sorted(self.opts[CONF_DEVICES], key=lambda x: x.get(D_PRIORITY, 5))
-        ]
-        return SelectSelector(SelectSelectorConfig(options=options, multiple=multiple))
+
+class ScriptFlow(_DeviceFlow):
+    kind = KIND_SCRIPT

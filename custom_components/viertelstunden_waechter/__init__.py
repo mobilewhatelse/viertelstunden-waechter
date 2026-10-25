@@ -2,13 +2,31 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+from types import MappingProxyType
+
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant
 
-from .const import PLATFORMS
+from .const import CONF_DEVICES, D_ID, D_KIND, D_NAME, PLATFORMS
 from .coordinator import Waechter
 
 type WaechterEntry = ConfigEntry[Waechter]
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Version 1 kept the devices in the options; version 2 has them as subentries."""
+    if entry.version == 1:
+        options = dict(entry.options)
+        for d in options.pop(CONF_DEVICES, []):
+            data = {k: v for k, v in d.items() if k != D_ID}
+            hass.config_entries.async_add_subentry(
+                entry,
+                ConfigSubentry(
+                    data=MappingProxyType(data), subentry_type=d[D_KIND], title=d.get(D_NAME) or d[D_ID], unique_id=None
+                ),
+            )
+        hass.config_entries.async_update_entry(entry, options=options, version=2)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry) -> bool:

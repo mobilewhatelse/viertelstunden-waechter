@@ -16,8 +16,8 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_CONDITION, CONF_DEVICES, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
-    CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
+    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
+    CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
 )
 from .engine import (
@@ -38,7 +38,10 @@ class Waechter:
         self.hass = hass
         self.entry = entry
         self.cfg: dict[str, Any] = {**entry.data, **entry.options}
-        self.raw_devices: dict[str, dict[str, Any]] = {d[D_ID]: d for d in self.cfg.get(CONF_DEVICES, [])}
+        self.raw_devices: dict[str, dict[str, Any]] = {
+            sid: {**sub.data, D_ID: sid, D_KIND: sub.subentry_type, D_NAME: sub.title}
+            for sid, sub in entry.subentries.items()
+        }
         self.guard = Guard([DeviceConfig.from_dict(d) for d in self.raw_devices.values()], STRATEGY_COMFORT)
         self.mode = MODE_OBSERVE
         self.limit_kw = float(self.cfg.get(CONF_LIMIT, 10.0))
