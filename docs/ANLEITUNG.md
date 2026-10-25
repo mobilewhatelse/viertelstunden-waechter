@@ -43,7 +43,9 @@ Zähler am Netzübergabepunkt ──Kabel──► Wechselrichter ──LAN (lok
    Home Assistant neu starten.
 2. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Viertelstunden-Wächter**:
    Netzbezug, Bezugszähler, Grenze (z. B. 10 kW), Sicherheitsabstand (z. B. 0,5 kW).
-3. Bei der Integration auf **Konfigurieren** → Geräte hinzufügen (siehe 3.).
+3. Geräte **auf der Integrationsseite** hinzufügen (siehe 3.): Schaltflächen **Wallbox / Schaltbares Gerät /
+   Notfall-Aktion hinzufügen**. Jedes Gerät steht danach als eigener Eintrag in der Liste, mit ⋮ → **Ändern**
+   oder **Löschen**. Das Zahnrad öffnet die allgemeinen Einstellungen.
 
 Der Wächter startet in der Betriebsart **„Nur beobachten“**: Er entscheidet und schreibt mit, schaltet aber
 nichts.
@@ -141,7 +143,8 @@ Sofort änderbar (Gerät des Wächters oder Dashboard): **Betriebsart**, **Strat
 
 ## 5. Was ist eingestellt? – Übersicht
 
-- **Konfigurieren** zeigt oben Messquellen, Sperre und alle Geräte nach Priorität.
+- Die **Integrationsseite** listet alle Geräte (ändern und löschen dort); das Zahnrad enthält die allgemeinen
+  Einstellungen.
 - ⋮ → **Diagnose herunterladen**: Konfiguration, aktuelle Werte, Eingriffe, Protokoll.
 - Dashboard-Karte (Markdown):
 
