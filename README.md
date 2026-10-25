@@ -230,7 +230,7 @@ Three switches, **all on by default** (the last state is restored after a restar
 | Switch | What it does |
 |---|---|
 | **Use peak already reached** | The tariff bills the highest quarter hour of the month. If a peak above the limit has already happened this month (say 12 kW), quarter hours below it cost nothing extra – the guard then works with that peak as its limit for the rest of the month (the limit number itself stays unchanged). Only helps after a peak above the limit; with a month peak below the limit nothing changes. The month peak counts from the moment the integration measures it. |
-| **Message on intervention** | A message (via the notify services of the general settings) at the first real intervention, at most every 30 minutes. Not sent in observe mode. |
+| **Message on intervention** | Via the notify services of the general settings: (1) at the first real intervention a message **with everything the guard did in that step** (e.g. "Wallbox 16 A -> 12 A (3-phasig, 1.6 kW zu viel)"), at most every 30 minutes; (2) when the guard has given everything back a **summary of all steps** with times (up to 15 lines). Not sent in observe mode. |
 | **Calculate cost and savings** | Shows what the month's peak costs and what it would have cost without the guard. |
 
 **Entering the costs:** the numbers *Demand charge up to the threshold* and *Demand charge above the threshold*

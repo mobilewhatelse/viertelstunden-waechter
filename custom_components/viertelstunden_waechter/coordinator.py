@@ -83,6 +83,7 @@ class Waechter:
         self.weekly_enabled = True       # weekly report on Monday morning
         self.weekly: dict[str, Any] = {}  # the last report
         self._prewarn_q: datetime | None = None
+        self._session: list[str] = []     # what the guard did since the first intervention (for the summary message)
         self._miss_push: dict[str, datetime] = {}
         self.costs_enabled = True        # compute cost and savings
         self.price_low = 0.0             # EUR per kW and year up to the threshold
@@ -320,15 +321,24 @@ class Waechter:
         return round(sum(self.month_costs(m)["saving"] or 0.0 for m in self.months if m.startswith(year)), 2)
 
     async def _push_intervention(self, acts: list[Action], now: datetime) -> None:
-        """Message at the first real intervention (not for releases), at most every 30 minutes."""
+        """Messages about what the guard did: one at the first intervention (all steps of that cycle, at most every
+        30 minutes) and a summary of everything it did when it has given everything back."""
         if not self.notify_intervention:
+            self._session = []
             return
-        first = next((a for a in acts if a.intervention and a.text and a.kind in
-                      ("set_current", "set_phase", "turn_off", "script_on")), None)
-        if first is None or (self._last_push is not None and (now - self._last_push) < timedelta(minutes=30)):
-            return
-        self._last_push = now
-        await self._exec(Action("", "notify", None, f"Eingriff: {first.text}"))
+        shown = ("set_current", "set_phase", "turn_off", "turn_on", "script_on", "script_off", "battery_release",
+                 "battery_restore", "set_value")
+        done = [a for a in acts if a.text and a.kind in shown]
+        reductions = [a for a in done if a.intervention]
+        if self._session or reductions:
+            self._session += [f"{now:%H:%M:%S} {a.text}" for a in done]
+        if reductions and (self._last_push is None or (now - self._last_push) >= timedelta(minutes=30)):
+            self._last_push = now
+            await self._exec(Action("", "notify", None, "Eingriff: " + "; ".join(a.text for a in reductions)))
+        if self._session and not self.guard.interventions:
+            lines = self._session[:15] + ([f"... (+{len(self._session) - 15})"] if len(self._session) > 15 else [])
+            await self._exec(Action("", "notify", None, "Eingriff beendet, alles wieder freigegeben. Das habe ich gemacht:\n" + "\n".join(lines)))
+            self._session = []
 
     async def _prewarning(self, now: datetime, needed: bool) -> None:
         """Optional message before an intervention: once per quarter hour when the forecast of the running quarter

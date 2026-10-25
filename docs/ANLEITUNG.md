@@ -284,7 +284,7 @@ Drei Schalter, **alle standardmäßig an** (nach einem Neustart gilt der letzte 
 | Schalter | Wirkung |
 |---|---|
 | **Bereits erreichte Spitze nutzen** | Abgerechnet wird die höchste Viertelstunde des Monats. Gab es in diesem Monat schon eine Spitze über der Grenze (z. B. 12 kW), kosten Viertelstunden darunter nichts mehr extra. Der Wächter arbeitet dann für den Rest des Monats mit dieser Spitze als Grenze (die Zahl „Grenze“ selbst bleibt unverändert). Das hilft nur nach einer Spitze über der Grenze; liegt die Monatsspitze unter der Grenze, ändert sich nichts. Die Monatsspitze zählt ab dem Zeitpunkt, an dem die Integration misst. |
-| **Meldung bei Eingriff** | Meldung über die Benachrichtigungsdienste aus den allgemeinen Einstellungen beim ersten echten Eingriff, höchstens alle 30 Minuten. Im Beobachtungsmodus wird nichts gesendet. |
+| **Meldung bei Eingriff** | Meldung über die Benachrichtigungsdienste aus den allgemeinen Einstellungen: (1) beim ersten echten Eingriff mit **allem, was der Wächter in diesem Schritt getan hat** (z. B. „Wallbox 16 A -> 12 A (3-phasig, 1.6 kW zu viel)“), höchstens alle 30 Minuten; (2) wenn alles wieder freigegeben ist, eine **Zusammenfassung aller Schritte** mit Uhrzeiten (bis zu 15 Zeilen). Im Beobachtungsmodus wird nichts gesendet. |
 | **Kosten und Ersparnis berechnen** | Zeigt, was die Monatsspitze kostet und was sie ohne Wächter gekostet hätte. |
 
 **Kosten erfassen:** die Zahlen **Leistungspreis bis zur Schwelle**, **Leistungspreis über der Schwelle**
