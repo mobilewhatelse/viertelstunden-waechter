@@ -119,6 +119,32 @@ Mit *Eingriff nur, solange* auf eine Vorlage, z. B. „Akku über 30 %“:
 
 (Einstellungen → Geräte & Dienste → Helfer → Vorlage → Binärsensor.)
 
+### Welche Aktoren gehen?
+
+Der Wächter kann etwas **ein-/ausschalten**, einen **Strom absenken** (Wallbox) oder ein **Skript auslösen**.
+Alles, was sich darauf zurückführen lässt, geht.
+
+| Aktor | Geht? | Wie |
+|---|---|---|
+| Steckdosen, Relais, Pumpe, Boiler | ja | schaltbares Gerät (`switch`, `input_boolean`, `light`, `fan`) |
+| Wallbox mit einstellbarem Ladestrom | ja | Wallbox (Zahl für den Strom, Phasenumschaltung optional) |
+| Wärmepumpe oder Heizstab mit Kontakt (z. B. SG-Ready), Klimaanlage mit Schalter | ja | schaltbares Gerät |
+| Hausakku, Wechselrichter-Modi | ja | Notfall-Aktion (zwei Skripte) |
+| Alles, was in Home Assistant eine Aktion hat (Szene, Automation, Modus-Auswahl) | ja | Notfall-Aktion (Skript) |
+| `climate` (Solltemperatur) | nur über Skript | ein Skript senkt die Solltemperatur, eines setzt sie zurück |
+| Gerät mit **einstellbarer Leistung** (stufenloser Heizstab, Akku-Ladeleistung) | grob | über Skripte nur an/aus, nicht stufenweise |
+| Wallbox, die nur starten und stoppen kann | möglich, nicht empfohlen | als schaltbares Gerät würde sie das Laden stoppen |
+| Rollläden, Beleuchtung, Schlösser | nein | sparen keine nennenswerte Leistung |
+
+Voraussetzung: Das Gerät hat in Home Assistant einen **Zustand** (an/aus), damit der Wächter weiß, ob es
+läuft. Ein Leistungssensor ist optional, sonst gilt die „angenommene Leistung“. Eingreifen darf der Wächter nur
+bei dem, was Sie eingetragen haben.
+
+**Noch nicht gebaut (Ausblick):** ein Gerätetyp **„Leistung drosseln“**, der eine Zahl (Heizstableistung,
+Akku-Ladeleistung) stufenweise absenkt und zurückgibt, wie bei der Wallbox. Er wird ergänzt, sobald ihn jemand
+braucht und an echter Hardware testen kann. Außerdem geplant: Lastprognose, „schon bezahlte Spitze“ nutzen
+(nur über der bisherigen Monatsspitze eingreifen), Kosten und Ersparnis in Euro, Ladeplan fürs Auto.
+
 ---
 
 ## 4. Allgemeine Einstellungen

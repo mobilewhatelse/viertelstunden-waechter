@@ -95,6 +95,34 @@ The guard knows no brands, only roles. Any wallbox whose integration offers a se
 controlled differently. Wallboxes that can only be started and stopped are not supported (the car is never
 stopped).
 
+### Which actuators work
+
+The guard can switch something **on/off**, **lower a current** (wallbox) or **run a script**. Whatever can be
+reduced to one of these works.
+
+| Actuator | Supported | How |
+|---|---|---|
+| Sockets, relays, pumps, boilers | yes | switchable device (`switch`, `input_boolean`, `light`, `fan`) |
+| Wallbox with a settable charging current | yes | wallbox (current `number`, optional phase `select`) |
+| Heat pump / heating element with a contact (e.g. SG-Ready), air conditioner with a switch | yes | switchable device |
+| Home battery, inverter modes | yes | emergency action (two scripts) |
+| Anything that is an action in Home Assistant (scene, automation, mode select) | yes | emergency action (script) |
+| `climate` entities (setpoint) | via script only | one script lowers the setpoint, one restores it |
+| Devices with an adjustable **power** (stepless heating element, battery charge power) | roughly | via scripts only on/off, not stepwise |
+| Wallbox that can only be started and stopped | possible, not recommended | as a switchable device it would stop charging |
+| Blinds, lights, locks | no | save no relevant power |
+
+Requirements: the device needs a **state** in Home Assistant (on/off) so the guard knows whether it runs; a
+power sensor is optional (otherwise the *assumed power* is used). The guard only touches what you configured.
+
+### Roadmap
+
+- **Power throttle** device type: lowers a `number` (heating element power, battery charge power) stepwise
+  between a minimum and a maximum, like the wallbox current, and gives it back stepwise. Not built yet – it is
+  added when someone needs it and can test it on real hardware.
+- Load forecast from the history, "already paid peak" (only intervene above this month's peak so far), cost and
+  savings in euros, charge plan for the car.
+
 ### Seeing what is configured
 
 - The **integration page** lists all devices; the gear icon holds the general settings.
