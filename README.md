@@ -88,4 +88,5 @@ python tests/sim.py                    # one simulated evening: car + cooker + p
 
 ## Licence
 
-MIT
+Dual-licensed: **AGPL-3.0** for free use (see [LICENSE](LICENSE)), or a **commercial licence** for use in
+products and services without the AGPL obligations. Details in [LICENSING.md](LICENSING.md).
