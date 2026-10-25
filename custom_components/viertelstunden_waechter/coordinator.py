@@ -20,6 +20,7 @@ from .const import (
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
 )
+from .pricing import monthly_cost
 from .engine import (
     KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX, STRATEGY_COMFORT, Action, DeviceConfig, Guard, Reading,
 )
@@ -53,6 +54,16 @@ class Waechter:
         self.month_peak: dict[str, Any] = {}
         self.day_peaks: dict[str, dict[str, Any]] = {}  # "2026-10-24": {"kw": 7.9, "at": "18:15"}
         self.last_quarter_kw: float | None = None
+        # peak per month: {"2026-10": {"kw": actual peak, "ug": estimated peak without the guard}}
+        self.months: dict[str, dict[str, float]] = {}
+        # switchable features (default on) and the tariff prices
+        self.paid_peak = True            # an already reached month peak above the limit raises the limit for the month
+        self.notify_intervention = True  # message at the first intervention (at most every 30 minutes)
+        self.costs_enabled = True        # compute cost and savings
+        self.price_low = 0.0             # EUR per kW and year up to the threshold
+        self.price_high = 0.0            # EUR per kW and year above the threshold
+        self.price_threshold = 10.0      # kW
+        self._last_push: datetime | None = None
         self._store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self._unsub = None
         self._lock = asyncio.Lock()
@@ -69,6 +80,10 @@ class Waechter:
         self.counts = data.get("counts", {})
         self.month_peak = data.get("month_peak", {})
         self.day_peaks = data.get("day_peaks", {})
+        self.months = data.get("months", {})
+        if self.month_peak.get("month") and self.month_peak["month"] not in self.months:
+            kw = float(self.month_peak.get("kw") or 0.0)  # taken over from version 0.2
+            self.months[self.month_peak["month"]] = {"kw": kw, "ug": kw}
         self.last_quarter_kw = data.get("last_quarter_kw")
         if data.get("executing") and data.get("interventions"):
             # Home Assistant restarted while the guard had changed devices: give them back first
@@ -173,18 +188,21 @@ class Waechter:
                 self.executing = execute
             needed = self._is_on(self.cfg.get(CONF_CONDITION), True)
             grid = self._power_kw(self.cfg.get(CONF_GRID_POWER))
+            self.guard.real_effect = execute
             acts = self.guard.step(
                 now,
                 max(0.0, grid) if grid is not None else None,
                 self._energy_kwh(self.cfg.get(CONF_GRID_ENERGY)),
                 readings,
-                self.limit_kw,
+                self.effective_limit(now),
                 self.margin_kw,
                 self.mode != MODE_OFF and needed,
             )
             await self._run(acts, execute)
+            if execute:
+                await self._push_intervention(acts, now)
             if self.guard.finished_quarter_kw is not None:
-                self._quarter_done(self.guard.finished_quarter_kw, now)
+                self._quarter_done(self.guard.finished_quarter_kw, self.guard.finished_unguarded_kw, now)
             self.status = self._status(locked, needed)
             self._store.async_delay_save(self._data, 10)
         async_dispatcher_send(self.hass, self.signal)
@@ -202,10 +220,57 @@ class Waechter:
             return "would_intervene" if self.guard.interventions else "observing"
         return "intervening" if self.guard.interventions else "ready"
 
-    def _quarter_done(self, kw: float, now: datetime) -> None:
+    def effective_limit(self, now: datetime) -> float:
+        """The limit the guard works with. With "use paid peak" a month peak above the limit raises it for the rest
+        of the month: quarter hours below the peak that was already reached cost nothing extra."""
+        if not self.paid_peak:
+            return self.limit_kw
+        reached = float(self.months.get(now.strftime("%Y-%m"), {}).get("kw") or 0.0)
+        return max(self.limit_kw, reached)
+
+    def cost(self, peak_kw: float) -> float:
+        return monthly_cost(peak_kw, self.price_low, self.price_high, self.price_threshold)
+
+    @property
+    def prices_set(self) -> bool:
+        return self.price_low > 0 or self.price_high > 0
+
+    def month_costs(self, month: str) -> dict[str, float | None]:
+        """Cost with the guard, without it (estimate) and the difference for one month."""
+        m = self.months.get(month)
+        if not m or not self.costs_enabled or not self.prices_set:
+            return {"peak": m.get("kw") if m else None, "peak_without": m.get("ug") if m else None,
+                    "cost": None, "cost_without": None, "saving": None}
+        ug = max(float(m.get("ug") or 0.0), float(m["kw"]))
+        cost, without = self.cost(float(m["kw"])), self.cost(ug)
+        return {"peak": float(m["kw"]), "peak_without": ug, "cost": round(cost, 2),
+                "cost_without": round(without, 2), "saving": round(max(0.0, without - cost), 2)}
+
+    def year_saving(self, year: str) -> float | None:
+        if not self.costs_enabled or not self.prices_set:
+            return None
+        return round(sum(self.month_costs(m)["saving"] or 0.0 for m in self.months if m.startswith(year)), 2)
+
+    async def _push_intervention(self, acts: list[Action], now: datetime) -> None:
+        """Message at the first real intervention (not for releases), at most every 30 minutes."""
+        if not self.notify_intervention:
+            return
+        first = next((a for a in acts if a.intervention and a.text and a.kind in
+                      ("set_current", "set_phase", "turn_off", "script_on")), None)
+        if first is None or (self._last_push is not None and (now - self._last_push) < timedelta(minutes=30)):
+            return
+        self._last_push = now
+        await self._exec(Action("", "notify", None, f"Eingriff: {first.text}"))
+
+    def _quarter_done(self, kw: float, unguarded_kw: float | None, now: datetime) -> None:
         self.last_quarter_kw = kw
         start = now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0) - timedelta(minutes=15)
         month = start.strftime("%Y-%m")
+        m = self.months.setdefault(month, {"kw": 0.0, "ug": 0.0})
+        m["kw"] = max(float(m.get("kw") or 0.0), kw)
+        m["ug"] = max(float(m.get("ug") or 0.0), kw, unguarded_kw or 0.0)
+        for k in sorted(self.months)[:-15]:
+            del self.months[k]
         if self.month_peak.get("month") != month or kw > float(self.month_peak.get("kw") or 0.0):
             self.month_peak = {"month": month, "kw": kw, "at": start.isoformat()}
         day = start.strftime("%Y-%m-%d")
@@ -269,6 +334,7 @@ class Waechter:
             "log": self.log,
             "counts": self.counts,
             "month_peak": self.month_peak,
+            "months": self.months,
             "day_peaks": self.day_peaks,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,

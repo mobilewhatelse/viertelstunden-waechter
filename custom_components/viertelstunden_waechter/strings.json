@@ -79,6 +79,15 @@
       },
       "margin": {
         "name": "Safety margin"
+      },
+      "price_low": {
+        "name": "Demand charge up to the threshold"
+      },
+      "price_high": {
+        "name": "Demand charge above the threshold"
+      },
+      "price_threshold": {
+        "name": "Price threshold"
       }
     },
     "sensor": {
@@ -115,6 +124,32 @@
       },
       "interventions_today": {
         "name": "Interventions today"
+      },
+      "saved_now": {
+        "name": "Relief now (estimate)"
+      },
+      "cost_month": {
+        "name": "Demand charge this month"
+      },
+      "cost_without": {
+        "name": "Demand charge without the guard (estimate)"
+      },
+      "savings_month": {
+        "name": "Savings this month (estimate)"
+      },
+      "savings_year": {
+        "name": "Savings this year (estimate)"
+      }
+    },
+    "switch": {
+      "paid_peak": {
+        "name": "Use peak already reached"
+      },
+      "notify_intervention": {
+        "name": "Message on intervention"
+      },
+      "costs_enabled": {
+        "name": "Calculate cost and savings"
       }
     }
   },

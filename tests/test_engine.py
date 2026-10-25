@@ -60,6 +60,49 @@ class PeakTests(unittest.TestCase):
         self.assertLessEqual(_minutes(t_off, t_back), 10.5)
 
 
+class SavingsTests(unittest.TestCase):
+    def test_estimated_unguarded_peak_is_higher_than_the_real_one(self):
+        # without the guard this evening would be about 21 kW (car 11, cooker 7, pool 0.75, heater 2, base 0.4)
+        house = House(cooker=[(5, 55, 7.0)])
+        ug: list[float] = []
+        quarters, _ = run(house, engine.Guard(devices()), 60, unguarded=ug)
+        self.assertLessEqual(max(quarters), 10.0)
+        self.assertGreater(max(ug), 15.0, ug)
+        self.assertLess(max(ug), 22.0, ug)  # an estimate must not exceed what really would have happened
+        self.assertTrue(all(u >= q - 0.2 for u, q in zip(ug, quarters)))
+
+    def test_no_savings_in_observe_mode(self):
+        house = House(cooker=[(5, 35, 7.0)])
+        guard = engine.Guard(devices())
+        guard.real_effect = False
+        ug: list[float] = []
+        own: list[float] = []
+        run(house, guard, 45, limit=10.0, unguarded=ug, finished=own)  # observe: decides, but nothing is changed
+        self.assertTrue(guard.interventions, "the guard did decide to intervene")
+        self.assertEqual(ug, own, "nothing was saved because nothing was done")
+
+    def test_savings_estimate_is_zero_without_interventions(self):
+        guard = engine.Guard(devices())
+        guard.step(START, 3.0, None, {}, 10.0, 0.5, True)
+        self.assertEqual(guard.values["saved_kw"], 0.0)
+
+
+class PricingTests(unittest.TestCase):
+    def test_monthly_cost(self):
+        from pricing import monthly_cost  # noqa: PLC0415
+
+        self.assertAlmostEqual(monthly_cost(9.4, 33.82, 67.64, 10.0), 9.4 * 33.82 / 12)
+        self.assertAlmostEqual(monthly_cost(13.1, 33.82, 67.64, 10.0), (10 * 33.82 + 3.1 * 67.64) / 12)
+        self.assertEqual(monthly_cost(0.0, 33.82, 67.64, 10.0), 0.0)
+        self.assertEqual(monthly_cost(-1.0, 33.82, 67.64, 10.0), 0.0)
+
+    def test_saving_example(self):
+        from pricing import monthly_cost  # noqa: PLC0415
+
+        saved = monthly_cost(13.1, 33.82, 67.64, 10.0) - monthly_cost(9.4, 33.82, 67.64, 10.0)
+        self.assertGreater(saved, 15.0)
+
+
 class SafetyTests(unittest.TestCase):
     def _guard_with_pool_off(self):
         guard = engine.Guard(devices(prio_wb=9, prio_pool=1))

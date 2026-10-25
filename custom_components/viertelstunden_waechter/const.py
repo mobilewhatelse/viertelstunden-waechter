@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 DOMAIN = "viertelstunden_waechter"
-PLATFORMS = ["number", "select", "sensor"]
+PLATFORMS = ["number", "select", "sensor", "switch"]
 UPDATE_INTERVAL = timedelta(seconds=20)
 
 # general settings (entry.data / entry.options)

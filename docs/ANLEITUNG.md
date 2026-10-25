@@ -169,8 +169,43 @@ gibt es weiter.
 
 **Noch nicht gebaut (Ausblick):** ein Gerätetyp **„Leistung drosseln“**, der eine Zahl (Heizstableistung,
 Akku-Ladeleistung) stufenweise absenkt und zurückgibt, wie bei der Wallbox. Er wird ergänzt, sobald ihn jemand
-braucht und an echter Hardware testen kann. Außerdem geplant: Lastprognose, „schon bezahlte Spitze“ nutzen
-(nur über der bisherigen Monatsspitze eingreifen), Kosten und Ersparnis in Euro, Ladeplan fürs Auto.
+braucht und an echter Hardware testen kann. Außerdem geplant: Lastprognose, Ladeplan fürs Auto, Akku-Reserve
+vor einem erwarteten Spitzenabend und ein Tagesplan als Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
+
+---
+
+## 3a. Kosten, Ersparnis und Zusatzfunktionen
+
+Drei Schalter, **alle standardmäßig an** (nach einem Neustart gilt der letzte Stand):
+
+| Schalter | Wirkung |
+|---|---|
+| **Bereits erreichte Spitze nutzen** | Abgerechnet wird die höchste Viertelstunde des Monats. Gab es in diesem Monat schon eine Spitze über der Grenze (z. B. 12 kW), kosten Viertelstunden darunter nichts mehr extra. Der Wächter arbeitet dann für den Rest des Monats mit dieser Spitze als Grenze (die Zahl „Grenze“ selbst bleibt unverändert). Das hilft nur nach einer Spitze über der Grenze; liegt die Monatsspitze unter der Grenze, ändert sich nichts. Die Monatsspitze zählt ab dem Zeitpunkt, an dem die Integration misst. |
+| **Meldung bei Eingriff** | Meldung über die Benachrichtigungsdienste aus den allgemeinen Einstellungen beim ersten echten Eingriff, höchstens alle 30 Minuten. Im Beobachtungsmodus wird nichts gesendet. |
+| **Kosten und Ersparnis berechnen** | Zeigt, was die Monatsspitze kostet und was sie ohne Wächter gekostet hätte. |
+
+**Kosten erfassen:** die Zahlen **Leistungspreis bis zur Schwelle**, **Leistungspreis über der Schwelle**
+(jeweils € pro kW und Jahr) und **Preisschwelle** (kW, Standard 10) – aus dem Preisblatt Ihres Netzbetreibers.
+Sie stehen auf 0, solange nichts eingetragen ist (dann zeigen die Kosten-Sensoren nichts an). Die Monatsspitze
+wird mit einem Zwölftel des Jahrespreises abgerechnet; der Teil bis zur Schwelle mit dem ersten Preis, der Teil
+darüber mit dem zweiten:
+
+```
+Kosten = ( min(Spitze, Schwelle) × Preis_niedrig + max(Spitze − Schwelle, 0) × Preis_hoch ) / 12
+```
+
+Beispiel: 13,1 kW ohne Wächter, 9,4 kW mit Wächter, Preise 33,82 und 67,64 €/kW/Jahr: 45,66 € statt 26,49 €
+im Monat, gespart **19,16 €**.
+
+Sensoren: **Leistungspreis diesen Monat**, **… ohne Wächter (Schätzung)**, **Ersparnis diesen Monat / dieses Jahr
+(Schätzung)** (Attribut `months`), **Entlastung jetzt (Schätzung)**.
+
+**Wie die Ersparnis geschätzt wird** (nur im Modus „Aktiv“; beim Beobachten wird nichts „gespart“): Der Wächter
+rechnet je Viertelstunde zusammen, was seine Eingriffe aus dem Netzbezug herausgehalten haben – Wallbox: was ihre
+Einstellung beim ursprünglichen Strom erlaubt hätte minus dem, was sie jetzt ziehen kann (nie weniger als das, was
+sie wirklich zieht); schaltbares Gerät: die Leistung, die es beim Ausschalten hatte, solange es aus ist;
+Notfall-Aktion: die eingetragene erwartete Entlastung. Die höchste dieser „ungeschützten“ Viertelstunden des
+Monats wird nach dem Tarif bepreist. Das ist eine Schätzung, keine Messung.
 
 ---
 

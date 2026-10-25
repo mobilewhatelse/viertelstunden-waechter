@@ -146,8 +146,37 @@ as "charging current setting". The guard then changes the helper and the automat
 - **Power throttle** device type: lowers a `number` (heating element power, battery charge power) stepwise
   between a minimum and a maximum, like the wallbox current, and gives it back stepwise. Not built yet – it is
   added when someone needs it and can test it on real hardware.
-- Load forecast from the history, "already paid peak" (only intervene above this month's peak so far), cost and
-  savings in euros, charge plan for the car.
+- Load forecast from the history, charge plan for the car, battery reserve before an expected peak, and a daily
+  plan proposed by an AI task (validated against hard limits).
+
+### Cost, savings and optional features
+
+Three switches, **all on by default** (the last state is restored after a restart):
+
+| Switch | What it does |
+|---|---|
+| **Use peak already reached** | The tariff bills the highest quarter hour of the month. If a peak above the limit has already happened this month (say 12 kW), quarter hours below it cost nothing extra – the guard then works with that peak as its limit for the rest of the month (the limit number itself stays unchanged). Only helps after a peak above the limit; with a month peak below the limit nothing changes. The month peak counts from the moment the integration measures it. |
+| **Message on intervention** | A message (via the notify services of the general settings) at the first real intervention, at most every 30 minutes. Not sent in observe mode. |
+| **Calculate cost and savings** | Shows what the month's peak costs and what it would have cost without the guard. |
+
+**Entering the costs:** the numbers *Demand charge up to the threshold* and *Demand charge above the threshold*
+(EUR per kW and year) and *Price threshold* (kW, default 10) – from the tariff sheet of your grid operator. They
+default to 0 (nothing is shown until you enter them). The monthly peak is billed with one twelfth of the annual
+price; the part of the peak up to the threshold with the first price, the part above with the second:
+
+```
+cost = ( min(peak, threshold) × price_low + max(peak − threshold, 0) × price_high ) / 12
+```
+
+Sensors: *Demand charge this month*, *… without the guard (estimate)*, *Savings this month (estimate)*,
+*Savings this year (estimate)* (attribute `months`), *Relief now (estimate)*.
+
+**How the savings are estimated** (only in active mode, nothing is "saved" while only observing): for every quarter
+hour the guard adds up what its interventions kept out of the grid import – wallbox: what its setting would have
+allowed at the original current minus what it can draw now (never less than it really draws); switchable device:
+the power it had when it was switched off, while it is off; emergency action: the configured expected reduction.
+The highest of these "unguarded" quarter hours of the month is billed with the tariff. This is an estimate, not a
+measurement.
 
 ### Seeing what is configured
 
@@ -176,6 +205,9 @@ as "charging current setting". The guard then changes the helper and the automat
 | `sensor` Peak today | kW, attribute `days`: peak per day of the last 31 days with time |
 | `sensor` Peak this month | kW |
 | `sensor` Interventions today | count, attribute `observed` for observe mode |
+| `number` Demand charge up to / above the threshold, Price threshold | EUR/kW/year and kW |
+| `switch` Use peak already reached, Message on intervention, Calculate cost and savings | default on |
+| `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
 
 ## Development
 

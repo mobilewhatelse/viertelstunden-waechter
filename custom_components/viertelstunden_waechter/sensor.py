@@ -22,6 +22,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         ValueSensor(w, "quarter_energy", "quarter_energy_kwh", UnitOfEnergy.KILO_WATT_HOUR, SensorDeviceClass.ENERGY, 3),
         ValueSensor(w, "forecast", "forecast_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
         ValueSensor(w, "allowed", "allowed_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
+        ValueSensor(w, "saved_now", "saved_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
+        CostSensor(w, "cost_month", "cost"),
+        CostSensor(w, "cost_without", "cost_without"),
+        CostSensor(w, "savings_month", "saving"),
+        SavingsYearSensor(w),
         LastQuarterSensor(w),
         TodayPeakSensor(w),
         MonthPeakSensor(w),
@@ -74,6 +79,47 @@ class ValueSensor(WaechterEntity, SensorEntity):
     @property
     def last_reset(self):
         return self.waechter.guard.values.get("quarter") if self._value_key == "quarter_energy_kwh" else None
+
+
+class CostSensor(WaechterEntity, SensorEntity):
+    """Cost of this month's peak with the guard, without it (estimate) or the difference. Needs the prices."""
+
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_native_unit_of_measurement = "EUR"
+    _attr_suggested_display_precision = 2
+
+    def __init__(self, w, key: str, field: str) -> None:
+        super().__init__(w, key)
+        self._field = field
+
+    @property
+    def native_value(self) -> float | None:
+        return self.waechter.month_costs(dt_util.now().strftime("%Y-%m"))[self._field]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        c = self.waechter.month_costs(dt_util.now().strftime("%Y-%m"))
+        return {"peak_kw": c["peak"], "peak_without_kw": c["peak_without"], "prices_set": self.waechter.prices_set}
+
+
+class SavingsYearSensor(WaechterEntity, SensorEntity):
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_native_unit_of_measurement = "EUR"
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:piggy-bank"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "savings_year")
+
+    @property
+    def native_value(self) -> float | None:
+        return self.waechter.year_saving(dt_util.now().strftime("%Y"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        w = self.waechter
+        year = dt_util.now().strftime("%Y")
+        return {"months": {m: w.month_costs(m)["saving"] for m in sorted(w.months) if m.startswith(year)}}
 
 
 class LastQuarterSensor(WaechterEntity, SensorEntity):

@@ -79,6 +79,15 @@
       },
       "margin": {
         "name": "Sicherheitsabstand"
+      },
+      "price_low": {
+        "name": "Leistungspreis bis zur Schwelle"
+      },
+      "price_high": {
+        "name": "Leistungspreis über der Schwelle"
+      },
+      "price_threshold": {
+        "name": "Preisschwelle"
       }
     },
     "sensor": {
@@ -115,6 +124,32 @@
       },
       "interventions_today": {
         "name": "Eingriffe heute"
+      },
+      "saved_now": {
+        "name": "Entlastung jetzt (Schätzung)"
+      },
+      "cost_month": {
+        "name": "Leistungspreis diesen Monat"
+      },
+      "cost_without": {
+        "name": "Leistungspreis ohne Wächter (Schätzung)"
+      },
+      "savings_month": {
+        "name": "Ersparnis diesen Monat (Schätzung)"
+      },
+      "savings_year": {
+        "name": "Ersparnis dieses Jahr (Schätzung)"
+      }
+    },
+    "switch": {
+      "paid_peak": {
+        "name": "Bereits erreichte Spitze nutzen"
+      },
+      "notify_intervention": {
+        "name": "Meldung bei Eingriff"
+      },
+      "costs_enabled": {
+        "name": "Kosten und Ersparnis berechnen"
       }
     }
   },

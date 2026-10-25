@@ -10,8 +10,9 @@ import pathlib
 import sys
 from datetime import datetime, timedelta, timezone
 
-_ENGINE = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "viertelstunden_waechter" / "engine.py"
-_spec = importlib.util.spec_from_file_location("vw_engine", _ENGINE)
+_PKG = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "viertelstunden_waechter"
+sys.path.insert(0, str(_PKG))  # pricing.py (and other pure modules) can be imported directly
+_spec = importlib.util.spec_from_file_location("vw_engine", _PKG / "engine.py")
 engine = importlib.util.module_from_spec(_spec)
 sys.modules["vw_engine"] = engine
 _spec.loader.exec_module(engine)
@@ -88,8 +89,12 @@ def devices(prio_wb=1, prio_pool=2, prio_heater=3, pool_max_off=0.0):
     ]
 
 
-def run(house: House, guard, minutes: int, limit=10.0, margin=0.5, grid_gap=None, verbose=False):
-    """Returns (quarter averages in kW, log of action texts)."""
+def run(house: House, guard, minutes: int, limit=10.0, margin=0.5, grid_gap=None, verbose=False, unguarded=None,
+        finished=None):
+    """Returns (quarter averages in kW, log of action texts).
+
+    `unguarded` collects the guard's estimate without intervention per quarter, `finished` the guard's own measured
+    quarter averages (they differ slightly from the simulation because the guard integrates 20 s samples)."""
     quarters, log = [], []
     q_energy, q_start = 0.0, START
     for i in range(int(minutes * 60 / STEP_S)):
@@ -103,6 +108,10 @@ def run(house: House, guard, minutes: int, limit=10.0, margin=0.5, grid_gap=None
         missing = grid_gap is not None and grid_gap[0] <= t_min < grid_gap[1]
         acts = guard.step(now, None if missing else grid, None if missing else house.counter_kwh,
                           house.readings(), limit, margin, True)
+        if unguarded is not None and guard.finished_unguarded_kw is not None:
+            unguarded.append(guard.finished_unguarded_kw)
+        if finished is not None and guard.finished_quarter_kw is not None:
+            finished.append(guard.finished_quarter_kw)
         for a in acts:
             house.apply(a, t_min)
             if a.text:

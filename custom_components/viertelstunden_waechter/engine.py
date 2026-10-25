@@ -134,6 +134,10 @@ class Guard:
         self._notified_q: datetime | None = None
         self._missing_since: datetime | None = None
         self._p_hist: list[tuple[datetime, float]] = []
+        self.real_effect = True            # False in observe mode: nothing was really changed, so nothing was saved
+        self.saved_kwh = 0.0               # estimated energy the interventions kept out of this quarter hour
+        self.finished_unguarded_kw: float | None = None  # estimated average without the guard, set when a quarter ends
+        self._last_saved = 0.0
         self._restored: dict[str, datetime] = {}
         self._now = datetime.min
 
@@ -149,15 +153,20 @@ class Guard:
 
     def _account(self, now: datetime, grid_kw: float | None, counter_kwh: float | None) -> None:
         self.finished_quarter_kw = None
+        self.finished_unguarded_kw = None
         q = now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0)
         if self.quarter != q:
             first = self.quarter is None
             if not first and self.quarter == q - timedelta(minutes=15):
                 if self._last_t is not None:
-                    self.energy_kwh += self._last_p * max(0.0, min(60.0, (q - self._last_t).total_seconds())) / 3600.0
+                    tail = max(0.0, min(60.0, (q - self._last_t).total_seconds())) / 3600.0
+                    self.energy_kwh += self._last_p * tail
+                    self.saved_kwh += self._last_saved * tail
                 self.finished_quarter_kw = round(self.energy_kwh / 0.25, 3)
+                self.finished_unguarded_kw = round((self.energy_kwh + self.saved_kwh) / 0.25, 3)
             self.quarter = q
             self.energy_kwh = 0.0
+            self.saved_kwh = 0.0
             self._notified_q = None
             if first:
                 # started in the middle of a quarter hour: estimate what came before with the current power
@@ -169,6 +178,7 @@ class Guard:
         if grid_kw is not None and self._last_t is not None:
             dt = max(0.0, min(60.0, (now - self._last_t).total_seconds()))
             self.energy_kwh += self._last_p * dt / 3600.0
+            self.saved_kwh += self._last_saved * dt / 3600.0
         if counter_kwh is not None:
             if self._counter_at_q is None:
                 self._counter_at_q = counter_kwh - self.energy_kwh
@@ -214,6 +224,8 @@ class Guard:
             "forecast_kw": round(forecast, 2),
             "quarter": self.quarter,
         }
+        self._last_saved = self._saved_kw(readings)
+        self.values["saved_kw"] = round(self._last_saved, 2)
 
         if grid_kw is None:
             if self._missing_since is None:
@@ -247,6 +259,40 @@ class Guard:
                 actions = self._release(now, room, readings)
         self.state = "intervening" if self.interventions else "ready"
         return actions
+
+    # ---------- savings estimate ----------
+
+    def _saved_kw(self, readings: dict[str, Reading]) -> float:
+        """Rough estimate of the power the current interventions keep out of the grid import (0 in observe mode).
+
+        Wallbox: what its setting would allow at the original current minus what it can draw now (conservative:
+        never less than the power it really draws). Switch: the power it had when it was switched off, while it
+        is off. Script: the configured expected reduction.
+        """
+        if not self.real_effect or not self.interventions:
+            return 0.0
+        total = 0.0
+        for dev_id, iv in self.interventions.items():
+            dev, r = self.devices.get(dev_id), readings.get(dev_id)
+            if dev is None or r is None:
+                continue
+            if dev.kind == KIND_WALLBOX:
+                p = (r.power_w or 0.0) / 1000.0
+                if p < 1.0:
+                    continue
+                cur = r.current_a if r.current_a is not None else dev.max_current
+                orig = float(iv.get("orig_current") or dev.max_current)
+                phases = self._phases(dev, r)
+                orig_phases = 3 if iv.get("switched") else phases
+                orig_kw = orig * (V3 if orig_phases == 3 else V1) / 1000.0
+                cur_kw = cur * (V3 if phases == 3 else V1) / 1000.0
+                total += max(0.0, orig_kw - max(cur_kw, p))
+            elif dev.kind == KIND_SWITCH:
+                if r.is_on is False:
+                    total += float(iv.get("watt") or dev.power_w) / 1000.0
+            else:
+                total += dev.power_w / 1000.0
+        return round(total, 3)
 
     # ---------- reducing ----------
 
