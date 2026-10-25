@@ -245,12 +245,14 @@
             "power_w": "Assumed power without sensor",
             "max_off_min": "Maximum off time",
             "restore_entity": "Switch on again only while",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "pause_min": "Pause after taking back"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
-            "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on."
+            "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
+            "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection)."
           }
         },
         "reconfigure": {
@@ -265,12 +267,14 @@
             "power_w": "Assumed power without sensor",
             "max_off_min": "Maximum off time",
             "restore_entity": "Switch on again only while",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "pause_min": "Pause after taking back"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
-            "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on."
+            "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
+            "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection)."
           }
         }
       }
@@ -393,6 +397,182 @@
         "value_number": "This setting is a number: enter a number.",
         "value_onoff": "A switch needs the value on or off.",
         "unknown_option": "The selection has no such option."
+      }
+    },
+    "setting": {
+      "entry_type": "Change settings (e.g. heat pump)",
+      "initiate_flow": {
+        "user": "Add device with settings (e.g. heat pump block)",
+        "reconfigure": "Reconfigure settings device"
+      },
+      "step": {
+        "user": {
+          "title": "Change settings",
+          "description": "Changes one or two settings to lower the consumption and puts them back later, e.g. the block contact (SG-Ready / utility block) or the operating mode of a heat pump. Enter the setting and the value that does it.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "release_entity_1": "Setting that lowers the consumption",
+            "release_value_1": "Value for \"lowered\"",
+            "release_entity_2": "Second setting (optional)",
+            "release_value_2": "Value for \"lowered\" (second)",
+            "power_w": "Expected relief",
+            "comfort_entity": "Comfort sensor (optional)",
+            "comfort_min": "Comfort minimum",
+            "hold_min": "Minimum duration",
+            "pause_min": "Pause after taking back",
+            "max_off_min": "Maximum duration",
+            "restore_original": "Put the previous values back",
+            "off_script": "Script after taking back",
+            "allow_entity": "Intervention only while"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps.",
+            "release_entity_1": "A switch (e.g. block contact), a selection (e.g. mode) or a number.",
+            "release_value_1": "The option text, on/off or the number that lowers the consumption (e.g. on for a block contact).",
+            "power_w": "How many watts the change lowers the grid import (planning, savings estimate). For a throttle: the power at the normal value if there is no power sensor.",
+            "comfort_entity": "Room or hot water temperature (any sensor): while it is below the minimum the device is left alone, and an intervention is ended.",
+            "comfort_min": "Same unit as the comfort sensor.",
+            "hold_min": "An intervention is kept at least this long (0 = 5 minutes).",
+            "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
+            "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
+            "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
+            "off_script": "Optional script that runs after taking back.",
+            "allow_entity": "Optional. Only while this entity is on."
+          }
+        },
+        "reconfigure": {
+          "title": "Change settings",
+          "description": "Changes one or two settings to lower the consumption and puts them back later, e.g. the block contact (SG-Ready / utility block) or the operating mode of a heat pump. Enter the setting and the value that does it.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "release_entity_1": "Setting that lowers the consumption",
+            "release_value_1": "Value for \"lowered\"",
+            "release_entity_2": "Second setting (optional)",
+            "release_value_2": "Value for \"lowered\" (second)",
+            "power_w": "Expected relief",
+            "comfort_entity": "Comfort sensor (optional)",
+            "comfort_min": "Comfort minimum",
+            "hold_min": "Minimum duration",
+            "pause_min": "Pause after taking back",
+            "max_off_min": "Maximum duration",
+            "restore_original": "Put the previous values back",
+            "off_script": "Script after taking back",
+            "allow_entity": "Intervention only while"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps.",
+            "release_entity_1": "A switch (e.g. block contact), a selection (e.g. mode) or a number.",
+            "release_value_1": "The option text, on/off or the number that lowers the consumption (e.g. on for a block contact).",
+            "power_w": "How many watts the change lowers the grid import (planning, savings estimate). For a throttle: the power at the normal value if there is no power sensor.",
+            "comfort_entity": "Room or hot water temperature (any sensor): while it is below the minimum the device is left alone, and an intervention is ended.",
+            "comfort_min": "Same unit as the comfort sensor.",
+            "hold_min": "An intervention is kept at least this long (0 = 5 minutes).",
+            "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
+            "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
+            "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
+            "off_script": "Optional script that runs after taking back.",
+            "allow_entity": "Optional. Only while this entity is on."
+          }
+        }
+      },
+      "error": {
+        "pair": "Setting and value belong together.",
+        "value_number": "This setting is a number: enter a number.",
+        "value_onoff": "A switch needs the value on or off.",
+        "unknown_option": "The phase selection has no such option.",
+        "min_above_max": "Minimum current is above maximum current.",
+        "phase_pair": "Phase selection and option for 1 phase belong together.",
+        "step_too_big": "The step is larger than the range between lowest and normal value."
+      }
+    },
+    "throttle": {
+      "entry_type": "Throttle power (e.g. heat pump %)",
+      "initiate_flow": {
+        "user": "Add power throttle (percent, watts, amps)",
+        "reconfigure": "Reconfigure power throttle"
+      },
+      "step": {
+        "user": {
+          "title": "Throttle power",
+          "description": "Lowers a number (heat pump power in percent, heating element watts, charging power ...) stepwise between a minimum and its normal value and gives it back stepwise, like a wallbox current.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "value_entity": "Number to lower",
+            "max_value": "Normal value",
+            "min_value": "Lowest value",
+            "step": "Step",
+            "power_entity": "Power sensor (optional)",
+            "power_w": "Expected relief",
+            "comfort_entity": "Comfort sensor (optional)",
+            "comfort_min": "Comfort minimum",
+            "hold_min": "Minimum duration",
+            "pause_min": "Pause after taking back",
+            "max_off_min": "Maximum duration",
+            "allow_entity": "Intervention only while"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps.",
+            "value_entity": "A number or input_number entity, e.g. the power limit in percent.",
+            "max_value": "The value the device normally has (e.g. 100).",
+            "min_value": "Never lowered below this (e.g. 30).",
+            "step": "Size of one step (e.g. 10).",
+            "power_entity": "With a power sensor the new value is calculated from the real consumption; without it, one step per cycle.",
+            "power_w": "How many watts the change lowers the grid import (planning, savings estimate). For a throttle: the power at the normal value if there is no power sensor.",
+            "comfort_entity": "Room or hot water temperature (any sensor): while it is below the minimum the device is left alone, and an intervention is ended.",
+            "comfort_min": "Same unit as the comfort sensor.",
+            "hold_min": "An intervention is kept at least this long (0 = 5 minutes).",
+            "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
+            "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
+            "allow_entity": "Optional. Only while this entity is on."
+          }
+        },
+        "reconfigure": {
+          "title": "Throttle power",
+          "description": "Lowers a number (heat pump power in percent, heating element watts, charging power ...) stepwise between a minimum and its normal value and gives it back stepwise, like a wallbox current.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "value_entity": "Number to lower",
+            "max_value": "Normal value",
+            "min_value": "Lowest value",
+            "step": "Step",
+            "power_entity": "Power sensor (optional)",
+            "power_w": "Expected relief",
+            "comfort_entity": "Comfort sensor (optional)",
+            "comfort_min": "Comfort minimum",
+            "hold_min": "Minimum duration",
+            "pause_min": "Pause after taking back",
+            "max_off_min": "Maximum duration",
+            "allow_entity": "Intervention only while"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps.",
+            "value_entity": "A number or input_number entity, e.g. the power limit in percent.",
+            "max_value": "The value the device normally has (e.g. 100).",
+            "min_value": "Never lowered below this (e.g. 30).",
+            "step": "Size of one step (e.g. 10).",
+            "power_entity": "With a power sensor the new value is calculated from the real consumption; without it, one step per cycle.",
+            "power_w": "How many watts the change lowers the grid import (planning, savings estimate). For a throttle: the power at the normal value if there is no power sensor.",
+            "comfort_entity": "Room or hot water temperature (any sensor): while it is below the minimum the device is left alone, and an intervention is ended.",
+            "comfort_min": "Same unit as the comfort sensor.",
+            "hold_min": "An intervention is kept at least this long (0 = 5 minutes).",
+            "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
+            "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
+            "allow_entity": "Optional. Only while this entity is on."
+          }
+        }
+      },
+      "error": {
+        "pair": "Setting and value belong together.",
+        "value_number": "This setting is a number: enter a number.",
+        "value_onoff": "A switch needs the value on or off.",
+        "unknown_option": "The phase selection has no such option.",
+        "min_above_max": "Minimum current is above maximum current.",
+        "phase_pair": "Phase selection and option for 1 phase belong together.",
+        "step_too_big": "The step is larger than the range between lowest and normal value."
       }
     }
   }

@@ -86,6 +86,8 @@ The device types:
 | Wallbox | lowers the current (3-phase down to the minimum, then optionally 1-phase) | charging power sensor, current setting (`number`), optional phase selection (`select`) |
 | Switchable device | switches off / on again | switch, optional power sensor |
 | Battery | releases the home battery so it feeds the house (settings and values you enter, previous values are put back) | state of charge sensor, one or two settings (`number` / `select` / switch) |
+| Change settings | changes one or two settings (block contact, operating mode ...) and puts them back | the settings (`switch`, `select`, `number`) and the value for "lowered" |
+| Throttle power | lowers a `number` (percent, watts, amps) stepwise between a minimum and its normal value and gives it back stepwise | a number entity, optional power sensor |
 | Emergency action | runs a script, a second script undoes it | scripts, for anything the other types cannot do |
 
 Each device has a **priority** (1 = restricted first, 10 = only if nothing else helps), an optional
@@ -113,6 +115,36 @@ The battery is offered as a measure only if at least one of its settings differs
 not "released" twice) and the state of charge allows it. It defaults to priority 10: last. Example:
 `number.battery_max_output_power` → `800` and `select.battery_mode` → `on`.
 
+### Heat pumps and other devices with a power limit
+
+Heat pumps are controlled in three ways in Home Assistant; the guard supports all three. **Tested in the
+simulator only** (no heat pump was available) - try it in observe mode first.
+
+| Your heat pump offers | Device type | Example |
+|---|---|---|
+| a **power limit** as a number (percent, watts, kilowatts; often via Modbus) | **Throttle power** | number `maximum compressor power` 100 → 30 in steps of 10 |
+| a **block contact** (SG-Ready / utility block) as one or two switches | **Change settings** | block switch → `on` (SG-Ready mode 1: switch 1 `on`, switch 2 `off`) |
+| an **operating mode** as a selection | **Change settings** | mode select → `Off` or `Eco` |
+| only an on/off switch | switchable device | always with a *maximum off time* |
+| a `climate` entity (setpoint) | emergency action (script) | a script lowers the setpoint, one restores it |
+
+**Throttle power:** with a power sensor the new value is calculated from the real consumption (power follows the
+value), without it the value is lowered by one step per cycle. The guard never goes below the *lowest value* and
+gives the value back stepwise when there is headroom.
+
+**Protecting the heat pump** (all optional, for *Throttle power* and *Change settings*):
+
+- **Comfort sensor and comfort minimum:** a room or hot water temperature. While it is below the minimum the
+  device is left alone, and an intervention that is running is ended.
+- **Minimum duration:** an intervention is kept at least this long (default 5 minutes).
+- **Pause after taking back:** wait this long before the next intervention - keeps the compressor from short
+  cycles (switchable devices have this field too).
+- **Maximum duration:** taken back after this time in any case.
+
+*Change settings* restores the previous values after the intervention, but only those that still hold the changed
+value (a value set meanwhile by another automation is left alone); switch off "put the previous values back" and
+use the script field if your heat pump has its own control logic.
+
 ### Which actuators work
 
 The guard can switch something **on/off**, **lower a current** (wallbox) or **run a script**. Whatever can be
@@ -124,9 +156,10 @@ reduced to one of these works.
 | Wallbox with a settable charging current | yes | wallbox (current `number`, optional phase `select`) |
 | Heat pump / heating element with a contact (e.g. SG-Ready), air conditioner with a switch | yes | switchable device |
 | Home battery, inverter modes | yes | battery (settings and values), or an emergency action (two scripts) |
+| Heat pump with power limit, block contact or operating mode | yes (simulator only) | throttle power / change settings, see above |
 | Anything that is an action in Home Assistant (scene, automation, mode select) | yes | emergency action (script) |
 | `climate` entities (setpoint) | via script only | one script lowers the setpoint, one restores it |
-| Devices with an adjustable **power** (stepless heating element, battery charge power) | roughly | via scripts only on/off, not stepwise |
+| Devices with an adjustable **power** (stepless heating element, heat pump percent, charge power) | yes | throttle power (stepwise) |
 | Wallbox that can only be started and stopped | possible, not recommended | as a switchable device it would stop charging |
 | Blinds, lights, locks | no | save no relevant power |
 
@@ -182,9 +215,7 @@ as "charging current setting". The guard then changes the helper and the automat
 
 ### Roadmap
 
-- **Power throttle** device type: lowers a `number` (heating element power, battery charge power) stepwise
-  between a minimum and a maximum, like the wallbox current, and gives it back stepwise. Not built yet – it is
-  added when someone needs it and can test it on real hardware.
+- Real-hardware tests of *Throttle power* and *Change settings* (heat pumps) - until then they are simulator-tested only.
 - Charge plan for the car, battery reserve before an expected peak, early and gentler intervention based on the
   forecast, and a daily plan proposed by an AI task (validated against hard limits).
 

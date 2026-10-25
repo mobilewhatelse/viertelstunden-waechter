@@ -19,12 +19,13 @@ from .const import (
     CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
-    D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC,
+    D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
 )
 from .forecast import LoadModel, hourly, risk_windows
 from .pricing import monthly_cost
 from .engine import (
-    KIND_BATTERY, KIND_SCRIPT, KIND_SWITCH, KIND_WALLBOX, STRATEGY_COMFORT, Action, DeviceConfig, Guard, Reading,
+    KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
+    DeviceConfig, Guard, Reading,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -194,8 +195,12 @@ class Waechter:
                 r.restore_allowed = self._is_on(d.get(D_RESTORE), False) if d.get(D_RESTORE) else True
             elif kind == KIND_SCRIPT:
                 r.available = self.hass.states.get(d.get(D_ON_SCRIPT) or "") is not None
-            elif kind == KIND_BATTERY:
-                r.soc = self._float(d.get(D_SOC))
+            elif kind == KIND_THROTTLE:
+                r.value = self._float(d.get(D_VALUE))
+                r.available = r.value is not None
+                r.soc = self._float(d.get(D_COMFORT))
+            elif kind in (KIND_BATTERY, KIND_SETTING):
+                r.soc = self._float(d.get(D_SOC) or d.get(D_COMFORT))
                 pairs = self._battery_pairs(d)
                 r.available = any(self._state(e) is not None for e, _ in pairs)
                 r.releasable = any(self._state(e) is not None and not _same_value(self._state(e).state, v) for e, v in pairs)
@@ -408,6 +413,8 @@ class Waechter:
             await self._call(eid.split(".")[0], "select_option", {"entity_id": eid, "option": a.value})
         elif a.kind in ("turn_off", "turn_on"):
             await self._call("homeassistant", a.kind, {"entity_id": d[D_SWITCH]})
+        elif a.kind == "set_value":
+            await self._set_entity(d[D_VALUE], str(a.value))
         elif a.kind == "battery_release":
             orig: dict[str, str] = {}
             for ent, val in self._battery_pairs(d):

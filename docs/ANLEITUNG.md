@@ -108,6 +108,37 @@ Notfall frei, damit er das Haus versorgt und den Netzbezug senkt.
 Die Batterie wird nur als Maßnahme angeboten, wenn mindestens eine ihrer Einstellungen vom Freigabewert abweicht
 (sie wird nicht zweimal „freigegeben“) und der Ladestand es zulässt. Standard-Priorität ist 10: zuletzt.
 
+### Wärmepumpen und andere Geräte mit Leistungsbegrenzung
+
+Wärmepumpen werden in Home Assistant auf drei Arten gesteuert; der Wächter unterstützt alle drei.
+**Bisher nur im Simulator getestet** (es stand keine Wärmepumpe zur Verfügung) – bitte zuerst im
+Beobachtungsmodus ausprobieren.
+
+| Ihre Wärmepumpe bietet | Gerätetyp | Beispiel |
+|---|---|---|
+| eine **Leistungsbegrenzung** als Zahl (Prozent, Watt, Kilowatt; oft über Modbus) | **Leistung drosseln** | Zahl „Maximale Verdichterleistung“ 100 → 30 in Schritten von 10 |
+| einen **Sperrkontakt** (SG-Ready / EVU-Sperre) als ein oder zwei Schalter | **Einstellung ändern** | Sperr-Schalter → `on` (SG-Ready-Modus 1: Schalter 1 `on`, Schalter 2 `off`) |
+| einen **Betriebsmodus** als Auswahl | **Einstellung ändern** | Modus-Auswahl → `Aus` oder `Eco` |
+| nur einen Ein/Aus-Schalter | schaltbares Gerät | immer mit **Höchster Auszeit** |
+| eine `climate`-Entität (Solltemperatur) | Notfall-Aktion (Skript) | ein Skript senkt die Solltemperatur, eines setzt sie zurück |
+
+**Leistung drosseln:** Mit Leistungssensor wird der neue Wert aus dem echten Verbrauch berechnet (die Leistung
+folgt dem Wert), ohne Sensor wird der Wert je Durchlauf um einen Schritt gesenkt. Der Wächter geht nie unter den
+**niedrigsten Wert** und gibt den Wert schrittweise zurück, wenn wieder Platz ist.
+
+**Schutz der Wärmepumpe** (alles optional, für „Leistung drosseln“ und „Einstellung ändern“):
+
+- **Komfort-Sensor und Komfort-Minimum:** eine Raum- oder Warmwassertemperatur. Solange sie unter dem Minimum
+  liegt, wird das Gerät in Ruhe gelassen, und ein laufender Eingriff wird beendet.
+- **Mindestdauer:** Ein Eingriff bleibt mindestens so lange (Standard 5 Minuten).
+- **Pause nach dem Zurücknehmen:** So lange warten, bevor wieder eingegriffen wird – schützt den Verdichter vor
+  kurzen Zyklen (auch schaltbare Geräte haben dieses Feld).
+- **Höchste Dauer:** Danach wird auf jeden Fall zurückgenommen.
+
+**Einstellung ändern** stellt nach dem Eingriff die vorherigen Werte wieder her, aber nur die, die noch den
+geänderten Wert haben (was inzwischen eine andere Automation gesetzt hat, bleibt). Hat Ihre Wärmepumpe eine
+eigene Steuerlogik, schalten Sie „Vorherige Werte wiederherstellen“ aus und nutzen das Skript-Feld.
+
 ### Notfall-Aktion (Skript)
 
 Für alles, was die anderen Gerätetypen nicht können. Beim **Hausakku** nehmen Sie besser den Gerätetyp Batterie
@@ -151,9 +182,10 @@ Alles, was sich darauf zurückführen lässt, geht.
 | Wallbox mit einstellbarem Ladestrom | ja | Wallbox (Zahl für den Strom, Phasenumschaltung optional) |
 | Wärmepumpe oder Heizstab mit Kontakt (z. B. SG-Ready), Klimaanlage mit Schalter | ja | schaltbares Gerät |
 | Hausakku, Wechselrichter-Modi | ja | Batterie (Einstellungen und Werte) oder Notfall-Aktion (zwei Skripte) |
+| Wärmepumpe mit Leistungsbegrenzung, Sperrkontakt oder Betriebsmodus | ja (nur Simulator) | Leistung drosseln / Einstellung ändern, siehe oben |
 | Alles, was in Home Assistant eine Aktion hat (Szene, Automation, Modus-Auswahl) | ja | Notfall-Aktion (Skript) |
 | `climate` (Solltemperatur) | nur über Skript | ein Skript senkt die Solltemperatur, eines setzt sie zurück |
-| Gerät mit **einstellbarer Leistung** (stufenloser Heizstab, Akku-Ladeleistung) | grob | über Skripte nur an/aus, nicht stufenweise |
+| Gerät mit **einstellbarer Leistung** (stufenloser Heizstab, Wärmepumpe in Prozent, Ladeleistung) | ja | Leistung drosseln (stufenweise) |
 | Wallbox, die nur starten und stoppen kann | möglich, nicht empfohlen | als schaltbares Gerät würde sie das Laden stoppen |
 | Rollläden, Beleuchtung, Schlösser | nein | sparen keine nennenswerte Leistung |
 
@@ -188,11 +220,9 @@ Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installa
 aufruft. Den Helfer trägt man als „Einstellung Ladestrom“ ein. Der Wächter ändert dann den Helfer, die Automation
 gibt es weiter.
 
-**Noch nicht gebaut (Ausblick):** ein Gerätetyp **„Leistung drosseln“**, der eine Zahl (Heizstableistung,
-Akku-Ladeleistung) stufenweise absenkt und zurückgibt, wie bei der Wallbox. Er wird ergänzt, sobald ihn jemand
-braucht und an echter Hardware testen kann. Außerdem geplant: Lastprognose, Ladeplan fürs Auto, Akku-Reserve
-vor einem erwarteten Spitzenabend, früheres und sanfteres Eingreifen anhand der Prognose und ein Tagesplan als
-Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
+**Noch nicht gebaut (Ausblick):** Tests von „Leistung drosseln“ und „Einstellung ändern“ an echter Hardware (bisher nur im
+Simulator), Ladeplan fürs Auto, Akku-Reserve vor einem erwarteten Spitzenabend, früheres und sanfteres Eingreifen
+anhand der Prognose und ein Tagesplan als Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
 
 ---
 

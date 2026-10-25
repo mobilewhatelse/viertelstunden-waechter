@@ -149,6 +149,51 @@ class BatteryTests(unittest.TestCase):
         self.assertGreater(max(ug), max(own))
 
 
+class ThrottleTests(unittest.TestCase):
+    def test_heat_pump_is_throttled_stepwise_and_restored(self):
+        # heat pump 3 kW at 100 %, lowest priority number = first: 100 -> ... -> 30 %, never below
+        house = House(cooker=[(5, 35, 7.0)], throttle=True, car=False, pool=False, heater=False)
+        guard = engine.Guard(devices(throttle_prio=1), engine.STRATEGY_ORDER)
+        quarters, log = run(house, guard, 90, limit=9.0, margin=0.5)  # 10.4 kW load; at 30 % the pump needs 0.9 kW
+        self.assertTrue(any("Waermepumpe 100 →" in x for x in log), log)
+        self.assertGreaterEqual(min(float(x.split("→")[1].split("(")[0]) for x in log if "Waermepumpe" in x and "→" in x and "wieder" not in x), 30.0)
+        self.assertEqual(house.thr_value, 100.0, "back to the normal value at the end")
+        self.assertLessEqual(max(quarters), 9.0, quarters)
+
+    def test_comfort_guard_prevents_and_ends_throttling(self):
+        house = House(cooker=[(5, 35, 7.0)], throttle=True, car=False, pool=False, heater=False, comfort=17.0)
+        guard = engine.Guard(devices(throttle_prio=1, min_soc=19.0), engine.STRATEGY_ORDER)
+        _, log = run(house, guard, 40, limit=5.0, margin=0.5)
+        self.assertFalse(any("Waermepumpe" in x and "→" in x for x in log), "too cold: the heat pump is left alone")
+
+    def test_pause_after_taking_back(self):
+        guard = engine.Guard(devices(throttle_prio=1, pause_min=20.0), engine.STRATEGY_ORDER)
+        R = engine.Reading
+        t = START
+        r = {"hp": R(power_w=3000.0, value=100.0)}
+        for i in range(4):  # import too high -> throttled
+            guard.step(t + timedelta(seconds=20 * i), 7.0, None, r, 5.0, 0.5, True)
+            if guard.interventions:
+                break
+        self.assertIn("hp", guard.interventions)
+        guard.release_all(t + timedelta(minutes=2), r, "test")
+        self.assertNotIn("hp", guard.interventions)
+        later = t + timedelta(minutes=5)
+        for i in range(6):
+            guard.step(later + timedelta(seconds=20 * i), 7.0, None, r, 5.0, 0.5, True)
+        self.assertNotIn("hp", guard.interventions, "pause of 20 minutes after taking back")
+
+    def test_setting_device_acts_like_the_battery(self):
+        dev = engine.DeviceConfig(id="hp", name="Waermepumpe", kind="setting", priority=2, power_w=2000)
+        guard = engine.Guard([dev], engine.STRATEGY_ORDER)
+        R = engine.Reading
+        acts = []
+        for i in range(8):
+            acts += guard.step(START + timedelta(seconds=20 * i), 9.0, None, {"hp": R(releasable=True)}, 5.0, 0.5, True)
+        self.assertTrue(any(a.kind == "battery_release" for a in acts))
+        self.assertIn("hp", guard.interventions)
+
+
 class SafetyTests(unittest.TestCase):
     def _guard_with_pool_off(self):
         guard = engine.Guard(devices(prio_wb=9, prio_pool=1))

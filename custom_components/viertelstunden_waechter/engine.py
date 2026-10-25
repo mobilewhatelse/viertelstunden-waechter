@@ -13,6 +13,7 @@ Short peaks are fine as long as the quarter-hour average stays below the target.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from itertools import combinations
@@ -25,6 +26,10 @@ KIND_WALLBOX = "wallbox"
 KIND_SWITCH = "switch"
 KIND_SCRIPT = "script"
 KIND_BATTERY = "battery"
+KIND_SETTING = "setting"    # changes settings (e.g. block contact of a heat pump) and puts them back
+KIND_THROTTLE = "throttle"  # lowers a number (percent, watts, amps) stepwise and gives it back stepwise
+SETTING_KINDS = (KIND_BATTERY, KIND_SETTING)
+GUARDED_KINDS = (KIND_BATTERY, KIND_SETTING, KIND_THROTTLE)
 
 STRATEGY_COMFORT = "comfort"  # least loss of comfort: cheapest combination of devices that is enough
 STRATEGY_ORDER = "order"      # strict order by priority, like a fixed list
@@ -59,7 +64,12 @@ class DeviceConfig:
     min_current: int = 6          # wallbox
     max_current: int = 16
     one_phase_option: str | None = None  # wallbox: select option for 1 phase; None = no phase switching
-    min_soc: float = 30.0         # battery: only released at or above this state of charge (%)
+    min_soc: float = 30.0         # battery: only released at or above this state of charge (%); setting/throttle: comfort minimum
+    min_value: float = 0.0        # throttle: never lower than this
+    max_value: float = 100.0      # throttle: normal value
+    step: float = 5.0             # throttle: step size
+    hold_min: float = 0.0         # minimum time an intervention is kept (0 = general default of 5 minutes)
+    pause_min: float = 0.0        # minimum pause after taking back before the next intervention (compressor protection)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -74,7 +84,12 @@ class DeviceConfig:
             min_current=int(d.get("min_current", 6)),
             max_current=int(d.get("max_current", 16)),
             one_phase_option=d.get("one_phase_option") or None,
-            min_soc=float(d.get("min_soc", 30.0)),
+            min_soc=float(d.get("min_soc", d.get("comfort_min", 30.0 if d.get("kind") == "battery" else 0.0))),
+            min_value=float(d.get("min_value", 0.0)),
+            max_value=float(d.get("max_value", 100.0)),
+            step=max(0.001, float(d.get("step", 5.0))),
+            hold_min=float(d.get("hold_min", 0.0)),
+            pause_min=float(d.get("pause_min", 0.0)),
         )
 
 
@@ -91,7 +106,8 @@ class Reading:
     allowed: bool = True          # condition entity: an intervention is possible right now
     restore_allowed: bool = True  # switch: may be switched back on (e.g. still within its schedule)
     soc: float | None = None      # battery: state of charge in %
-    releasable: bool = True       # battery: at least one release setting differs from its release value
+    releasable: bool = True       # battery/setting: at least one setting differs from its release value
+    value: float | None = None    # throttle: current value of the number
 
 
 @dataclass
@@ -295,6 +311,12 @@ class Guard:
             elif dev.kind == KIND_SWITCH:
                 if r.is_on is False:
                     total += float(iv.get("watt") or dev.power_w) / 1000.0
+            elif dev.kind == KIND_THROTTLE:
+                cur = self._thr_value(dev, r)
+                p = (r.power_w or 0.0) / 1000.0
+                orig = float(iv.get("orig_value", dev.max_value))
+                if p >= 0.3 and cur > 0 and orig > cur:
+                    total += p * (orig / cur - 1.0)
             else:
                 total += dev.power_w / 1000.0
         return round(total, 3)
@@ -311,6 +333,10 @@ class Guard:
                 red = self._wb_reduction(dev, r, now)
                 if red >= 0.1:
                     opts.append(_Option(dev, red))
+            elif dev.kind == KIND_THROTTLE:
+                red = self._thr_reduction(dev, r, now)
+                if red >= 0.1:
+                    opts.append(_Option(dev, red))
             elif dev.id in self.interventions or not r.allowed:
                 continue
             elif dev.kind == KIND_SWITCH:
@@ -319,7 +345,7 @@ class Guard:
                     opts.append(_Option(dev, pw / 1000.0))
             elif dev.kind == KIND_SCRIPT and dev.power_w > 0:
                 opts.append(_Option(dev, dev.power_w / 1000.0))
-            elif dev.kind == KIND_BATTERY and dev.power_w > 0:
+            elif dev.kind in SETTING_KINDS and dev.power_w > 0:
                 if r.releasable and (r.soc is None or r.soc >= dev.min_soc):
                     opts.append(_Option(dev, dev.power_w / 1000.0))
         return opts
@@ -365,15 +391,88 @@ class Guard:
             pw = r.power_w if r.power_w is not None else dev.power_w
             self.interventions[dev.id] = {"since": now.isoformat(), "watt": pw}
             acts = [Action(dev.id, "turn_off", None, f"{dev.name} aus ({pw:.0f} W, {excess:.1f} kW zu viel)")]
+        elif dev.kind == KIND_THROTTLE:
+            acts = self._thr_reduce(dev, r, min(excess + 0.2, first.reduction_kw + 0.2), now, excess)
         elif dev.kind == KIND_BATTERY:
             self.interventions[dev.id] = {"since": now.isoformat(), "soc": r.soc}
             soc = f", Ladestand {r.soc:.0f} %" if r.soc is not None else ""
             acts = [Action(dev.id, "battery_release", None, f"{dev.name}: Batterie freigegeben ({excess:.1f} kW zu viel{soc})")]
+        elif dev.kind == KIND_SETTING:
+            self.interventions[dev.id] = {"since": now.isoformat(), "soc": r.soc}
+            acts = [Action(dev.id, "battery_release", None, f"{dev.name}: Einstellung geändert ({excess:.1f} kW zu viel)")]
         else:
             self.interventions[dev.id] = {"since": now.isoformat()}
             acts = [Action(dev.id, "script_on", None, f"{dev.name}: Notfall-Eingriff ({excess:.1f} kW zu viel)")]
         if acts:
             self._last_action = now
+        return acts
+
+    # ---------- throttle (stepless number) ----------
+
+    @staticmethod
+    def _thr_value(dev: DeviceConfig, r: Reading) -> float:
+        return r.value if r.value is not None else dev.max_value
+
+    def _thr_reduction(self, dev: DeviceConfig, r: Reading, now: datetime) -> float:
+        """How many kW lowering to the minimum would bring (0 if not possible right now)."""
+        if _secs(self._wbt(dev.id)["changed"], now) < WALLBOX_STEP_S:
+            return 0.0
+        if dev.id not in self.interventions and not r.allowed:
+            return 0.0
+        if r.soc is not None and r.soc < dev.min_soc:
+            return 0.0
+        cur = self._thr_value(dev, r)
+        if cur <= dev.min_value + 1e-9 or cur <= 0:
+            return 0.0
+        p = (r.power_w or 0.0) / 1000.0
+        if p >= 0.3:
+            return max(0.0, p * (1.0 - dev.min_value / cur))
+        span = max(dev.max_value - dev.min_value, 1e-9)
+        return max(0.0, dev.power_w / 1000.0 * (cur - dev.min_value) / span)
+
+    def _thr_reduce(self, dev: DeviceConfig, r: Reading, want_kw: float, now: datetime, excess: float) -> list[Action]:
+        cur = self._thr_value(dev, r)
+        p = (r.power_w or 0.0) / 1000.0
+        if p >= 0.3:
+            new = cur * max(0.0, p - want_kw) / p  # power follows the value
+        else:
+            new = cur - dev.step
+        new = math.floor(new / dev.step + 1e-9) * dev.step
+        if new >= cur:
+            new = cur - dev.step
+        new = max(dev.min_value, new)
+        if new >= cur - 1e-9:
+            return []
+        self.interventions.setdefault(dev.id, {"since": now.isoformat(), "orig_value": cur})
+        self._wbt(dev.id)["changed"] = now
+        return [Action(dev.id, "set_value", new, f"{dev.name} {cur:g} → {new:g} ({excess:.1f} kW zu viel)")]
+
+    def _thr_release(self, dev: DeviceConfig, r: Reading, room: float, now: datetime, force: bool) -> list[Action]:
+        iv = self.interventions[dev.id]
+        t = self._wbt(dev.id)
+        cur = self._thr_value(dev, r)
+        orig = float(iv.get("orig_value", dev.max_value))
+        if force:
+            del self.interventions[dev.id]
+            return [Action(dev.id, "set_value", orig, f"{dev.name} wieder {orig:g}", False)]
+        hold = max(WALLBOX_UP_AFTER_S, dev.hold_min * 60)
+        if _secs(t["changed"], now) < hold:
+            return []
+        if cur >= orig - 1e-9:
+            del self.interventions[dev.id]
+            return [Action(dev.id, "log", None, f"{dev.name} wieder frei", False)]
+        p = (r.power_w or 0.0) / 1000.0
+        if p >= 0.3 and cur > 0:
+            per_step = p * dev.step / cur
+        else:
+            per_step = dev.power_w / 1000.0 * dev.step / max(dev.max_value - dev.min_value, 1e-9)
+        if room <= per_step + 0.15:
+            return []
+        new = min(orig, cur + dev.step)
+        t["changed"] = now
+        acts = [Action(dev.id, "set_value", new, f"{dev.name} {cur:g} → {new:g} (wieder mehr Luft)", False)]
+        if new >= orig - 1e-9:
+            del self.interventions[dev.id]
         return acts
 
     # ---------- wallbox ----------
@@ -507,10 +606,20 @@ class Guard:
     # ---------- releasing ----------
 
     def _release_one(self, dev: DeviceConfig, r: Reading, room: float, now: datetime, force: bool) -> list[Action]:
+        had = dev.id in self.interventions
+        acts = self._release_one_inner(dev, r, room, now, force)
+        if had and dev.id not in self.interventions and dev.pause_min > 0:
+            self._rest_until[dev.id] = now + timedelta(minutes=dev.pause_min)  # protect e.g. a compressor
+        return acts
+
+    def _release_one_inner(self, dev: DeviceConfig, r: Reading, room: float, now: datetime, force: bool) -> list[Action]:
         iv = self.interventions[dev.id]
         if dev.kind == KIND_WALLBOX:
             return self._wb_release(dev, r, room, now, force)
-        if not force and _secs(datetime.fromisoformat(iv["since"]), now) < MIN_OFF_S:
+        if dev.kind == KIND_THROTTLE:
+            return self._thr_release(dev, r, room, now, force)
+        hold = dev.hold_min * 60 if dev.hold_min > 0 else MIN_OFF_S
+        if not force and _secs(datetime.fromisoformat(iv["since"]), now) < hold:
             return []
         if dev.kind == KIND_SWITCH:
             need = float(iv.get("watt") or dev.power_w) / 1000.0 + 0.1
@@ -524,8 +633,8 @@ class Guard:
         if not force and room <= need:
             return []
         del self.interventions[dev.id]
-        if dev.kind == KIND_BATTERY:
-            return [Action(dev.id, "battery_restore", None, f"{dev.name}: Batterie wieder wie vorher", False)]
+        if dev.kind in SETTING_KINDS:
+            return [Action(dev.id, "battery_restore", None, f"{dev.name}: wieder wie vorher", False)]
         return [Action(dev.id, "script_off", None, f"{dev.name}: Eingriff zurückgenommen", False)]
 
     def _release(self, now: datetime, room: float, readings: dict[str, Reading]) -> list[Action]:
@@ -555,8 +664,9 @@ class Guard:
         for dev_id in list(self.interventions):
             dev = self.devices[dev_id]
             r = readings.get(dev_id)
-            if dev.kind == KIND_BATTERY and r is not None and r.soc is not None and r.soc < dev.min_soc:
-                acts.append(Action(dev_id, "log", None, f"{dev.name}: Ladestand {r.soc:.0f} % unter dem Mindestwert ({dev.min_soc:.0f} %)", False))
+            if dev.kind in GUARDED_KINDS and r is not None and r.soc is not None and r.soc < dev.min_soc:
+                what = "Ladestand" if dev.kind == KIND_BATTERY else "Schutzwert"
+                acts.append(Action(dev_id, "log", None, f"{dev.name}: {what} {r.soc:g} unter dem Mindestwert ({dev.min_soc:g})", False))
                 acts += self._release_one(dev, r, 0.0, now, True)
                 self._rest_until[dev_id] = now + timedelta(minutes=10)
                 continue

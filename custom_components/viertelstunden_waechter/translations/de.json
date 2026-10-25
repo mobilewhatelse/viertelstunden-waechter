@@ -245,12 +245,14 @@
             "power_w": "Angenommene Leistung ohne Sensor",
             "max_off_min": "Höchste Auszeit",
             "restore_entity": "Nur wieder einschalten, solange",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "pause_min": "Pause nach dem Zurücknehmen"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
-            "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will."
+            "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
+            "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz)."
           }
         },
         "reconfigure": {
@@ -265,12 +267,14 @@
             "power_w": "Angenommene Leistung ohne Sensor",
             "max_off_min": "Höchste Auszeit",
             "restore_entity": "Nur wieder einschalten, solange",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "pause_min": "Pause nach dem Zurücknehmen"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
-            "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will."
+            "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
+            "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz)."
           }
         }
       }
@@ -393,6 +397,182 @@
         "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
         "value_onoff": "Ein Schalter braucht den Wert on oder off.",
         "unknown_option": "Die Auswahl hat diese Option nicht."
+      }
+    },
+    "setting": {
+      "entry_type": "Einstellung ändern (z. B. Wärmepumpe)",
+      "initiate_flow": {
+        "user": "Gerät mit Einstellung hinzufügen (z. B. Wärmepumpen-Sperre)",
+        "reconfigure": "Gerät mit Einstellung ändern"
+      },
+      "step": {
+        "user": {
+          "title": "Einstellung ändern",
+          "description": "Ändert eine oder zwei Einstellungen, um den Verbrauch zu senken, und stellt sie später zurück, z. B. den Sperrkontakt (SG-Ready / EVU-Sperre) oder den Betriebsmodus einer Wärmepumpe. Tragen Sie die Einstellung und den Wert dafür ein.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "release_entity_1": "Einstellung, die den Verbrauch senkt",
+            "release_value_1": "Wert für „gesenkt“",
+            "release_entity_2": "Zweite Einstellung (optional)",
+            "release_value_2": "Wert für „gesenkt“ (zweite)",
+            "power_w": "Erwartete Entlastung",
+            "comfort_entity": "Komfort-Sensor (optional)",
+            "comfort_min": "Komfort-Minimum",
+            "hold_min": "Mindestdauer",
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "max_off_min": "Höchste Dauer",
+            "restore_original": "Vorherige Werte wiederherstellen",
+            "off_script": "Skript nach dem Zurücknehmen",
+            "allow_entity": "Eingriff nur, solange"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+            "release_entity_1": "Ein Schalter (z. B. Sperrkontakt), eine Auswahl (z. B. Modus) oder eine Zahl.",
+            "release_value_1": "Der Optionstext, on/off oder die Zahl, die den Verbrauch senkt (z. B. on bei einem Sperrkontakt).",
+            "power_w": "Um wie viele Watt die Änderung den Netzbezug senkt (Planung, Ersparnis-Schätzung). Bei der Drossel: die Leistung beim Normalwert, falls es keinen Leistungssensor gibt.",
+            "comfort_entity": "Raum- oder Warmwassertemperatur (beliebiger Sensor): Solange sie unter dem Minimum liegt, wird das Gerät in Ruhe gelassen, und ein Eingriff wird beendet.",
+            "comfort_min": "Gleiche Einheit wie der Komfort-Sensor.",
+            "hold_min": "Ein Eingriff bleibt mindestens so lange (0 = 5 Minuten).",
+            "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
+            "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
+            "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
+            "off_script": "Optionales Skript nach dem Zurücknehmen.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist."
+          }
+        },
+        "reconfigure": {
+          "title": "Einstellung ändern",
+          "description": "Ändert eine oder zwei Einstellungen, um den Verbrauch zu senken, und stellt sie später zurück, z. B. den Sperrkontakt (SG-Ready / EVU-Sperre) oder den Betriebsmodus einer Wärmepumpe. Tragen Sie die Einstellung und den Wert dafür ein.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "release_entity_1": "Einstellung, die den Verbrauch senkt",
+            "release_value_1": "Wert für „gesenkt“",
+            "release_entity_2": "Zweite Einstellung (optional)",
+            "release_value_2": "Wert für „gesenkt“ (zweite)",
+            "power_w": "Erwartete Entlastung",
+            "comfort_entity": "Komfort-Sensor (optional)",
+            "comfort_min": "Komfort-Minimum",
+            "hold_min": "Mindestdauer",
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "max_off_min": "Höchste Dauer",
+            "restore_original": "Vorherige Werte wiederherstellen",
+            "off_script": "Skript nach dem Zurücknehmen",
+            "allow_entity": "Eingriff nur, solange"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+            "release_entity_1": "Ein Schalter (z. B. Sperrkontakt), eine Auswahl (z. B. Modus) oder eine Zahl.",
+            "release_value_1": "Der Optionstext, on/off oder die Zahl, die den Verbrauch senkt (z. B. on bei einem Sperrkontakt).",
+            "power_w": "Um wie viele Watt die Änderung den Netzbezug senkt (Planung, Ersparnis-Schätzung). Bei der Drossel: die Leistung beim Normalwert, falls es keinen Leistungssensor gibt.",
+            "comfort_entity": "Raum- oder Warmwassertemperatur (beliebiger Sensor): Solange sie unter dem Minimum liegt, wird das Gerät in Ruhe gelassen, und ein Eingriff wird beendet.",
+            "comfort_min": "Gleiche Einheit wie der Komfort-Sensor.",
+            "hold_min": "Ein Eingriff bleibt mindestens so lange (0 = 5 Minuten).",
+            "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
+            "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
+            "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
+            "off_script": "Optionales Skript nach dem Zurücknehmen.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist."
+          }
+        }
+      },
+      "error": {
+        "pair": "Einstellung und Wert gehören zusammen.",
+        "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
+        "value_onoff": "Ein Schalter braucht den Wert on oder off.",
+        "unknown_option": "Diese Option hat die Phasenwahl nicht.",
+        "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
+        "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
+        "step_too_big": "Der Schritt ist größer als der Bereich zwischen niedrigstem Wert und Normalwert."
+      }
+    },
+    "throttle": {
+      "entry_type": "Leistung drosseln (z. B. Wärmepumpe %)",
+      "initiate_flow": {
+        "user": "Leistungs-Drossel hinzufügen (Prozent, Watt, Ampere)",
+        "reconfigure": "Leistungs-Drossel ändern"
+      },
+      "step": {
+        "user": {
+          "title": "Leistung drosseln",
+          "description": "Senkt eine Zahl (Wärmepumpen-Leistung in Prozent, Heizstab-Watt, Ladeleistung …) schrittweise zwischen einem Mindestwert und dem Normalwert und gibt sie schrittweise zurück, wie beim Ladestrom einer Wallbox.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "value_entity": "Zahl, die gesenkt wird",
+            "max_value": "Normalwert",
+            "min_value": "Niedrigster Wert",
+            "step": "Schritt",
+            "power_entity": "Leistungssensor (optional)",
+            "power_w": "Erwartete Entlastung",
+            "comfort_entity": "Komfort-Sensor (optional)",
+            "comfort_min": "Komfort-Minimum",
+            "hold_min": "Mindestdauer",
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "max_off_min": "Höchste Dauer",
+            "allow_entity": "Eingriff nur, solange"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+            "value_entity": "Eine number- oder input_number-Entität, z. B. die Leistungsbegrenzung in Prozent.",
+            "max_value": "Der Wert, den das Gerät normalerweise hat (z. B. 100).",
+            "min_value": "Wird nie unter diesen Wert gesenkt (z. B. 30).",
+            "step": "Größe eines Schritts (z. B. 10).",
+            "power_entity": "Mit Leistungssensor wird der neue Wert aus dem echten Verbrauch berechnet, ohne ihn ein Schritt je Durchlauf.",
+            "power_w": "Um wie viele Watt die Änderung den Netzbezug senkt (Planung, Ersparnis-Schätzung). Bei der Drossel: die Leistung beim Normalwert, falls es keinen Leistungssensor gibt.",
+            "comfort_entity": "Raum- oder Warmwassertemperatur (beliebiger Sensor): Solange sie unter dem Minimum liegt, wird das Gerät in Ruhe gelassen, und ein Eingriff wird beendet.",
+            "comfort_min": "Gleiche Einheit wie der Komfort-Sensor.",
+            "hold_min": "Ein Eingriff bleibt mindestens so lange (0 = 5 Minuten).",
+            "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
+            "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist."
+          }
+        },
+        "reconfigure": {
+          "title": "Leistung drosseln",
+          "description": "Senkt eine Zahl (Wärmepumpen-Leistung in Prozent, Heizstab-Watt, Ladeleistung …) schrittweise zwischen einem Mindestwert und dem Normalwert und gibt sie schrittweise zurück, wie beim Ladestrom einer Wallbox.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "value_entity": "Zahl, die gesenkt wird",
+            "max_value": "Normalwert",
+            "min_value": "Niedrigster Wert",
+            "step": "Schritt",
+            "power_entity": "Leistungssensor (optional)",
+            "power_w": "Erwartete Entlastung",
+            "comfort_entity": "Komfort-Sensor (optional)",
+            "comfort_min": "Komfort-Minimum",
+            "hold_min": "Mindestdauer",
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "max_off_min": "Höchste Dauer",
+            "allow_entity": "Eingriff nur, solange"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+            "value_entity": "Eine number- oder input_number-Entität, z. B. die Leistungsbegrenzung in Prozent.",
+            "max_value": "Der Wert, den das Gerät normalerweise hat (z. B. 100).",
+            "min_value": "Wird nie unter diesen Wert gesenkt (z. B. 30).",
+            "step": "Größe eines Schritts (z. B. 10).",
+            "power_entity": "Mit Leistungssensor wird der neue Wert aus dem echten Verbrauch berechnet, ohne ihn ein Schritt je Durchlauf.",
+            "power_w": "Um wie viele Watt die Änderung den Netzbezug senkt (Planung, Ersparnis-Schätzung). Bei der Drossel: die Leistung beim Normalwert, falls es keinen Leistungssensor gibt.",
+            "comfort_entity": "Raum- oder Warmwassertemperatur (beliebiger Sensor): Solange sie unter dem Minimum liegt, wird das Gerät in Ruhe gelassen, und ein Eingriff wird beendet.",
+            "comfort_min": "Gleiche Einheit wie der Komfort-Sensor.",
+            "hold_min": "Ein Eingriff bleibt mindestens so lange (0 = 5 Minuten).",
+            "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
+            "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist."
+          }
+        }
+      },
+      "error": {
+        "pair": "Einstellung und Wert gehören zusammen.",
+        "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
+        "value_onoff": "Ein Schalter braucht den Wert on oder off.",
+        "unknown_option": "Diese Option hat die Phasenwahl nicht.",
+        "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
+        "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
+        "step_too_big": "Der Schritt ist größer als der Bereich zwischen niedrigstem Wert und Normalwert."
       }
     }
   }
