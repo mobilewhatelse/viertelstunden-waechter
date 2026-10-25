@@ -39,6 +39,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "enough_data": "Die Tabelle füllt sich mit jeder Viertelstunde.",
         "when_on": "aus ab", "wallbox": "dann 1-phasig", "script": "Skript", "battery": "Batterie ab",
         "setting": "Einstellung ändern", "throttle": "Schritt", "if_only": "eingreifen nur, wenn", "again_only": "wieder an nur, wenn",
+        "plan": "Ladeplan fürs Auto", "plan_on": "Ladeplan berechnen", "plan_exec": "Ladeplan auch ausführen (Standard aus)",
+        "plan_status": "Ladeplan", "ready": "Fertig ca.", "departure": "Abfahrt", "soc": "Ladestand", "missing": "Es fehlen", "vehicle_hint": "Ohne Fahrzeug-Eintrag (Konfigurieren) gibt es keinen Plan.",
+        "paused_by_plan": "Der Plan hat das Laden pausiert.", "executing": "Der Plan wird ausgeführt.",
     },
     "en": {
         "view_main": "Guard", "view_stats": "Statistics and forecast",
@@ -69,6 +72,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "enough_data": "The table fills with every quarter hour.",
         "when_on": "off from", "wallbox": "then 1 phase", "script": "script", "battery": "battery from",
         "setting": "change setting", "throttle": "step", "if_only": "intervene only if", "again_only": "on again only if",
+        "plan": "Charge plan for the car", "plan_on": "Calculate the charge plan", "plan_exec": "Also carry out the plan (default off)",
+        "plan_status": "Charge plan", "ready": "Ready about", "departure": "Departure", "soc": "State of charge", "missing": "Missing", "vehicle_hint": "Without a vehicle entry (Configure) there is no plan.",
+        "paused_by_plan": "The plan has paused the charging.", "executing": "The plan is being carried out.",
     },
 }
 
@@ -93,6 +99,7 @@ def _config_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% if k == 'wallbox' %}{{ d.get('max_current') }}→{{ d.get('min_current') }} A{{ ', " + x["wallbox"] + "' if d.get('one_phase_option') else '' }}"
         "{% elif k == 'switch' %}" + x["when_on"] + " {{ d.get('min_power_w') | int(0) }} W"
         "{% elif k == 'battery' %}" + x["battery"] + " {{ d.get('min_soc') | int(0) }} %"
+        "{% elif k == 'vehicle' %}" + x["plan"] + ""
         "{% elif k == 'setting' %}" + x["setting"] + ""
         "{% elif k == 'throttle' %}{{ d.get('max_value') }}→{{ d.get('min_value') }}, " + x["throttle"] + " {{ d.get('step') }}"
         "{% else %}" + x["script"] + "{% endif %} | "
@@ -185,6 +192,23 @@ def _interventions_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     )
 
 
+def _plan_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    s = ids["charge_plan"]
+    return (
+        "{% set s = '" + s + "' %}{% set st = states(s) %}**{{ state_translated(s) }}**\n\n"
+        "{% if st == 'no_vehicle' %}" + x["vehicle_hint"] + "{% endif %}"
+        "{% if st in ['planned', 'infeasible', 'not_needed'] %}"
+        "{% set ra = state_attr(s, 'ready_at') %}{% set dp = state_attr(s, 'departure') %}"
+        "" + x["soc"] + " {{ state_attr(s, 'soc') | int(0) }} → {{ state_attr(s, 'target_soc') | int(0) }} %"
+        "{% if dp %} · " + x["departure"] + " {{ dp[11:16] }}{% endif %}{% if ra %} · " + x["ready"] + " {{ ra[11:16] }}{% endif %}\n"
+        "{% for z in state_attr(s, 'text') or [] %}\n- {{ z }}{% endfor %}\n"
+        "{% if (state_attr(s, 'shortfall_kwh') or 0) > 0.1 %}\n⚠ " + x["missing"] + " {{ '%.1f' | format(state_attr(s, 'shortfall_kwh')) }} kWh{% endif %}"
+        "{% if state_attr(s, 'paused_by_plan') %}\n\n" + x["paused_by_plan"] + "{% elif state_attr(s, 'executing') %}\n\n" + x["executing"] + "{% endif %}"
+        "{% if state_attr(s, 'hint') %}\n\n*{{ state_attr(s, 'hint') }}*{% endif %}"
+        "{% endif %}"
+    )
+
+
 def _tile(entity: str, name: str) -> dict[str, Any]:
     return {"type": "tile", "entity": entity, "name": name}
 
@@ -235,6 +259,14 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "markdown", "content": _forecast_markdown(ids, x)},
             ]},
             {"type": "grid", "cards": [
+                {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
+                _tile(ids["charge_plan"], x["plan_status"]),
+                {"type": "entities", "entities": [
+                    {"entity": ids["charge_plan_enabled"], "name": x["plan_on"]},
+                    {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]},
+                {"type": "markdown", "content": _plan_markdown(ids, x)},
+            ]},
+            {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["profile"], "icon": "mdi:calendar-week"},
                 {"type": "markdown", "content": _profile_markdown(ids, x)},
             ]},
@@ -263,4 +295,5 @@ ENTITY_KEYS: dict[str, str] = {
     "today_peak": "sensor", "month_peak": "sensor", "interventions_today": "sensor", "cost_month": "sensor",
     "cost_without": "sensor", "savings_month": "sensor", "savings_year": "sensor", "saved_now": "sensor",
     "forecast_now": "sensor", "forecast_peak": "sensor", "next_risk": "sensor",
+    "charge_plan": "sensor", "charge_plan_enabled": "switch", "charge_plan_execute": "switch",
 }

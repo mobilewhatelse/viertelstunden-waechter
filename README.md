@@ -89,6 +89,7 @@ The device types:
 | Change settings | changes one or two settings (block contact, operating mode ...) and puts them back | the settings (`switch`, `select`, `number`) and the value for "lowered" |
 | Throttle power | lowers a `number` (percent, watts, amps) stepwise between a minimum and its normal value and gives it back stepwise | a number entity, optional power sensor |
 | Emergency action | runs a script, a second script undoes it | scripts, for anything the other types cannot do |
+| Vehicle (charge plan) | plans when the car should charge; optionally pauses/allows charging accordingly | state of charge sensor, departure time, see *Charge plan* |
 
 Each device has a **priority** (1 = restricted first, 10 = only if nothing else helps), an optional
 *intervention only while* entity, and for switches/scripts a maximum off time.
@@ -218,8 +219,8 @@ as "charging current setting". The guard then changes the helper and the automat
 ### Roadmap
 
 - Real-hardware tests of *Throttle power* and *Change settings* (heat pumps) - until then they are simulator-tested only.
-- Charge plan for the car, battery reserve before an expected peak, early and gentler intervention based on the
-  forecast, and a daily plan proposed by an AI task (validated against hard limits).
+- Battery reserve before an expected peak, early and gentler intervention based on the forecast, and a daily plan
+  proposed by an AI task (validated against hard limits).
 
 ### Cost, savings and optional features
 
@@ -273,6 +274,63 @@ Sensors:
 The forecast is displayed only for now; it does not change what the guard does. It is the basis for the planned
 charge plan, battery reserve and early intervention.
 
+### Charge plan for the car
+
+Device type **Vehicle (charge plan)**. It plans in which quarter hours the car should charge so that it reaches its
+target by the next departure, and shows the plan. **Carrying it out is a separate switch, off by default.**
+
+**What you enter:** the car's state of charge (sensor, %), the target (fixed percentage, optionally from a sensor
+such as the car's charge limit), the battery capacity (kWh), the next departure (a *time* entity - the next
+occurrence is used - or a date-time entity / `input_datetime` / timestamp sensor), the highest and lowest charging
+power of the wallbox, the house base load, optionally a "car plugged in" entity, and optionally the commands to
+**allow** and **pause** charging (a button, switch, selection or number).
+
+**How it plans** (`plan.py`, tested):
+
+1. Energy needed = (target - state of charge) x capacity / 0.9 (charging losses).
+2. **Sun first:** if a solar forecast exists, quarter hours with PV surplus (forecast minus house base load, at least
+   the lowest charging power) are filled first - charging from the sun costs no grid energy.
+3. **Then the quietest quarter hours**: the learned expected grid import (the *high* value of the load forecast)
+   decides; a quarter hour is only used as far as *expected import + what the car takes from the grid* stays below
+   the peak target.
+4. If the target cannot be reached by departure the state is **Target not reachable** and the missing kWh are shown.
+   The plan never pretends.
+
+**The solar forecast is optional and comes from the Energy dashboard.** The plan uses the solar forecast that is set
+up there (Settings > Dashboards > Energy > Solar panels > *forecast*; integrations that provide one include
+Forecast.Solar and Solcast). **Without one the plan still works**, but only on the expected grid import, and the
+sensor shows a hint (`solar_used: false`). The hourly forecast is spread over its four quarter hours.
+
+**Carrying it out** (switch *Also carry out the charge plan*, **off by default and always off after a restart**):
+outside the planned windows the *pause* command is sent, inside them the *allow* command. It needs a pause command
+(without it the plan stays advice). Safety rules:
+
+- only while the plan can reach the target (state *Planned*) and the car is plugged in (if you entered that entity);
+- if the plan is not feasible, not needed, has no departure, the switch is turned off, the integration unloads or
+  Home Assistant restarts, the *allow* command is sent so that the car charges normally;
+- at most one command per five minutes while the plan runs; resuming is never delayed;
+- the peak guard still works on top of it and, as always, never stops the car by itself.
+
+**Limits:** only the first vehicle entry is used; the plan is advice based on habits (the load forecast) and a
+forecast, not a guarantee; the car may behave differently (it can end a session by itself); it has **not been tried on
+real hardware yet** - start with the switch off and compare the plan with what you would do.
+
+Sensor *Charge plan* (states: off, no vehicle, state of charge missing, no departure time, not needed, planned,
+target not reachable) with the attributes `windows`, `text`, `needed_kwh`, `planned_kwh`, `solar_kwh`, `grid_kwh`,
+`shortfall_kwh`, `ready_at`, `latest_start`, `departure`, `soc`, `target_soc`, `solar_used`, `paused_by_plan`, `hint`.
+
+### Dashboard
+
+Service **Create dashboard** (`viertelstunden_waechter.create_dashboard`) builds a ready-made dashboard with the
+entities of *your* installation (whatever the device is called, in German or English): the overview (settings,
+features, devices and priorities, now, cost and savings) and *Statistics and forecast* (24-hour forecast as bars,
+weekly profile, peaks of the last days, months, interventions per day, charge plan). Only standard cards are used.
+
+- With a dashboard URL (e.g. `waechter`): create an empty dashboard first (Settings > Dashboards > Add), then call the
+  service with its URL - its views are replaced.
+- Without a URL: the YAML is returned and shown as a notification; paste it into a new dashboard (three dots > Edit >
+  Raw configuration editor). This is the more robust way if Home Assistant changes internally.
+
 ### Seeing what is configured
 
 - The **integration page** lists all devices; the gear icon holds the general settings.
@@ -304,7 +362,9 @@ charge plan, battery reserve and early intervention.
 | `switch` Use peak already reached, Message on intervention, Calculate cost and savings | default on |
 | `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
 | `switch` Learn and show the load forecast | default on |
-| `sensor` Typical import now, Expected peak in 24 h, Next peak risk | forecast, attributes `windows`, `hours` |
+| `sensor` Typical import now, Expected peak in 24 h, Next peak risk | forecast, attributes `windows`, `hours`, `profile` |
+| `sensor` Charge plan | states and attributes see *Charge plan* |
+| `switch` Calculate the charge plan (default on), Also carry out the charge plan (always off after a restart) | |
 
 ## Development
 

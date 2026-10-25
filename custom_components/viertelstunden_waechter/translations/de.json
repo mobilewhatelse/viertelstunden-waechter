@@ -148,6 +148,18 @@
       },
       "next_risk": {
         "name": "Nächstes Spitzenrisiko"
+      },
+      "charge_plan": {
+        "name": "Ladeplan",
+        "state": {
+          "off": "Aus",
+          "no_vehicle": "Kein Fahrzeug eingerichtet",
+          "no_data": "Ladestand fehlt",
+          "no_departure": "Keine Abfahrtszeit",
+          "not_needed": "Nicht nötig",
+          "planned": "Geplant",
+          "infeasible": "Ziel nicht erreichbar"
+        }
       }
     },
     "switch": {
@@ -162,6 +174,12 @@
       },
       "forecast_enabled": {
         "name": "Lastprognose lernen und anzeigen"
+      },
+      "charge_plan_enabled": {
+        "name": "Ladeplan berechnen"
+      },
+      "charge_plan_execute": {
+        "name": "Ladeplan auch ausführen"
       }
     }
   },
@@ -573,6 +591,93 @@
         "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
         "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
         "step_too_big": "Der Schritt ist größer als der Bereich zwischen niedrigstem Wert und Normalwert."
+      }
+    },
+    "vehicle": {
+      "entry_type": "Fahrzeug (Ladeplan)",
+      "initiate_flow": {
+        "user": "Fahrzeug hinzufügen (Ladeplan)",
+        "reconfigure": "Fahrzeug ändern"
+      },
+      "step": {
+        "user": {
+          "title": "Fahrzeug und Ladeplan",
+          "description": "Plant, wann das Auto laden soll, damit es bis zur nächsten Abfahrt sein Ziel erreicht: zuerst mit Sonne (wenn im Energie-Dashboard eine Solarprognose eingerichtet ist), dann in den ruhigsten Viertelstunden, die die Spitzengrenze erlaubt. Der Plan ist ein Vorschlag; das Ausführen ist ein eigener Schalter (standardmäßig aus) und braucht die Start- und Stopp-Befehle unten.",
+          "data": {
+            "name": "Name",
+            "soc_entity": "Ladestand des Autos",
+            "target_soc": "Ziel-Ladestand",
+            "target_soc_entity": "Ziel aus einem Sensor (optional)",
+            "capacity_kwh": "Batteriekapazität",
+            "departure_entity": "Nächste Abfahrt",
+            "connected_entity": "Auto angesteckt (optional)",
+            "charge_kw_max": "Höchste Ladeleistung",
+            "charge_kw_min": "Niedrigste Ladeleistung",
+            "house_base_kw": "Grundlast des Hauses",
+            "start_entity": "Befehl: Laden erlauben (optional)",
+            "start_value": "Wert für „erlauben“",
+            "stop_entity": "Befehl: Laden pausieren (optional)",
+            "stop_value": "Wert für „pausieren“"
+          },
+          "data_description": {
+            "soc_entity": "Sensor mit dem Ladestand des Autos in %.",
+            "target_soc": "Wo das Auto bei der Abfahrt stehen soll (gilt, wenn unten kein Sensor eingetragen ist).",
+            "target_soc_entity": "Optional: ein Sensor oder eine Zahl mit dem Ziel (z. B. das Ladelimit des Autos); ersetzt den festen Wert.",
+            "capacity_kwh": "Nutzbare Batteriekapazität in kWh.",
+            "departure_entity": "Eine Uhrzeit-Entität (das nächste Auftreten wird genommen) oder eine Datum-Uhrzeit-Entität / input_datetime / Zeitstempel-Sensor.",
+            "connected_entity": "Optional, an/aus: an = angesteckt. Der Plan wird nur ausgeführt, solange sie an ist.",
+            "charge_kw_max": "Was die Wallbox höchstens liefert (z. B. 11 kW).",
+            "charge_kw_min": "Die niedrigste Leistung, mit der die Wallbox laden kann (1 Phase, 6 A = 1,4 kW).",
+            "house_base_kw": "Verbrauch des Hauses tagsüber, den der Solarüberschuss zuerst decken muss, bevor das Auto etwas bekommt.",
+            "start_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Auto laden lässt.",
+            "start_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig).",
+            "stop_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert. Ohne sie bleibt der Plan ein Vorschlag.",
+            "stop_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig)."
+          }
+        },
+        "reconfigure": {
+          "title": "Fahrzeug und Ladeplan",
+          "description": "Plant, wann das Auto laden soll, damit es bis zur nächsten Abfahrt sein Ziel erreicht: zuerst mit Sonne (wenn im Energie-Dashboard eine Solarprognose eingerichtet ist), dann in den ruhigsten Viertelstunden, die die Spitzengrenze erlaubt. Der Plan ist ein Vorschlag; das Ausführen ist ein eigener Schalter (standardmäßig aus) und braucht die Start- und Stopp-Befehle unten.",
+          "data": {
+            "name": "Name",
+            "soc_entity": "Ladestand des Autos",
+            "target_soc": "Ziel-Ladestand",
+            "target_soc_entity": "Ziel aus einem Sensor (optional)",
+            "capacity_kwh": "Batteriekapazität",
+            "departure_entity": "Nächste Abfahrt",
+            "connected_entity": "Auto angesteckt (optional)",
+            "charge_kw_max": "Höchste Ladeleistung",
+            "charge_kw_min": "Niedrigste Ladeleistung",
+            "house_base_kw": "Grundlast des Hauses",
+            "start_entity": "Befehl: Laden erlauben (optional)",
+            "start_value": "Wert für „erlauben“",
+            "stop_entity": "Befehl: Laden pausieren (optional)",
+            "stop_value": "Wert für „pausieren“"
+          },
+          "data_description": {
+            "soc_entity": "Sensor mit dem Ladestand des Autos in %.",
+            "target_soc": "Wo das Auto bei der Abfahrt stehen soll (gilt, wenn unten kein Sensor eingetragen ist).",
+            "target_soc_entity": "Optional: ein Sensor oder eine Zahl mit dem Ziel (z. B. das Ladelimit des Autos); ersetzt den festen Wert.",
+            "capacity_kwh": "Nutzbare Batteriekapazität in kWh.",
+            "departure_entity": "Eine Uhrzeit-Entität (das nächste Auftreten wird genommen) oder eine Datum-Uhrzeit-Entität / input_datetime / Zeitstempel-Sensor.",
+            "connected_entity": "Optional, an/aus: an = angesteckt. Der Plan wird nur ausgeführt, solange sie an ist.",
+            "charge_kw_max": "Was die Wallbox höchstens liefert (z. B. 11 kW).",
+            "charge_kw_min": "Die niedrigste Leistung, mit der die Wallbox laden kann (1 Phase, 6 A = 1,4 kW).",
+            "house_base_kw": "Verbrauch des Hauses tagsüber, den der Solarüberschuss zuerst decken muss, bevor das Auto etwas bekommt.",
+            "start_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Auto laden lässt.",
+            "start_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig).",
+            "stop_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert. Ohne sie bleibt der Plan ein Vorschlag.",
+            "stop_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig)."
+          }
+        }
+      },
+      "error": {
+        "pair": "Einstellung und Wert gehören zusammen.",
+        "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
+        "value_onoff": "Ein Schalter braucht den Wert on oder off.",
+        "unknown_option": "Diese Option hat die Phasenwahl nicht.",
+        "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
+        "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen."
       }
     }
   },

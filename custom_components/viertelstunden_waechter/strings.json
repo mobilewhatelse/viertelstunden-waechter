@@ -148,6 +148,18 @@
       },
       "next_risk": {
         "name": "Next peak risk"
+      },
+      "charge_plan": {
+        "name": "Charge plan",
+        "state": {
+          "off": "Off",
+          "no_vehicle": "No vehicle set up",
+          "no_data": "State of charge missing",
+          "no_departure": "No departure time",
+          "not_needed": "Not needed",
+          "planned": "Planned",
+          "infeasible": "Target not reachable"
+        }
       }
     },
     "switch": {
@@ -162,6 +174,12 @@
       },
       "forecast_enabled": {
         "name": "Learn and show the load forecast"
+      },
+      "charge_plan_enabled": {
+        "name": "Calculate the charge plan"
+      },
+      "charge_plan_execute": {
+        "name": "Also carry out the charge plan"
       }
     }
   },
@@ -573,6 +591,93 @@
         "min_above_max": "Minimum current is above maximum current.",
         "phase_pair": "Phase selection and option for 1 phase belong together.",
         "step_too_big": "The step is larger than the range between lowest and normal value."
+      }
+    },
+    "vehicle": {
+      "entry_type": "Vehicle (charge plan)",
+      "initiate_flow": {
+        "user": "Add vehicle (charge plan)",
+        "reconfigure": "Reconfigure vehicle"
+      },
+      "step": {
+        "user": {
+          "title": "Vehicle and charge plan",
+          "description": "Plans when the car should charge so that it reaches its target by the next departure: first from the sun (if a solar forecast is set up in the Energy dashboard), then in the quietest quarter hours that the peak limit allows. The plan is advice; carrying it out is a separate switch (off by default) and needs the start and stop commands below.",
+          "data": {
+            "name": "Name",
+            "soc_entity": "Car state of charge",
+            "target_soc": "Target state of charge",
+            "target_soc_entity": "Target from a sensor (optional)",
+            "capacity_kwh": "Battery capacity",
+            "departure_entity": "Next departure",
+            "connected_entity": "Car plugged in (optional)",
+            "charge_kw_max": "Highest charging power",
+            "charge_kw_min": "Lowest charging power",
+            "house_base_kw": "House base load",
+            "start_entity": "Command: allow charging (optional)",
+            "start_value": "Value for \"allow\"",
+            "stop_entity": "Command: pause charging (optional)",
+            "stop_value": "Value for \"pause\""
+          },
+          "data_description": {
+            "soc_entity": "Sensor with the car's state of charge in %.",
+            "target_soc": "Where the car should be at departure (used if no sensor below).",
+            "target_soc_entity": "Optional: a sensor or number that holds the target (e.g. the car's charge limit); overrides the fixed value.",
+            "capacity_kwh": "Usable battery capacity in kWh.",
+            "departure_entity": "A time entity (next occurrence is used) or a date-time entity / input_datetime / timestamp sensor.",
+            "connected_entity": "Optional on/off entity: on = plugged in. The plan is only carried out while it is on.",
+            "charge_kw_max": "What the wallbox delivers at most (e.g. 11 kW).",
+            "charge_kw_min": "The lowest power the wallbox can charge with (1 phase, 6 A = 1.4 kW).",
+            "house_base_kw": "Consumption of the house during the day that the solar surplus must cover before the car gets any.",
+            "start_entity": "A button (pressed), switch, selection or number that lets the car charge.",
+            "start_value": "The option text, on/off or number for \"allow\" (not needed for a button).",
+            "stop_entity": "A button (pressed), switch, selection or number that pauses the charging. Without it the plan stays advice.",
+            "stop_value": "The option text, on/off or number for \"pause\" (not needed for a button)."
+          }
+        },
+        "reconfigure": {
+          "title": "Vehicle and charge plan",
+          "description": "Plans when the car should charge so that it reaches its target by the next departure: first from the sun (if a solar forecast is set up in the Energy dashboard), then in the quietest quarter hours that the peak limit allows. The plan is advice; carrying it out is a separate switch (off by default) and needs the start and stop commands below.",
+          "data": {
+            "name": "Name",
+            "soc_entity": "Car state of charge",
+            "target_soc": "Target state of charge",
+            "target_soc_entity": "Target from a sensor (optional)",
+            "capacity_kwh": "Battery capacity",
+            "departure_entity": "Next departure",
+            "connected_entity": "Car plugged in (optional)",
+            "charge_kw_max": "Highest charging power",
+            "charge_kw_min": "Lowest charging power",
+            "house_base_kw": "House base load",
+            "start_entity": "Command: allow charging (optional)",
+            "start_value": "Value for \"allow\"",
+            "stop_entity": "Command: pause charging (optional)",
+            "stop_value": "Value for \"pause\""
+          },
+          "data_description": {
+            "soc_entity": "Sensor with the car's state of charge in %.",
+            "target_soc": "Where the car should be at departure (used if no sensor below).",
+            "target_soc_entity": "Optional: a sensor or number that holds the target (e.g. the car's charge limit); overrides the fixed value.",
+            "capacity_kwh": "Usable battery capacity in kWh.",
+            "departure_entity": "A time entity (next occurrence is used) or a date-time entity / input_datetime / timestamp sensor.",
+            "connected_entity": "Optional on/off entity: on = plugged in. The plan is only carried out while it is on.",
+            "charge_kw_max": "What the wallbox delivers at most (e.g. 11 kW).",
+            "charge_kw_min": "The lowest power the wallbox can charge with (1 phase, 6 A = 1.4 kW).",
+            "house_base_kw": "Consumption of the house during the day that the solar surplus must cover before the car gets any.",
+            "start_entity": "A button (pressed), switch, selection or number that lets the car charge.",
+            "start_value": "The option text, on/off or number for \"allow\" (not needed for a button).",
+            "stop_entity": "A button (pressed), switch, selection or number that pauses the charging. Without it the plan stays advice.",
+            "stop_value": "The option text, on/off or number for \"pause\" (not needed for a button)."
+          }
+        }
+      },
+      "error": {
+        "pair": "Setting and value belong together.",
+        "value_number": "This setting is a number: enter a number.",
+        "value_onoff": "A switch needs the value on or off.",
+        "unknown_option": "The phase selection has no such option.",
+        "min_above_max": "Minimum current is above maximum current.",
+        "phase_pair": "Phase selection and option for 1 phase belong together."
       }
     }
   },

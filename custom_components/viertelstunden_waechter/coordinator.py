@@ -19,12 +19,15 @@ from .const import (
     CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN,
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
+    D_BASE, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
+    D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
 )
 from .forecast import LoadModel, hourly, risk_windows, weekly_profile
+from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
 from .engine import (
-    KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
+    KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
     DeviceConfig, Guard, Reading,
 )
 
@@ -56,7 +59,9 @@ class Waechter:
             sid: {**sub.data, D_ID: sid, D_KIND: sub.subentry_type, D_NAME: sub.data.get(D_NAME) or sub.title}
             for sid, sub in entry.subentries.items()
         }
-        self.guard = Guard([DeviceConfig.from_dict(d) for d in self.raw_devices.values()], STRATEGY_COMFORT)
+        self.guard = Guard(
+            [DeviceConfig.from_dict(d) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT
+        )
         self.mode = MODE_OBSERVE
         self.limit_kw = float(self.cfg.get(CONF_LIMIT, 10.0))
         self.margin_kw = float(self.cfg.get(CONF_MARGIN, 0.5))
@@ -78,6 +83,14 @@ class Waechter:
         self.price_threshold = 10.0      # kW
         self._last_push: datetime | None = None
         self._battery_orig: dict[str, dict[str, str]] = {}  # settings before the release, per battery device
+        # charge plan for the car
+        self.plan_enabled = True         # compute the plan (needs a vehicle entry)
+        self.plan_execute = False        # also carry it out (always off after a restart)
+        self.plan: dict[str, Any] = {"status": "no_vehicle"}
+        self._plan_at: datetime | None = None
+        self._plan_paused = False        # the plan has paused the charging (and must resume it)
+        self._plan_cmd_at: datetime | None = None
+        self._solar_cache: tuple[datetime, dict[datetime, float] | None] | None = None
         # load forecast: learned typical grid import per weekday and quarter hour
         self.forecast_enabled = True
         self.model = LoadModel()
@@ -105,6 +118,7 @@ class Waechter:
         self.day_peaks = data.get("day_peaks", {})
         self.months = data.get("months", {})
         self._battery_orig = data.get("battery_orig", {})
+        self._plan_paused = bool(data.get("plan_paused"))  # resumed by the first cycle (the plan switch is off)
         if self.month_peak.get("month") and self.month_peak["month"] not in self.months:
             kw = float(self.month_peak.get("kw") or 0.0)  # taken over from version 0.2
             self.months[self.month_peak["month"]] = {"kw": kw, "ug": kw}
@@ -124,6 +138,8 @@ class Waechter:
             self._unsub()
             self._unsub = None
         async with self._lock:
+            self.plan_execute = False
+            await self._execute_plan(dt_util.now())  # resume a charging the plan had paused
             if self.executing and self.guard.interventions:
                 await self._run(self.guard.release_all(dt_util.now(), self._readings(), "Integration beendet"), True)
             self.executing = False
@@ -177,6 +193,8 @@ class Waechter:
     def _readings(self) -> dict[str, Reading]:
         out: dict[str, Reading] = {}
         for dev_id, d in self.raw_devices.items():
+            if d[D_KIND] == KIND_VEHICLE:
+                continue
             r = Reading(allowed=self._is_on(d.get(D_ALLOW), False) if d.get(D_ALLOW) else True)
             p = self._power_kw(d.get(D_POWER))
             r.power_w = p * 1000.0 if p is not None else None
@@ -241,6 +259,8 @@ class Waechter:
                 self._quarter_done(self.guard.finished_quarter_kw, self.guard.finished_unguarded_kw, now)
             self._maybe_bootstrap()
             self._update_forecast(now)
+            await self._update_plan(now)
+            await self._execute_plan(now)
             self.status = self._status(locked, needed)
             self._store.async_delay_save(self._data, 10)
         async_dispatcher_send(self.hass, self.signal)
@@ -386,6 +406,137 @@ class Waechter:
         finally:
             self._bootstrapping = False
 
+    # ---------- charge plan ----------
+
+    def _vehicle(self) -> dict[str, Any] | None:
+        return next((d for d in self.raw_devices.values() if d[D_KIND] == KIND_VEHICLE), None)
+
+    def _departure(self, entity_id: str | None, now: datetime) -> datetime | None:
+        """Next departure from a time (next occurrence) or a date-time entity."""
+        st = self._state(entity_id)
+        if st is None:
+            return None
+        parsed = dt_util.parse_datetime(st.state)
+        if parsed is not None:
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+            parsed = dt_util.as_local(parsed)
+            return parsed if parsed > now else None
+        t = dt_util.parse_time(st.state)
+        if t is None:
+            return None
+        cand = now.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
+        return cand if cand > now else cand + timedelta(days=1)
+
+    async def _solar_kw(self, now: datetime) -> dict[datetime, float] | None:
+        """PV forecast per quarter hour from whatever solar forecast the Energy dashboard uses (Forecast.Solar,
+        Solcast, ...). None if there is none: the plan then works without the sun."""
+        if self._solar_cache is not None and (now - self._solar_cache[0]) < timedelta(minutes=15):
+            return self._solar_cache[1]
+        series: dict[datetime, float] | None = None
+        try:
+            from homeassistant.components.energy.data import async_get_manager
+            from homeassistant.components.energy.websocket_api import async_get_energy_platforms
+
+            manager = await async_get_manager(self.hass)
+            entries: list[str] = []
+            for source in (manager.data or {}).get("energy_sources", []):
+                if source.get("type") == "solar":
+                    entries += source.get("config_entry_solar_forecast") or []
+            if entries:
+                platforms = await async_get_energy_platforms(self.hass)
+                hourly_kw: dict[datetime, float] = {}
+                for entry_id in entries:
+                    ce = self.hass.config_entries.async_get_entry(entry_id)
+                    if ce is None or ce.domain not in platforms:
+                        continue
+                    forecast = await platforms[ce.domain](self.hass, entry_id)
+                    for iso, wh in ((forecast or {}).get("wh_hours") or {}).items():
+                        t = dt_util.parse_datetime(iso)
+                        if t is not None:
+                            t = dt_util.as_local(t)
+                            hourly_kw[t] = hourly_kw.get(t, 0.0) + float(wh) / 1000.0
+                if hourly_kw:
+                    series = {t.replace(minute=m): kw for t, kw in hourly_kw.items() for m in (0, 15, 30, 45)}
+        except Exception as err:  # noqa: BLE001 - the sun is optional
+            _LOGGER.debug("Solar forecast not available: %s", err)
+            series = None
+        self._solar_cache = (now, series)
+        return series
+
+    async def _update_plan(self, now: datetime) -> None:
+        v = self._vehicle()
+        if v is None:
+            self.plan = {"status": "no_vehicle"}
+            return
+        if not self.plan_enabled:
+            self.plan = {"status": "off"}
+            return
+        if self._plan_at is not None and (now - self._plan_at) < timedelta(minutes=5):
+            return
+        self._plan_at = now
+        soc = self._float(v.get(D_SOC))
+        departure = self._departure(v.get(D_DEPARTURE), now)
+        if soc is None:
+            self.plan = {"status": "no_data"}
+            return
+        if departure is None:
+            self.plan = {"status": "no_departure", "soc": soc}
+            return
+        target = self._float(v.get(D_TARGET_ENTITY))
+        target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
+        hours = max(2, min(48, int((departure - now).total_seconds() // 3600) + 2))
+        series = self.model.horizon(now, hours)
+        solar = await self._solar_kw(now)
+        target_kw = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
+        plan = make_plan(
+            now, departure, soc, target, float(v.get(D_CAPACITY, 60)), float(v.get(D_CHARGE_MAX, 11)),
+            float(v.get(D_CHARGE_MIN, 1.4)), target_kw, series, solar, float(v.get(D_BASE, 0.5)),
+        )
+        plan["soc"], plan["target_soc"] = soc, target
+        self.plan = plan
+
+    def _vehicle_connected(self, v: dict[str, Any]) -> bool:
+        return self._is_on(v.get(D_CONNECTED), True) if v.get(D_CONNECTED) else True
+
+    async def _vehicle_command(self, v: dict[str, Any], which: str) -> bool:
+        """Run the configured start or stop command. False if none is configured."""
+        ent, val = (v.get(D_START), v.get(D_START_VALUE)) if which == "start" else (v.get(D_STOP), v.get(D_STOP_VALUE))
+        if not ent:
+            return False
+        await self._set_entity(ent, str(val if val is not None else ""))
+        return True
+
+    async def _execute_plan(self, now: datetime) -> None:
+        """Pause the charging outside the planned windows and let it run inside - only with the switch on and only
+        while the plan can reach the target. Everything else (switch off, plan infeasible, no departure, restart)
+        lets the car charge normally."""
+        v = self._vehicle()
+        active = (v is not None and self.plan_execute and self.plan_enabled and self.plan.get("status") == "planned"
+                  and self._vehicle_connected(v))
+        want = charging_allowed(self.plan, now) if active else None
+        paused_wanted = want is False
+        if v is None or paused_wanted == self._plan_paused:
+            return
+        if self._plan_cmd_at is not None and active and (now - self._plan_cmd_at) < timedelta(minutes=5):
+            return  # at most one command per five minutes while the plan is running; resuming is never delayed
+        try:
+            if paused_wanted:
+                if not v.get(D_STOP):
+                    return  # nothing to pause with; the plan stays advice
+                await self._vehicle_command(v, "stop")
+                self._plan_paused = True
+                self._log(Action("", "log", None, "Ladeplan: Laden pausiert (außerhalb der geplanten Zeiten)", False), False)
+            else:
+                if v.get(D_START):
+                    await self._vehicle_command(v, "start")
+                self._plan_paused = False
+                self._log(Action("", "log", None, "Ladeplan: Laden freigegeben", False), False)
+            self._plan_cmd_at = now
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Charge plan command failed: %s", err)
+            self._log(Action("", "log", None, f"Ladeplan: Befehl fehlgeschlagen ({err})", False), False)
+
     # ---------- executing ----------
 
     async def _run(self, acts: list[Action], execute: bool) -> None:
@@ -450,6 +601,8 @@ class Waechter:
             await self._call(domain, "select_option", {"entity_id": entity_id, "option": value})
         elif domain in ("switch", "input_boolean"):
             await self._call("homeassistant", "turn_on" if value == "on" else "turn_off", {"entity_id": entity_id})
+        elif domain == "button":
+            await self._call("button", "press", {"entity_id": entity_id})
         else:
             raise ValueError(f"unsupported entity {entity_id}")
 
@@ -482,6 +635,7 @@ class Waechter:
             "month_peak": self.month_peak,
             "months": self.months,
             "battery_orig": self._battery_orig,
+            "plan_paused": self._plan_paused,
             "day_peaks": self.day_peaks,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,

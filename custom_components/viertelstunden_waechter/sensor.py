@@ -27,6 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         CostSensor(w, "cost_without", "cost_without"),
         CostSensor(w, "savings_month", "saving"),
         SavingsYearSensor(w),
+        ChargePlanSensor(w),
         ForecastNowSensor(w),
         ForecastPeakSensor(w),
         NextRiskSensor(w),
@@ -82,6 +83,49 @@ class ValueSensor(WaechterEntity, SensorEntity):
     @property
     def last_reset(self):
         return self.waechter.guard.values.get("quarter") if self._value_key == "quarter_energy_kwh" else None
+
+
+PLAN_STATES = ["off", "no_vehicle", "no_data", "no_departure", "not_needed", "planned", "infeasible"]
+
+
+class ChargePlanSensor(WaechterEntity, SensorEntity):
+    """Charge plan for the car: when to charge so that the car is ready at departure."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = PLAN_STATES
+    _attr_icon = "mdi:ev-station"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "charge_plan")
+
+    @property
+    def native_value(self) -> str:
+        return self.waechter.plan.get("status", "no_vehicle")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        w = self.waechter
+        p = w.plan
+        german = (w.hass.config.language or "").startswith("de")
+
+        def iso(x):
+            return x.isoformat() if x is not None else None
+
+        windows = [{"start": iso(x["start"]), "end": iso(x["end"]), "energy_kwh": x["energy_kwh"],
+                    "solar_kwh": x["solar_kwh"], "peak_kw": x["peak_kw"]} for x in p.get("windows", [])]
+        text = [f"{x['start'].strftime('%H:%M')}–{x['end'].strftime('%H:%M')} · {x['energy_kwh']:.1f} kWh"
+                + (f" (☀ {x['solar_kwh']:.1f})" if x["solar_kwh"] > 0.05 else "") for x in p.get("windows", [])]
+        hint = None
+        if p.get("status") in ("planned", "infeasible", "not_needed") and not p.get("solar_used"):
+            hint = ("Keine Solarprognose gefunden (Energie-Dashboard, Solarproduktion, Prognose): Geplant wird nur nach dem erwarteten Netzbezug."
+                    if german else "No solar forecast found (Energy dashboard, solar production, forecast): the plan only uses the expected grid import.")
+        return {
+            "windows": windows, "text": text, "needed_kwh": p.get("needed_kwh"), "planned_kwh": p.get("planned_kwh"),
+            "solar_kwh": p.get("solar_kwh"), "grid_kwh": p.get("grid_kwh"), "shortfall_kwh": p.get("shortfall_kwh"),
+            "ready_at": iso(p.get("ready_at")), "latest_start": iso(p.get("latest_start")), "departure": iso(p.get("departure")),
+            "soc": p.get("soc"), "target_soc": p.get("target_soc"), "solar_used": p.get("solar_used"),
+            "executing": w.plan_execute, "paused_by_plan": w._plan_paused, "hint": hint,
+        }
 
 
 class ForecastNowSensor(WaechterEntity, SensorEntity):

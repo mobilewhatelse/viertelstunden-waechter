@@ -18,6 +18,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         FeatureSwitch(w, "notify_intervention", "notify_intervention", "mdi:bell-ring"),
         FeatureSwitch(w, "costs_enabled", "costs_enabled", "mdi:currency-eur"),
         FeatureSwitch(w, "forecast_enabled", "forecast_enabled", "mdi:chart-timeline-variant"),
+        FeatureSwitch(w, "charge_plan_enabled", "plan_enabled", "mdi:ev-station"),
+        ExecuteSwitch(w, "charge_plan_execute", "plan_execute", "mdi:play-circle-outline"),
     ])
 
 
@@ -45,3 +47,12 @@ class FeatureSwitch(WaechterEntity, SwitchEntity, RestoreEntity):
         setattr(self.waechter, self._attr, False)
         self.async_write_ha_state()
         await self.waechter.async_refresh()
+
+
+class ExecuteSwitch(FeatureSwitch):
+    """Carry out the charge plan. Always OFF after a restart (a plan that pauses charging must be switched on on
+    purpose); turning it off lets the car charge normally again."""
+
+    async def async_added_to_hass(self) -> None:
+        await WaechterEntity.async_added_to_hass(self)
+        setattr(self.waechter, self._attr, False)

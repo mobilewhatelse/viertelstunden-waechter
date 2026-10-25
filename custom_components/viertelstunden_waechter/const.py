@@ -50,7 +50,19 @@ D_STEP = "step"                         # throttle: step size
 D_COMFORT = "comfort_entity"            # setting/throttle: sensor that must not fall below the minimum (room, hot water)
 D_COMFORT_MIN = "comfort_min"
 D_HOLD = "hold_min"                     # minimum time an intervention is kept
-D_PAUSE = "pause_min"                   # minimum pause after taking back (compressor protection)
+D_PAUSE = "pause_min"
+D_TARGET_SOC = "target_soc"             # vehicle: target state of charge (%)
+D_TARGET_ENTITY = "target_soc_entity"   # vehicle: optional sensor/number that overrides the target
+D_CAPACITY = "capacity_kwh"             # vehicle: battery capacity
+D_DEPARTURE = "departure_entity"        # vehicle: time / datetime of the next departure
+D_CONNECTED = "connected_entity"        # vehicle: optional, on = car is plugged in
+D_CHARGE_MAX = "charge_kw_max"          # vehicle: what the wallbox can deliver
+D_CHARGE_MIN = "charge_kw_min"          # vehicle: lowest charging power (1 phase, 6 A = 1.4 kW)
+D_BASE = "house_base_kw"                # vehicle: house base load that the solar surplus must cover first
+D_START = "start_entity"                # vehicle: command that allows charging ...
+D_START_VALUE = "start_value"
+D_STOP = "stop_entity"                  # ... and the one that pauses it
+D_STOP_VALUE = "stop_value"                   # minimum pause after taking back (compressor protection)
 D_OFF_SCRIPT = "off_script"
 
 MODE_OFF = "off"

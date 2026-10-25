@@ -27,6 +27,7 @@ KIND_SWITCH = "switch"
 KIND_SCRIPT = "script"
 KIND_BATTERY = "battery"
 KIND_SETTING = "setting"    # changes settings (e.g. block contact of a heat pump) and puts them back
+KIND_VEHICLE = "vehicle"    # charge plan for a car: not an actuator of the guard
 KIND_THROTTLE = "throttle"  # lowers a number (percent, watts, amps) stepwise and gives it back stepwise
 SETTING_KINDS = (KIND_BATTERY, KIND_SETTING)
 GUARDED_KINDS = (KIND_BATTERY, KIND_SETTING, KIND_THROTTLE)

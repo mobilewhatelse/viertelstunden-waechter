@@ -223,8 +223,8 @@ aufruft. Den Helfer trägt man als „Einstellung Ladestrom“ ein. Der Wächter
 gibt es weiter.
 
 **Noch nicht gebaut (Ausblick):** Tests von „Leistung drosseln“ und „Einstellung ändern“ an echter Hardware (bisher nur im
-Simulator), Ladeplan fürs Auto, Akku-Reserve vor einem erwarteten Spitzenabend, früheres und sanfteres Eingreifen
-anhand der Prognose und ein Tagesplan als Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
+Simulator), Akku-Reserve vor einem erwarteten Spitzenabend, früheres und sanfteres Eingreifen anhand der Prognose und
+ein Tagesplan als Vorschlag einer KI-Aufgabe (gegen feste Grenzen geprüft).
 
 ---
 
@@ -309,6 +309,74 @@ Einstellung beim ursprünglichen Strom erlaubt hätte minus dem, was sie jetzt z
 sie wirklich zieht); schaltbares Gerät: die Leistung, die es beim Ausschalten hatte, solange es aus ist;
 Notfall-Aktion: die eingetragene erwartete Entlastung. Die höchste dieser „ungeschützten“ Viertelstunden des
 Monats wird nach dem Tarif bepreist. Das ist eine Schätzung, keine Messung.
+
+---
+
+## 3c. Ladeplan fürs Auto
+
+Gerätetyp **Fahrzeug (Ladeplan)**. Er plant, in welchen Viertelstunden das Auto laden soll, damit es bis zur nächsten
+Abfahrt sein Ziel erreicht, und zeigt den Plan an. **Das Ausführen ist ein eigener Schalter, standardmäßig aus.**
+
+**Was Sie eintragen:** Ladestand des Autos (Sensor, %), Ziel (fester Prozentwert, optional aus einem Sensor wie dem
+Ladelimit des Autos), Batteriekapazität (kWh), nächste Abfahrt (eine *Uhrzeit*-Entität – genommen wird das nächste
+Auftreten – oder eine Datum-Uhrzeit-Entität / `input_datetime` / Zeitstempel-Sensor), höchste und niedrigste
+Ladeleistung der Wallbox, Grundlast des Hauses, optional eine Entität „Auto angesteckt“ und optional die Befehle zum
+**Erlauben** und **Pausieren** des Ladens (Knopf, Schalter, Auswahl oder Zahl).
+
+**So plant er** (`plan.py`, mit Tests):
+
+1. Benötigte Energie = (Ziel − Ladestand) × Kapazität / 0,9 (Ladeverluste).
+2. **Zuerst die Sonne:** Gibt es eine Solarprognose, werden Viertelstunden mit PV-Überschuss (Prognose minus
+   Grundlast des Hauses, mindestens die niedrigste Ladeleistung) zuerst gefüllt – Laden mit Sonne kostet keine
+   Netzenergie.
+3. **Dann die ruhigsten Viertelstunden:** Der gelernte erwartete Netzbezug (der „hoch“-Wert der Lastprognose)
+   entscheidet; eine Viertelstunde wird nur so weit genutzt, dass *erwarteter Bezug + was das Auto aus dem Netz zieht*
+   unter dem Spitzenziel bleibt.
+4. Schafft das Auto sein Ziel bis zur Abfahrt nicht, steht der Zustand auf **Ziel nicht erreichbar**, und die fehlenden
+   kWh werden angezeigt. Der Plan tut nie so, als ginge es.
+
+**Die Solarprognose ist optional und kommt aus dem Energie-Dashboard.** Der Plan benutzt die Solarprognose, die dort
+eingerichtet ist (Einstellungen > Dashboards > Energie > Solarmodule > *Prognose*; Integrationen mit Prognose sind
+z. B. Forecast.Solar und Solcast). **Ohne sie funktioniert der Plan trotzdem**, rechnet aber nur mit dem erwarteten
+Netzbezug, und der Sensor zeigt einen Hinweis (`solar_used: false`). Die Stundenprognose wird auf ihre vier
+Viertelstunden verteilt.
+
+**Ausführen** (Schalter *Ladeplan auch ausführen*, **standardmäßig aus und nach jedem Neustart wieder aus**): Außerhalb
+der geplanten Zeiten wird der *Pausieren*-Befehl gesendet, innerhalb der *Erlauben*-Befehl. Dafür braucht es einen
+Pausieren-Befehl (ohne ihn bleibt der Plan ein Vorschlag). Schutzregeln:
+
+- nur solange der Plan das Ziel erreichen kann (Zustand *Geplant*) und das Auto angesteckt ist (wenn Sie diese
+  Entität eingetragen haben);
+- ist der Plan nicht machbar, nicht nötig, ohne Abfahrt, wird der Schalter ausgeschaltet, die Integration entladen oder
+  Home Assistant neu gestartet, wird der *Erlauben*-Befehl gesendet, damit das Auto normal lädt;
+- höchstens ein Befehl alle fünf Minuten, solange der Plan läuft; das Freigeben wird nie verzögert;
+- der Spitzenwächter arbeitet zusätzlich weiter und stoppt das Auto, wie immer, nie von sich aus.
+
+**Grenzen:** Es wird nur der erste Fahrzeug-Eintrag benutzt; der Plan ist ein Vorschlag aus Gewohnheiten (Lastprognose)
+und einer Prognose, keine Garantie; das Auto kann sich anders verhalten (es kann eine Ladung von selbst beenden); er
+wurde **noch nicht an echter Hardware ausprobiert** – starten Sie mit dem Schalter aus und vergleichen Sie den Plan
+mit dem, was Sie selbst tun würden.
+
+Sensor **Ladeplan** (Zustände: Aus, Kein Fahrzeug eingerichtet, Ladestand fehlt, Keine Abfahrtszeit, Nicht nötig,
+Geplant, Ziel nicht erreichbar) mit den Attributen `windows`, `text`, `needed_kwh`, `planned_kwh`, `solar_kwh`,
+`grid_kwh`, `shortfall_kwh`, `ready_at`, `latest_start`, `departure`, `soc`, `target_soc`, `solar_used`,
+`paused_by_plan`, `hint`.
+
+---
+
+## 3d. Fertiges Dashboard
+
+Der Dienst **Dashboard erstellen** (`viertelstunden_waechter.create_dashboard`) baut ein fertiges Dashboard mit den
+Entitäten **Ihrer** Installation (egal wie das Gerät heißt, auf Deutsch oder Englisch): die Übersicht (Einstellungen,
+Zusatzfunktionen, Geräte und Prioritäten, Jetzt, Kosten und Ersparnis) und *Statistik und Prognose* (24-Stunden-Vorschau
+als Balken, Wochenprofil, Spitzen der letzten Tage, Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten
+benutzt.
+
+- Mit einer Dashboard-Adresse (z. B. `waechter`): zuerst ein leeres Dashboard anlegen (Einstellungen > Dashboards >
+  Hinzufügen), dann den Dienst mit dessen Adresse aufrufen – die Ansichten dort werden ersetzt.
+- Ohne Adresse: Das YAML wird zurückgegeben und als Benachrichtigung angezeigt; in ein neues Dashboard einfügen
+  (drei Punkte > Bearbeiten > Rohkonfigurations-Editor). Das ist der robustere Weg, falls sich in Home Assistant intern
+  etwas ändert.
 
 ---
 

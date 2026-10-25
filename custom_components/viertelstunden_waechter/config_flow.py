@@ -23,13 +23,17 @@ from .const import (
     CONF_STARTUP_MODE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
     D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
+    D_BASE, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
+    D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_COMFORT_MIN, D_HOLD, D_MAX_VALUE, D_MIN_SOC, D_MIN_VALUE, D_PAUSE, D_REL1, D_REL1_VALUE, D_REL2,
     D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_STEP, D_VALUE,
 )
-from .engine import KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX
+from .engine import KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
 
 ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
 RELEASE_DOMAINS = ["number", "input_number", "select", "input_select", "switch", "input_boolean"]
+COMMAND_DOMAINS = RELEASE_DOMAINS + ["button"]
+TIME_DOMAINS = ["time", "datetime", "input_datetime", "sensor"]
 
 
 def _num(lo: float, hi: float, step: float = 1, unit: str | None = None) -> NumberSelector:
@@ -68,11 +72,24 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
 
 
 def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
-    s: dict[Any, Any] = {
-        vol.Required(D_NAME, default=d.get(D_NAME, vol.UNDEFINED)): TextSelector(),
-        vol.Required(D_PRIORITY, default=d.get(D_PRIORITY, 1 if kind == KIND_WALLBOX else 5 if kind == KIND_SWITCH else 10)): _num(1, 10),
-    }
-    if kind == KIND_WALLBOX:
+    s: dict[Any, Any] = {vol.Required(D_NAME, default=d.get(D_NAME, vol.UNDEFINED)): TextSelector()}
+    if kind != KIND_VEHICLE:
+        s[vol.Required(D_PRIORITY, default=d.get(D_PRIORITY, 1 if kind == KIND_WALLBOX else 5 if kind == KIND_SWITCH else 10))] = _num(1, 10)
+    if kind == KIND_VEHICLE:
+        s[vol.Required(D_SOC, default=d.get(D_SOC, vol.UNDEFINED))] = _ent("sensor")
+        s[vol.Required(D_TARGET_SOC, default=d.get(D_TARGET_SOC, 80))] = _num(1, 100, 1, "%")
+        s[_opt(D_TARGET_ENTITY, d)] = _ent(["sensor", "number", "input_number"])
+        s[vol.Required(D_CAPACITY, default=d.get(D_CAPACITY, 60))] = _num(5, 300, 0.5, "kWh")
+        s[vol.Required(D_DEPARTURE, default=d.get(D_DEPARTURE, vol.UNDEFINED))] = _ent(TIME_DOMAINS)
+        s[_opt(D_CONNECTED, d)] = _ent(ON_OFF_DOMAINS)
+        s[vol.Required(D_CHARGE_MAX, default=d.get(D_CHARGE_MAX, 11))] = _num(1.4, 50, 0.1, "kW")
+        s[vol.Required(D_CHARGE_MIN, default=d.get(D_CHARGE_MIN, 1.4))] = _num(0.5, 20, 0.1, "kW")
+        s[vol.Required(D_BASE, default=d.get(D_BASE, 0.5))] = _num(0, 20, 0.1, "kW")
+        s[_opt(D_START, d)] = _ent(COMMAND_DOMAINS)
+        s[_opt(D_START_VALUE, d)] = TextSelector()
+        s[_opt(D_STOP, d)] = _ent(COMMAND_DOMAINS)
+        s[_opt(D_STOP_VALUE, d)] = TextSelector()
+    elif kind == KIND_WALLBOX:
         s[vol.Required(D_POWER, default=d.get(D_POWER, vol.UNDEFINED))] = _ent("sensor", "power")
         s[vol.Required(D_CURRENT, default=d.get(D_CURRENT, vol.UNDEFINED))] = _ent(["number", "input_number"])
         s[vol.Required(D_MIN_CURRENT, default=d.get(D_MIN_CURRENT, 6))] = _num(1, 32, 1, "A")
@@ -141,6 +158,8 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
         what = f"{int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A" + (", 1~" if d.get(D_ONE_PHASE) else "")
     elif kind == KIND_SWITCH:
         what = f"aus ab {int(d.get(D_MIN_POWER, 100))} W" + (f", ≤ {int(d.get(D_MAX_OFF))} min" if d.get(D_MAX_OFF) else "")
+    elif kind == KIND_VEHICLE:
+        return f"Ladeplan · {d.get(D_NAME, '?')} · bis {int(d.get(D_TARGET_SOC, 80))} % zur Abfahrt"
     elif kind == KIND_SETTING:
         what = f"Einstellung ändern, ≈ {int(d.get(D_POWER_W, 0))} W"
     elif kind == KIND_THROTTLE:
@@ -172,7 +191,7 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
         return {
             KIND_WALLBOX: WallboxFlow, KIND_SWITCH: SwitchFlow, KIND_SCRIPT: ScriptFlow, KIND_BATTERY: BatteryFlow,
-            KIND_SETTING: SettingFlow, KIND_THROTTLE: ThrottleFlow,
+            KIND_SETTING: SettingFlow, KIND_THROTTLE: ThrottleFlow, KIND_VEHICLE: VehicleFlow,
         }
 
 
@@ -294,4 +313,36 @@ class ThrottleFlow(_DeviceFlow):
             return {D_MIN_VALUE: "min_above_max"}
         if step > hi - lo:
             return {D_STEP: "step_too_big"}
+        return {}
+
+
+class VehicleFlow(_DeviceFlow):
+    kind = KIND_VEHICLE
+
+    def _validate(self, u: dict[str, Any]) -> dict[str, str]:
+        if float(u.get(D_CHARGE_MIN, 1.4)) > float(u.get(D_CHARGE_MAX, 11)):
+            return {D_CHARGE_MIN: "min_above_max"}
+        for ent_key, val_key in ((D_START, D_START_VALUE), (D_STOP, D_STOP_VALUE)):
+            ent, val = u.get(ent_key), str(u.get(val_key) or "").strip()
+            if not ent:
+                if val:
+                    return {val_key: "pair"}
+                continue
+            domain = ent.split(".")[0]
+            if domain == "button":
+                continue
+            if not val:
+                return {val_key: "pair"}
+            if domain in ("number", "input_number"):
+                try:
+                    float(val)
+                except ValueError:
+                    return {val_key: "value_number"}
+            elif domain in ("select", "input_select"):
+                st = self.hass.states.get(ent)
+                options = st.attributes.get("options", []) if st else []
+                if options and val not in options:
+                    return {val_key: "unknown_option"}
+            elif val not in ("on", "off"):
+                return {val_key: "value_onoff"}
         return {}
