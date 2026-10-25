@@ -93,6 +93,19 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
     return vol.Schema(s)
 
 
+def device_title(d: dict[str, Any], kind: str | None = None) -> str:
+    """One line for the device list on the integration page: priority, name and what the guard does with it."""
+    kind = kind or d.get(D_KIND)
+    prio = int(d.get(D_PRIORITY, 5))
+    if kind == KIND_WALLBOX:
+        what = f"{int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A" + (", 1~" if d.get(D_ONE_PHASE) else "")
+    elif kind == KIND_SWITCH:
+        what = f"aus ab {int(d.get(D_MIN_POWER, 100))} W" + (f", ≤ {int(d.get(D_MAX_OFF))} min" if d.get(D_MAX_OFF) else "")
+    else:
+        what = f"Skript ≈ {int(d.get(D_POWER_W, 0))} W"
+    return f"{prio} · {d.get(D_NAME, '?')} · {what}"
+
+
 class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 2
 
@@ -147,10 +160,11 @@ class _DeviceFlow(ConfigSubentryFlow):
                     if k in data:
                         data[k] = int(data[k])
                 data[D_KIND] = self.kind
+                title = device_title(data)
                 if self.source == "user":
-                    return self.async_create_entry(title=data[D_NAME], data=data)
+                    return self.async_create_entry(title=title, data=data)
                 return self.async_update_and_abort(
-                    self._get_entry(), self._get_reconfigure_subentry(), title=data[D_NAME], data=data
+                    self._get_entry(), self._get_reconfigure_subentry(), title=title, data=data
                 )
             current = user_input
         step = "user" if self.source == "user" else "reconfigure"

@@ -140,6 +140,33 @@ Voraussetzung: Das Gerät hat in Home Assistant einen **Zustand** (an/aus), dami
 läuft. Ein Leistungssensor ist optional, sonst gilt die „angenommene Leistung“. Eingreifen darf der Wächter nur
 bei dem, was Sie eingetragen haben.
 
+### Welche Wallboxen gehen?
+
+Der Wächter braucht von der Wallbox-Integration einen **Leistungssensor** und einen **einstellbaren Ladestrom**
+(`number`, A). Geprüft im Quelltext der Integrationen am 25.10.2026, auf echter Hardware nur der Wattpilot.
+Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installation nachsehen.
+
+| Integration | Ladestrom als `number` | Leistungssensor | Geht? |
+|---|---|---|---|
+| Wattpilot (HACS, `wattpilot-HA`) | ja, „Max Charging Current“ | ja | **ja** (getestet, Phasenwahl vorhanden) |
+| Wallbox (Home Assistant) | ja, „Maximum charging current“ | ja (kW) | **ja** (ohne Phasenumschaltung) |
+| OpenEVSE (Home Assistant) | ja, „Charge rate“ (A) | ja | **ja** |
+| Zaptec (HACS) | ja, „charger_max_current“ | ja (W) | **ja** |
+| OCPP (HACS, `lbbrhzn/ocpp`) | ja, „Maximum Current“ | ja | **ja** (setzt ein Ladeprofil; Verhalten der Wallbox prüfen) |
+| Alfen (HACS) | ja, mehrere „max current“-Zahlen | ja | **mit Vorsicht**: Geräteeinstellungen, häufiges Schreiben nicht geprüft |
+| KEBA (Home Assistant) | nein, nur Dienst `keba.set_current` | ja | **über Hilfsgröße** (unten) |
+| Easee (HACS) | nein, nur Dienste (z. B. Dynamic Limit) | ja | **über Hilfsgröße** (unten) |
+| Ohme (Home Assistant) | nein (Zahlen sind Ziel-Prozent u. ä.) | ja | nein |
+| Blue Current (Home Assistant) | nein (nur Start/Stopp) | ja | nein |
+| myenergi (HACS) | nein (Mindest-Grünanteil, Prioritäten) | ja | nein |
+| evcc (HACS) | kein Strom als Zahl gefunden | ja | nein – in evcc selbst regeln |
+| go-e, openWB, Tesla Wall Connector, andere | nicht geprüft | | unbekannt |
+
+**Über Hilfsgröße** (die Wallbox kennt den Strom nur über einen Dienst): einen `input_number`-Helfer anlegen
+(A, Schritt 1, Ihr Minimum/Maximum) und eine Automation, die bei Änderung des Helfers den Dienst mit dem Wert
+aufruft. Den Helfer trägt man als „Einstellung Ladestrom“ ein. Der Wächter ändert dann den Helfer, die Automation
+gibt es weiter.
+
 **Noch nicht gebaut (Ausblick):** ein Gerätetyp **„Leistung drosseln“**, der eine Zahl (Heizstableistung,
 Akku-Ladeleistung) stufenweise absenkt und zurückgibt, wie bei der Wallbox. Er wird ergänzt, sobald ihn jemand
 braucht und an echter Hardware testen kann. Außerdem geplant: Lastprognose, „schon bezahlte Spitze“ nutzen

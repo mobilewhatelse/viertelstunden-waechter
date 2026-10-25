@@ -115,6 +115,32 @@ reduced to one of these works.
 Requirements: the device needs a **state** in Home Assistant (on/off) so the guard knows whether it runs; a
 power sensor is optional (otherwise the *assumed power* is used). The guard only touches what you configured.
 
+### Wallbox compatibility
+
+What the guard needs from a wallbox integration: a **charging power sensor** and a **settable charging current**
+(`number`, A). Checked in the integrations' source code on 2026-10-25; only the Wattpilot was tried on real
+hardware. Entity names change between versions - look for them in your own installation.
+
+| Integration | Charging current as `number` | Power sensor | Usable |
+|---|---|---|---|
+| Wattpilot (HACS, `wattpilot-HA`) | yes, "Max Charging Current" | yes | **yes** (tested; phase selection available) |
+| Wallbox (Home Assistant core) | yes, "Maximum charging current" | yes (kW) | **yes** (no phase switching) |
+| OpenEVSE (core) | yes, "Charge rate" (A) | yes | **yes** |
+| Zaptec (HACS) | yes, "charger_max_current" | yes (W) | **yes** |
+| OCPP (HACS, `lbbrhzn/ocpp`) | yes, "Maximum Current" | yes | **yes** (sets a charging profile; check how your charger reacts) |
+| Alfen (HACS) | yes, several "max current" numbers | yes | **with care** - these are device settings; frequent writing was not checked |
+| KEBA (core) | no, only the service `keba.set_current` | yes | **via helper** (below) |
+| Easee (HACS) | no, only services (e.g. dynamic limit) | yes | **via helper** (below) |
+| Ohme (core) | no (numbers are target percentage etc.) | yes | no |
+| Blue Current (core) | no (only start/stop switch) | yes | no |
+| myenergi (HACS) | no (minimum green level, priorities) | yes | no |
+| evcc (HACS) | no current number found | yes | no - regulate in evcc itself |
+| go-e, openWB, Tesla Wall Connector, others | not checked | | unknown |
+
+**Via helper** (charger sets the current only through a service): create an `input_number` helper (A, step 1,
+your min/max) and an automation that calls the service with the helper's value when it changes. Enter the helper
+as "charging current setting". The guard then changes the helper and the automation passes it on.
+
 ### Roadmap
 
 - **Power throttle** device type: lowers a `number` (heating element power, battery charge power) stepwise

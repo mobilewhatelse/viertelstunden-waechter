@@ -39,7 +39,7 @@ class Waechter:
         self.entry = entry
         self.cfg: dict[str, Any] = {**entry.data, **entry.options}
         self.raw_devices: dict[str, dict[str, Any]] = {
-            sid: {**sub.data, D_ID: sid, D_KIND: sub.subentry_type, D_NAME: sub.title}
+            sid: {**sub.data, D_ID: sid, D_KIND: sub.subentry_type, D_NAME: sub.data.get(D_NAME) or sub.title}
             for sid, sub in entry.subentries.items()
         }
         self.guard = Guard([DeviceConfig.from_dict(d) for d in self.raw_devices.values()], STRATEGY_COMFORT)

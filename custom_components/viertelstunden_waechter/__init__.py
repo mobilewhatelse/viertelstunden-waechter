@@ -30,6 +30,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry) -> bool:
+    from .config_flow import device_title  # imported here: config_flow pulls in the selector helpers
+
+    for sub in list(entry.subentries.values()):  # keep the list titles current (before the update listener exists)
+        title = device_title(dict(sub.data), sub.subentry_type)
+        if sub.title != title:
+            hass.config_entries.async_update_subentry(entry, sub, title=title)
     waechter = Waechter(hass, entry)
     entry.runtime_data = waechter
     # entities first: mode, limit and strategy restore their last values before the first cycle
