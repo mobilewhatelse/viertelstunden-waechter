@@ -148,13 +148,15 @@ Sofort änderbar (Gerät des Wächters oder Dashboard): **Betriebsart**, **Strat
 ```
 {% set c = state_attr('sensor.viertelstunden_wachter_status', 'configuration') %}
 {% macro n(e) %}{% set s = states[e] if e else none %}{{ s.name if s else (e or '–') }}{% endmacro %}
-{% if c %}**Messung:** {{ n(c.grid_power) }} · {{ n(c.grid_energy) }}
+{% if c %}**Messung:** {{ n(c.get('grid_power')) }} · {{ n(c.get('grid_energy')) }}
 
 | Prio | Gerät | Steuert |
 |---:|---|---|
-{% for d in c.devices %}| {{ d.priority }} | {{ d.name }} | {{ n(d.current_entity or d.switch_entity or d.on_script) }} |
+{% for d in c.get('devices', []) %}| {{ d.get('priority') }} | {{ d.get('name') }} | {{ n(d.get('current_entity') or d.get('switch_entity') or d.get('on_script')) }} |
 {% endfor %}{% endif %}
 ```
+
+Dashboards rendern Vorlagen streng: fehlende Felder mit `.get('…')` abfragen, nicht mit `d.feld`.
 
 Protokoll des Tages: Attribut `today` des Status-Sensors. Spitzen der letzten 31 Tage: Attribut `days` von
 „Spitze heute“.
