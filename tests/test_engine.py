@@ -43,6 +43,32 @@ class PeakTests(unittest.TestCase):
         _, log = run(house, guard, 30, verbose=False)
         self.assertEqual(guard.misses, 0)
 
+    def test_forecast_lowers_the_wallbox_early_but_never_switches_off(self):
+        # car at 9 A (6.2 kW) + 1.5 kW house = 7.7 kW: below the target, no reason to act without a forecast
+        def scenario(reserve):
+            house = House(base_kw=1.5, pool=False, heater=False)
+            house.current = 9
+            guard = engine.Guard(devices())
+            _, log = run(house, guard, 10, reserve=reserve)
+            return house, "\n".join(log)
+
+        house, text = scenario(None)
+        self.assertEqual(text, "")
+        self.assertEqual(house.current, 9)
+        house, text = scenario(lambda t: (3.0, "Risiko 12.0 kW laut Prognose"))
+        self.assertIn("Vorausschauend", text)
+        self.assertLess(house.current, 9)
+        self.assertGreaterEqual(house.current, 6, "never stopped")
+        self.assertEqual(house.phase_option, "Auto", "a forecast alone never switches to 1 phase")
+        self.assertNotIn("aus (", text, "no device is switched off because of a forecast")
+
+    def test_forecast_reserve_is_given_back_after_the_risk_window(self):
+        house = House(base_kw=1.5, pool=False, heater=False)
+        house.current = 9
+        guard = engine.Guard(devices())
+        run(house, guard, 40, reserve=lambda t: (3.0, "x") if t < 8 else (0.0, ""))
+        self.assertGreaterEqual(house.current, 9)
+
     def test_car_gets_full_current_back_when_there_is_room(self):
         house = House(cooker=[(5, 20, 7.0)], heater=False, pool=False)
         quarters, _ = run(house, engine.Guard(devices()), 60, limit=13.0)

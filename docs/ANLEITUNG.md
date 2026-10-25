@@ -249,8 +249,8 @@ Sensoren:
   `hours` (stündlich `typical` / `high`, für Diagramme und Karten)
 - **Nächstes Spitzenrisiko** – Zeitpunkt des nächsten oder laufenden Risikofensters (Attribute `until`, `high_kw`)
 
-Die Prognose wird bisher nur angezeigt, sie verändert nicht, was der Wächter tut. Sie ist die Grundlage für den
-geplanten Ladeplan, die Akku-Reserve und das frühere Eingreifen.
+Die Prognose wird angezeigt und speist den Ladeplan (3c). Das Verhalten des Wächters ändert sie nur, wenn Sie den Schalter
+**Vorausschauend drosseln nach Prognose** einschalten (siehe unten).
 
 ---
 
@@ -311,6 +311,26 @@ Notfall-Aktion: die eingetragene erwartete Entlastung. Die höchste dieser „un
 Monats wird nach dem Tarif bepreist. Das ist eine Schätzung, keine Messung.
 
 ---
+
+### Vorausschauend drosseln nach Prognose (Schalter, Standard aus)
+
+Normalerweise reagiert der Wächter, wenn die laufende Viertelstunde über das Ziel läuft. Mit dem Schalter **Vorausschauend drosseln
+nach Prognose** nutzt er zusätzlich das gelernte Muster des Wochentags: In einer **Risiko-Viertelstunde** (die Prognose `high` liegt
+über dem Ziel, mindestens 3 Messwerte) hält er eine **Reserve** frei: die übliche Spitze über dem typischen Wert (`high - typisch`,
+höchstens 3 kW, unter 0,5 kW ignoriert). Er handelt dann, als läge das Ziel um diese Reserve niedriger – aber nur mit den **sanften**
+Hebeln:
+
+- der **Ladestrom der Wallbox** wird gesenkt (nie auf 0, nie unter Ihr Minimum),
+- **Drosseln** (z. B. Wärmepumpe in Prozent) werden schrittweise gesenkt,
+- wegen einer Prognose wird **kein Gerät ausgeschaltet** und **nicht auf 1 Phase umgeschaltet** (das unterbricht das Laden); das bleibt
+  dem echten Überschreiten vorbehalten.
+
+Zurückgeben läuft umgekehrt: Ist die Risiko-Viertelstunde vorbei, ist die Reserve 0 und die übliche stufenweise Rückgabe folgt. Die
+Protokollzeilen beginnen mit „Vorausschauend (laut Prognose Spitzen bis … kW, typisch … kW):“, man sieht also den Grund; das Attribut
+`forecast_reserve_kw` des Status zeigt die Reserve der laufenden Viertelstunde. Voraussetzung: *Lastprognose lernen und anzeigen* (an) und
+genug Messwerte – der Verlaufsimport füllt das Profil zuerst mit Stundenmitteln (Spitzen werden unterschätzt), die echten Viertelstunden
+machen es in einigen Wochen genau. Im **Beobachtungsmodus** wird nur protokolliert, was er tun würde. Empfehlung: nach ein paar Tagen
+einschalten, wenn das Wochenprofil stimmig aussieht.
 
 ## 3c. Ladeplan fürs Auto
 

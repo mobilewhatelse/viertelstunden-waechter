@@ -312,8 +312,28 @@ Sensors:
   (hourly `typical` / `high`, for charts and cards)
 - *Next peak risk* – timestamp of the next or running risk window (attributes `until`, `high_kw`)
 
-The forecast is displayed only for now; it does not change what the guard does. It is the basis for the planned
-charge plan, battery reserve and early intervention.
+The forecast is displayed and feeds the charge plan. It changes what the guard does only if you switch on
+**Throttle ahead using the forecast** (below).
+
+#### Throttling ahead by the forecast (switch, default off)
+
+Normally the guard reacts when the running quarter hour heads above the target. With the switch **Throttle ahead using
+the forecast** it uses the learned weekday pattern as well: in a **risk quarter hour** (the forecast `high` is above
+the target, at least 3 samples) it keeps a **reserve** free: the usual spike on top of the typical value
+(`high - typical`, at most 3 kW, ignored below 0.5 kW). It then acts as if the target were that much lower - but only with
+the *smooth* levers:
+
+- the **wallbox current** is lowered (never to 0, never below your minimum),
+- **throttles** (for example a heat pump in percent) are lowered stepwise,
+- **no device is switched off** and **no phase switch** happens because of a forecast (that pauses charging);
+  those remain reserved for a real excess.
+
+Release is the other way round: when the risk quarter hour is over the reserve is zero and the usual stepwise
+give-back follows. The log lines start with "Vorausschauend (laut Prognose Spitzen bis ... kW, typisch ... kW):", so you
+can see why it acted; the status attribute `forecast_reserve_kw` shows the reserve of the running quarter hour.
+Needs *Learn and show the load forecast* (on) and enough samples: the history import fills the profile at first with
+hourly means (peaks underestimated), the live quarter hours make it accurate within a few weeks. In **observe mode**
+it only logs what it would do. Recommended: switch it on after a few days, once the weekly profile looks right.
 
 ### Charge plan for the car
 
@@ -441,7 +461,7 @@ from the database to keep it small.
 | `switch` Use peak already reached, Message on intervention, Calculate cost and savings | default on |
 | `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
 | `switch` Learn and show the load forecast | default on |
-| `switch` Early warning before an intervention (default off), Weekly report (default on) | optional messages |
+| `switch` Throttle ahead using the forecast (default off), Early warning before an intervention (default off), Weekly report (default on) | optional |
 | `sensor` Weekly report | state = week, attribute `text`, `peak_kw`, `days_over`, `interventions`, `unconfirmed` |
 | `sensor` Typical import now, Expected peak in 24 h, Next peak risk | forecast, attributes `windows`, `hours`, `profile` |
 | `sensor` Charge plan | states and attributes see *Charge plan* |

@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
+import forecast
 from forecast import MAX_SAMPLES, LoadModel, floor_quarter, hourly, risk_windows, slot_of, weekly_profile
 
 TZ = timezone(timedelta(hours=1))
@@ -109,6 +110,28 @@ class WindowTests(unittest.TestCase):
         self.assertEqual(len(h), 24)
         evening = next(x for x in h if x["t"].hour == 18)
         self.assertEqual(evening["high"], 8.0)
+
+
+class ReserveTests(unittest.TestCase):
+    def _model(self, values):
+        m = forecast.LoadModel()
+        when = datetime(2026, 10, 21, 18, 0)
+        for v in values:
+            m.add(when, v)
+        return m, when
+
+    def test_reserve_is_the_usual_spike_in_a_risk_quarter(self):
+        m, when = self._model([1.0, 1.2, 1.1, 12.0, 11.5])
+        kw, info = forecast.reserve_kw(m, when, 9.5)
+        self.assertEqual(kw, 3.0)  # capped
+        self.assertEqual(info["n"], 5)
+
+    def test_no_reserve_below_target_or_with_little_data(self):
+        m, when = self._model([1.0, 1.2, 1.1, 2.0, 2.5])
+        self.assertEqual(forecast.reserve_kw(m, when, 9.5)[0], 0.0)
+        m, when = self._model([12.0, 11.0])
+        self.assertEqual(forecast.reserve_kw(m, when, 9.5)[0], 0.0)
+        self.assertEqual(forecast.reserve_kw(forecast.LoadModel(), when, 9.5)[0], 0.0)
 
 
 if __name__ == "__main__":

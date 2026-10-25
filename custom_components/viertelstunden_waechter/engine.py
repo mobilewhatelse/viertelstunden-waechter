@@ -166,6 +166,7 @@ class Guard:
         self._last_saved = 0.0
         self._restored: dict[str, datetime] = {}
         self._pending: dict[str, dict[str, Any]] = {}  # interventions waiting for their confirmation
+        self._smooth = False               # forecast-based step: no phase switching
         self.misses = 0                    # interventions that never showed in the readings (since start)
         self._now = datetime.min
 
@@ -228,6 +229,8 @@ class Guard:
         limit_kw: float,
         margin_kw: float,
         enabled: bool,
+        reserve_kw: float = 0.0,
+        reserve_text: str = "",
     ) -> list[Action]:
         self._now = now
         self._account(now, grid_kw, counter_kwh)
@@ -251,6 +254,7 @@ class Guard:
             "allowed_kw": round(allowed, 2),
             "forecast_kw": round(forecast, 2),
             "quarter": self.quarter,
+            "reserve_kw": round(reserve_kw, 2),
         }
         self._last_saved = self._saved_kw(readings)
         self.values["saved_kw"] = round(self._last_saved, 2)
@@ -274,7 +278,7 @@ class Guard:
         changed = max([t for t in (self._last_action, self._last_release) if t is not None], default=None)
         slow = [x for x in self._p_hist if changed is None or x[0] > changed]
         held = bool(slow) and _secs(slow[0][0], now) >= ROOM_SUSTAIN_S - STEP_TOLERANCE_S
-        room = min(allowed, target) - sum(x[1] for x in slow) / len(slow) if held else -1.0
+        room = min(allowed, target) - reserve_kw - sum(x[1] for x in slow) / len(slow) if held else -1.0
         self.values["room_kw"] = round(room, 2)
 
         checks = self._verify(now, readings)
@@ -282,6 +286,17 @@ class Guard:
         if not actions:
             if excess > 0.1:
                 actions = self._reduce(now, excess, readings, forecast, limit_kw, rest_h)
+            elif reserve_kw > 0 and p - (allowed - reserve_kw) > 0.1:
+                # forecast says a spike is usual in this quarter hour: take the smooth levers (wallbox, throttle) early
+                self._smooth = True
+                try:
+                    actions = self._reduce(now, p - (allowed - reserve_kw), readings, forecast, limit_kw, rest_h,
+                                           smooth_only=True)
+                finally:
+                    self._smooth = False
+                for a in actions:
+                    if a.text:
+                        a.text = f"Vorausschauend ({reserve_text}): {a.text}"
             else:
                 if room > 0:  # only real, lasting headroom ends the wait for 1-phase (a cooker's off-phase does not)
                     for t in self._wb.values():
@@ -460,12 +475,14 @@ class Guard:
         back = self._restored.get(dev.id)
         return dev.priority + (10 if back is not None and back > self._now - timedelta(seconds=MIN_OFF_S) else 0)
 
-    def _reduce(self, now, excess, readings, forecast, limit_kw, rest_h) -> list[Action]:
+    def _reduce(self, now, excess, readings, forecast, limit_kw, rest_h, smooth_only: bool = False) -> list[Action]:
         if _secs(self._last_action, now) < SETTLE_S:
             return []
         opts = self._options(now, readings, excess)
+        if smooth_only:  # forecast-based: never switch devices off, only lower wallbox current and throttles
+            opts = [o for o in opts if o.device.kind in (KIND_WALLBOX, KIND_THROTTLE)]
         if not opts:
-            if forecast > limit_kw and rest_h < 0.1 and self._notified_q != self.quarter:
+            if not smooth_only and forecast > limit_kw and rest_h < 0.1 and self._notified_q != self.quarter:
                 self._notified_q = self.quarter
                 return [Action("", "notify", round(forecast, 1),
                                f"Grenze nicht zu halten: Prognose {forecast:.1f} kW (Grenze {limit_kw:.1f} kW), alle Hebel ausgeschöpft")]
@@ -593,6 +610,8 @@ class Guard:
         if self._phases(dev, r) == 3:
             if cur > dev.min_current:
                 return max(0.0, p_wb - dev.min_current * self.v3 / 1000.0)
+            if self._smooth:
+                return 0.0  # a forecast alone never switches to 1 phase (that pauses charging)
             if t["too_little"] is None:
                 t["too_little"] = now
             if dev.one_phase_option and _secs(t["too_little"], now) >= TO_ONE_PHASE_AFTER_S:

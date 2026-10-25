@@ -114,7 +114,7 @@ def devices(prio_wb=1, prio_pool=2, prio_heater=3, pool_max_off=0.0, battery=Fal
 
 
 def run(house: House, guard, minutes: int, limit=10.0, margin=0.5, grid_gap=None, verbose=False, unguarded=None,
-        finished=None):
+        finished=None, reserve=None):
     """Returns (quarter averages in kW, log of action texts).
 
     `unguarded` collects the guard's estimate without intervention per quarter, `finished` the guard's own measured
@@ -131,7 +131,7 @@ def run(house: House, guard, minutes: int, limit=10.0, margin=0.5, grid_gap=None
         q_energy += grid * STEP_S / 3600.0
         missing = grid_gap is not None and grid_gap[0] <= t_min < grid_gap[1]
         acts = guard.step(now, None if missing else grid, None if missing else house.counter_kwh,
-                          house.readings(), limit, margin, True)
+                          house.readings(), limit, margin, True, *(reserve(t_min) if reserve else (0.0, "")))
         if unguarded is not None and guard.finished_unguarded_kw is not None:
             unguarded.append(guard.finished_unguarded_kw)
         if finished is not None and guard.finished_quarter_kw is not None:

@@ -23,7 +23,7 @@ from .const import (
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
 )
-from .forecast import LoadModel, hourly, risk_windows, weekly_profile
+from .forecast import LoadModel, hourly, reserve_kw, risk_windows, weekly_profile
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
 from .report import week_label, week_report
@@ -79,6 +79,7 @@ class Waechter:
         # switchable features (default on) and the tariff prices
         self.paid_peak = True            # an already reached month peak above the limit raises the limit for the month
         self.notify_intervention = True  # message at the first intervention (at most every 30 minutes)
+        self.predictive = False          # use the load forecast: lower the wallbox early in a risk quarter hour (default off)
         self.prewarn = False             # message before an intervention: the quarter hour heads for the limit (default off)
         self.weekly_enabled = True       # weekly report on Monday morning
         self.weekly: dict[str, Any] = {}  # the last report
@@ -252,6 +253,9 @@ class Waechter:
             needed = self._is_on(self.cfg.get(CONF_CONDITION), True)
             grid = self._power_kw(self.cfg.get(CONF_GRID_POWER))
             self.guard.real_effect = execute
+            reserve, info = 0.0, None
+            if self.predictive and self.forecast_enabled and self.mode != MODE_OFF:
+                reserve, info = reserve_kw(self.model, now, self.effective_limit(now) - self.margin_kw)
             acts = self.guard.step(
                 now,
                 max(0.0, grid) if grid is not None else None,
@@ -260,6 +264,8 @@ class Waechter:
                 self.effective_limit(now),
                 self.margin_kw,
                 self.mode != MODE_OFF and needed,
+                reserve,
+                f"laut Prognose Spitzen bis {info['high']:.1f} kW, typisch {info['typical']:.1f} kW" if info else "",
             )
             await self._run(acts, execute)
             if execute:

@@ -88,6 +88,23 @@ class LoadModel:
         return cls(slots)
 
 
+RESERVE_CAP_KW = 3.0
+RESERVE_MIN_KW = 0.5
+RESERVE_MIN_SAMPLES = 3
+
+
+def reserve_kw(model: LoadModel, when: datetime, target_kw: float, cap: float = RESERVE_CAP_KW) -> tuple[float, dict[str, Any] | None]:
+    """Headroom the guard keeps free in a risk quarter hour (the forecast `high` exceeds the target): the usual
+    spike on top of the typical value (`high - typical`, at most `cap`). 0 for a normal quarter hour or too little data."""
+    p = model.predict(when)
+    if p is None or p[2] < RESERVE_MIN_SAMPLES or p[1] <= target_kw:
+        return 0.0, None
+    spike = min(cap, max(0.0, p[1] - p[0]))
+    if spike < RESERVE_MIN_KW:
+        return 0.0, None
+    return round(spike, 2), {"typical": p[0], "high": p[1], "n": p[2]}
+
+
 def risk_windows(series: list[dict[str, Any]], target_kw: float, min_samples: int = MIN_SAMPLES) -> list[dict[str, Any]]:
     """Merge consecutive risk quarter hours into windows (start, end, highest `high`, highest typical)."""
     windows: list[dict[str, Any]] = []
