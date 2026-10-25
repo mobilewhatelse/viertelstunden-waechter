@@ -542,8 +542,10 @@ hat. Er braucht dann oft weniger zu tun – wichtig sind Abweichungen in Reihenf
 
 Die Reihenfolge ist ein Vorschlag, kein Versprechen.
 
-1. **Installationstest** auf einem frischen Home Assistant (hassfest, HACS-Prüfung, Einrichtung von Grund auf), bevor die Integration
-   öffentlich angeboten wird. Bisher läuft sie auf einer Installation.
+1. **Veröffentlichung:** Der Installationstest auf einem frischen Home Assistant 2026.10.3 (Docker, `tests/install`) ist am 25.10.2026
+   bestanden (Einrichtung von Grund auf, Geräte, Beobachten und Aktiv, Rückgabe, Dienste, Neustart) und **hassfest besteht**. Offen sind die
+   HACS-Prüfung (braucht ein öffentliches Repository), Themen (Topics) im Repository, eine erste Version (Release) und Berichte von
+   anderen Installationen.
 2. **Tests mit echter Hardware** für *Leistung drosseln*, *Einstellungen ändern* (Wärmepumpen) und die Batterie-Freigabe anderer Hersteller;
    bis dahin nur im Simulator getestet. Testberichte sind willkommen (Vorlage *Gerätetestbericht*).
 3. **Akku-Reserve vor einer erwarteten Spitze:** kurz vor einem Risikofenster den Akku nicht für den Eigenverbrauch entladen, damit er im

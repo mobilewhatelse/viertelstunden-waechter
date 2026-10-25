@@ -716,11 +716,11 @@
       "fields": {
         "days": {
           "name": "Days",
-          "description": "List of {date, kw, at}."
+          "description": "List of entries with date, kw and at."
         },
         "months": {
           "name": "Months",
-          "description": "List of {month, peak_kw}."
+          "description": "List of entries with month and peak_kw."
         }
       }
     },

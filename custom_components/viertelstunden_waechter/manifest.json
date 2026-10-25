@@ -1,9 +1,16 @@
 {
   "domain": "viertelstunden_waechter",
   "name": "Viertelstunden-Wächter",
-  "codeowners": ["@mobilewhatelse"],
+  "after_dependencies": [
+    "recorder",
+    "lovelace",
+    "persistent_notification",
+    "energy"
+  ],
+  "codeowners": [
+    "@mobilewhatelse"
+  ],
   "config_flow": true,
-  "after_dependencies": ["recorder", "lovelace", "persistent_notification"],
   "dependencies": [],
   "documentation": "https://github.com/mobilewhatelse/viertelstunden-waechter",
   "integration_type": "service",

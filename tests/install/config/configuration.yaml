@@ -1,0 +1,72 @@
+homeassistant:
+  name: Testhaus
+  unit_system: metric
+  time_zone: Europe/Vienna
+  currency: EUR
+  country: AT
+  language: de
+
+default_config:
+
+logger:
+  default: warning
+  logs:
+    custom_components.viertelstunden_waechter: debug
+
+# Simuliertes Haus: Wallbox, Pool, Hauslast, Netzbezug als geschlossene Schleife
+input_number:
+  hauslast_w:
+    name: Hauslast
+    min: 0
+    max: 30000
+    step: 1
+    initial: 400
+    unit_of_measurement: W
+    mode: box
+  wb_strom:
+    name: Wallbox Ladestrom
+    min: 6
+    max: 16
+    step: 1
+    initial: 16
+    unit_of_measurement: A
+    mode: box
+
+input_boolean:
+  auto_laedt:
+    name: Auto laedt
+    initial: false
+  pool_pumpe:
+    name: Poolpumpe
+    initial: true
+
+input_datetime:
+  abfahrt:
+    name: Abfahrt
+    has_date: true
+    has_time: true
+
+template:
+  - sensor:
+      - name: Wallbox Leistung
+        unique_id: wb_leistung
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ (states('input_number.wb_strom') | float(6) * 690) if is_state('input_boolean.auto_laedt', 'on') else 0 }}"
+      - name: Pool Leistung
+        unique_id: pool_leistung
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ 750 if is_state('input_boolean.pool_pumpe', 'on') else 0 }}"
+      - name: Netzbezug
+        unique_id: netzbezug
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) }}"
+      - name: Auto Ladestand
+        unique_id: auto_soc
+        unit_of_measurement: "%"
+        state: "40"

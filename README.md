@@ -223,8 +223,10 @@ Nothing in this list is built yet. The order is a proposal, not a promise.
 
 **Planned**
 
-1. **Installation test** on a fresh Home Assistant (hassfest, HACS validation, config flow from scratch) before the
-   integration is offered publicly. So far it has run on one installation only.
+1. **Publishing:** the installation test on a fresh Home Assistant 2026.10.3 (Docker, `tests/install`) passed on
+   2026-10-25 - config flow from scratch, devices, observe and active mode, release, services, restart - and
+   **hassfest passes**. Still open: the HACS validation (needs a public repository), repository topics, a first release,
+   and real-world reports from other installations.
 2. **Real-hardware tests** of *Throttle power* and *Change settings* (heat pumps) and of the battery release on other
    makes - until then they are simulator-tested only. Test reports are welcome (issue template *device test report*).
 3. **Battery reserve before an expected peak:** do not discharge the battery for self-consumption shortly before a
@@ -503,6 +505,7 @@ from the database to keep it small.
 
 ```
 python -m unittest discover tests      # engine tests and house simulation, no Home Assistant needed
+# tests/install: installation test with a fresh Home Assistant in Docker, see tests/install/README.md
 python tests/sim.py                    # one simulated evening: car + cooker + pool + water heater
 ```
 
