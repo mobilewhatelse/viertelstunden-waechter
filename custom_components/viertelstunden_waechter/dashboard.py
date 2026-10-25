@@ -9,6 +9,11 @@ from __future__ import annotations
 
 from typing import Any
 
+try:
+    from . import dashboard_charts as charts
+except ImportError:  # imported as a plain module (tests)
+    import dashboard_charts as charts
+
 TEXTS: dict[str, dict[str, str]] = {
     "de": {
         "view_main": "Wächter", "view_stats": "Statistik und Prognose",
@@ -36,6 +41,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "col_day": "Tag", "col_peak": "höchste ¼ h", "col_at": "um", "col_month": "Monat", "col_without": "ohne Wächter",
         "col_cost": "Kosten", "col_saving": "Ersparnis", "col_real": "echt", "col_observed": "beobachtet",
         "chart_peaks": "Höchste Viertelstunde je Stunde, letzte 3 Tage (kW)", "windows": "Risikofenster", "none": "keine",
+        "daily": "Höchste Viertelstunde je Tag, letzte 6 Wochen", "months_chart": "Spitze je Monat",
+        "legend_forecast": "Voller Balken = typischer Bezug, heller Balken = höchster erwarteter Wert, rot = über dem Ziel.",
+        "legend_profile": "Je Wochentag und Stunde (0–23 Uhr): dunkler = mehr Netzbezug, rot = über dem Ziel.",
+        "legend_daily": "Jeder Balken ein Tag, rot = über der Grenze. Werte aus dem importierten Verlauf sind Stundenmittel (Untergrenze).",
+        "legend_months": "Voller Balken = Spitze des Monats, gestrichelt = Schätzung ohne Wächter.",
+        "hour_label": "Typisch|Höchste Werte|Uhr (0–23)", "limit_label": "Grenze", "target_label": "Ziel",
         "weeks": "Tagesspitzen der letzten 10 Wochen", "day_letters": "MDMDFSS",
         "weeks_help": "Eine Zeile je Woche (Mo–So), höher = höhere Spitze, ▲ = über der Grenze, · = keine Daten.",
         "enough_data": "Die Tabelle füllt sich mit jeder Viertelstunde.",
@@ -71,6 +82,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "col_day": "Day", "col_peak": "highest ¼ h", "col_at": "at", "col_month": "Month", "col_without": "without guard",
         "col_cost": "Cost", "col_saving": "Savings", "col_real": "real", "col_observed": "observed",
         "chart_peaks": "Highest quarter hour per hour, last 3 days (kW)", "windows": "Risk windows", "none": "none",
+        "daily": "Highest quarter hour per day, last 6 weeks", "months_chart": "Peak per month",
+        "legend_forecast": "Solid bar = typical import, light bar = highest expected value, red = above the target.",
+        "legend_profile": "Per weekday and hour (0-23 h): darker = more grid import, red = above the target.",
+        "legend_daily": "Each bar one day, red = above the limit. Values from imported history are hourly means (lower bound).",
+        "legend_months": "Solid bar = peak of the month, dashed = estimate without the guard.",
+        "hour_label": "Typical|Highest values|Hour (0-23)", "limit_label": "Limit", "target_label": "Target",
         "weeks": "Daily peaks of the last 10 weeks", "day_letters": "MTWTFSS",
         "weeks_help": "One line per week (Mon-Sun), higher = higher peak, ▲ = above the limit, · = no data.",
         "enough_data": "The table fills with every quarter hour.",
@@ -136,12 +153,7 @@ def _forecast_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% if hours %}**" + x["peak_label"] + ":** {{ states(s) }} kW · " + x["target"] + " {{ target }} kW\n\n"
         "{% set w = state_attr(s, 'windows') or [] %}**" + x["windows"] + ":** "
         "{% for a in w %}{{ a.get('start')[11:16] }}–{{ a.get('end')[11:16] }} ({{ '%.1f' | format(a.get('high_kw')) }} kW){{ ', ' if not loop.last }}"
-        "{% else %}" + x["none"] + "{% endfor %}\n\n"
-        "```\n"
-        "{% for h in hours %}{% set hi = h.get('high') %}{% set n = (((hi or 0) / target * 24) | round(0) | int) %}"
-        "{{ h.get('t')[11:16] }} {{ '█' * ([n, 36] | min) }} {{ '%.1f' | format(hi) if hi is not none else '–' }}"
-        "{{ ' ⚠' if hi is not none and hi > target else '' }}\n{% endfor %}"
-        "```\n"
+        "{% else %}" + x["none"] + "{% endfor %}"
         "{% else %}" + x["no_forecast"] + "{% endif %}"
     )
 
@@ -277,6 +289,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 _tile(ids["forecast_now"], x["typical_now"]), _tile(ids["forecast_peak"], x["expected_peak"]),
                 _tile(ids["next_risk"], x["next_risk"]),
                 {"type": "markdown", "content": _forecast_markdown(ids, x)},
+                {"type": "markdown", "content": charts.forecast(ids, x["target_label"], x["legend_forecast"], x["no_forecast"])},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
@@ -288,18 +301,19 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["profile"], "icon": "mdi:calendar-week"},
-                {"type": "markdown", "content": _profile_markdown(ids, x)},
+                {"type": "markdown", "content": charts.profile(ids, x["days"], x["hour_label"], x["legend_profile"], x["no_forecast"])},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["peaks"], "icon": "mdi:calendar-month"},
                 {"type": "markdown", "content": _peaks_markdown(ids, x)},
-                {"type": "heading", "heading": x["weeks"], "icon": "mdi:calendar-blank-multiple"},
-                {"type": "markdown", "content": _weeks_markdown(ids, x)},
+                {"type": "heading", "heading": x["daily"], "icon": "mdi:chart-bar"},
+                {"type": "markdown", "content": charts.daily(ids, x["limit_label"], x["legend_daily"], x["enough_data"])},
                 {"type": "statistics-graph", "title": x["chart_peaks"], "entities": [ids["last_quarter"]],
                  "stat_types": ["max"], "period": "hour", "days_to_show": 3, "chart_type": "bar"},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["months"], "icon": "mdi:calendar-range"},
+                {"type": "markdown", "content": charts.months(ids, x["limit_label"], x["legend_months"], x["enough_data"])},
                 {"type": "markdown", "content": _months_markdown(ids, x)},
                 {"type": "heading", "heading": x["interventions"], "icon": "mdi:counter"},
                 {"type": "markdown", "content": _interventions_markdown(ids, x)},
