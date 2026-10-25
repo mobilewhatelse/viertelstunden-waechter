@@ -126,7 +126,36 @@ class WaechterOptionsFlow(OptionsFlow):
         menu = ["settings", "add_wallbox", "add_switch", "add_script"]
         if self.opts[CONF_DEVICES]:
             menu += ["edit_device", "remove_device"]
-        return self.async_show_menu(step_id="init", menu_options=menu)
+        return self.async_show_menu(step_id="init", menu_options=menu, description_placeholders=self._summary())
+
+    def _name(self, eid: str | None) -> str:
+        if not eid:
+            return "–"
+        st = self.hass.states.get(eid)
+        name = st.attributes.get("friendly_name") if st else None
+        return f"{name} (`{eid}`)" if name else f"`{eid}`"
+
+    def _summary(self) -> dict[str, str]:
+        """Overview shown above the menu: sources and devices in priority order."""
+        lines = []
+        for d in sorted(self.opts[CONF_DEVICES], key=lambda x: int(x.get(D_PRIORITY, 5))):
+            kind = d[D_KIND]
+            if kind == KIND_WALLBOX:
+                what = f"{int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A" + (" → 1~" if d.get(D_ONE_PHASE) else "")
+                ent = d.get(D_CURRENT)
+            elif kind == KIND_SWITCH:
+                what = "⏻" + (f" ≤ {int(d.get(D_MAX_OFF, 0))} min" if d.get(D_MAX_OFF) else "")
+                ent = d.get(D_SWITCH)
+            else:
+                what = f"▶ ≈ {int(d.get(D_POWER_W, 0))} W"
+                ent = d.get(D_ON_SCRIPT)
+            lines.append(f"- **{int(d.get(D_PRIORITY, 5))} · {d.get(D_NAME)}**: {what} – {self._name(ent)}")
+        return {
+            "grid_power": self._name(self.opts.get(CONF_GRID_POWER)),
+            "grid_energy": self._name(self.opts.get(CONF_GRID_ENERGY)),
+            "lock": self._name(self.opts.get(CONF_LOCK)),
+            "devices": "\n".join(lines) or "–",
+        }
 
     async def async_step_settings(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:

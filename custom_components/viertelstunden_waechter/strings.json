@@ -27,6 +27,7 @@
     "step": {
       "init": {
         "title": "Quarter-hour peak guard",
+        "description": "**Grid import:** {grid_power}\n**Import counter:** {grid_energy}\n**Lock:** {lock}\n\n**Devices (priority, 1 = restricted first):**\n{devices}",
         "menu_options": {
           "settings": "General settings",
           "add_wallbox": "Add wallbox (reduce charging current)",

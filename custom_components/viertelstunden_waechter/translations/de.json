@@ -27,6 +27,7 @@
     "step": {
       "init": {
         "title": "Viertelstunden-Wächter",
+        "description": "**Netzbezug:** {grid_power}\n**Bezugszähler:** {grid_energy}\n**Sperre:** {lock}\n\n**Geräte (Priorität, 1 = wird zuerst eingeschränkt):**\n{devices}",
         "menu_options": {
           "settings": "Allgemeine Einstellungen",
           "add_wallbox": "Wallbox hinzufügen (Ladestrom senken)",

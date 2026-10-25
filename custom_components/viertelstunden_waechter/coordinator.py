@@ -287,5 +287,17 @@ class Waechter:
                 break
         return lines
 
+    def configuration(self) -> dict[str, Any]:
+        """What is configured, for the status attribute, the dashboard and diagnostics."""
+        devices = sorted(self.raw_devices.values(), key=lambda d: int(d.get("priority", 5)))
+        return {
+            "grid_power": self.cfg.get(CONF_GRID_POWER),
+            "grid_energy": self.cfg.get(CONF_GRID_ENERGY),
+            "condition": self.cfg.get(CONF_CONDITION),
+            "lock": self.cfg.get(CONF_LOCK),
+            "notify": self.cfg.get(CONF_NOTIFY),
+            "devices": [{k: v for k, v in d.items() if k != D_ID} for d in devices],
+        }
+
     def intervention_names(self) -> list[str]:
         return [self.raw_devices[i].get("name", i) for i in self.guard.interventions if i in self.raw_devices]

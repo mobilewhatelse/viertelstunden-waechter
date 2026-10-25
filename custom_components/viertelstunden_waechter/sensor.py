@@ -51,6 +51,7 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "today": w.log_lines(50, today_only=True),
             "room_kw": w.guard.values.get("room_kw"),
             "target_kw": w.guard.values.get("target_kw"),
+            "configuration": w.configuration(),
         }
 
 
