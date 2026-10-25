@@ -47,6 +47,7 @@ Safety:
   optional "switch on again only while" entity is on.
 - A *lock entity* refuses active mode, e.g. while another guard still runs.
 - Implausible counter jumps (after an outage) are ignored.
+- **Confirmation:** every real intervention is checked in the readings (see *Confirmation of commands*).
 
 > **Deutsche Anleitung:** [docs/ANLEITUNG.md](docs/ANLEITUNG.md) – Einrichtung, Messung, Beispiele, Umstellen.
 
@@ -251,6 +252,46 @@ the power it had when it was switched off, while it is off; emergency action: th
 The highest of these "unguarded" quarter hours of the month is billed with the tariff. This is an estimate, not a
 measurement.
 
+### Confirmation of commands, early warning, weekly report
+
+**Confirmation of commands (always on, nothing to set up).** A "done" from a service call proves nothing: a cloud
+wallbox may accept the command and ignore it, a smart plug may be offline. The guard therefore reads the result
+back about 60 seconds after every real intervention:
+
+| Device | What must show |
+|---|---|
+| Wallbox | the current entity is at or below the new value, and after the phase pause the charging power is not clearly above what the new current allows |
+| Switchable device | the switch is off |
+| Throttle | the number has the new value |
+| Battery / setting | the release value is set (nothing left to release) |
+
+If not, the command is **repeated once**. If it still does not show, the guard logs it, sends one message per
+device (at most every 30 minutes) and leaves that device alone for 10 minutes, so the **next lever of the order
+is used** instead of waiting for a device that does not react. When the device follows later, it is used again.
+Releases (giving back) are not checked: if one fails, the device simply stays limited and the guard tries again.
+Observe mode does not check anything (nothing is sent). The count is the attribute `unconfirmed` and appears in the
+weekly report; log lines read "no reaction ... command repeated" and "command not carried out".
+
+**Early warning** – switch *Early warning before an intervention*, **default off**. One message per quarter hour
+when the forecast of the running quarter hour reaches 90 % of the limit while the guard has not yet intervened
+(an intervention sends its own message). Useful in observe mode to see how often a quarter hour comes close.
+Needs *notify services* in the general settings.
+
+**Weekly report** – switch *Weekly report*, default on. On Monday from 07:00 the guard sends a short report of the
+last full week (Monday to Sunday) via the notify services: highest quarter hour with day and time, days above the
+limit, interventions (real, observed, not carried out), the month's peak and – if prices are entered – the month's
+cost and the estimated saving. Nothing is sent for a week without measurements (e.g. a new installation). The last
+report is the sensor *Weekly report* (state = week, attribute `text`) and shown at the end of the statistics view.
+Service **Send weekly report** (`viertelstunden_waechter.send_week_report`, fields `current_week`, `push`) creates it
+on demand, e.g. to see how it looks:
+
+```yaml
+action: viertelstunden_waechter.send_week_report
+data:
+  current_week: true   # the running week so far instead of the last full week
+  push: false          # only create the sensor, send no message
+```
+
 ### Load forecast
 
 Switch **Learn and show the load forecast** (default on). The guard learns the typical grid import for every
@@ -337,7 +378,7 @@ drawn from the sensors' attributes; the colours work on light and dark themes):
 | Chart | What it shows | Source | Fills after |
 |---|---|---|---|
 | **Forecast** | One bar per hour for the next 24 h: solid = typical grid import, light = highest expected value, red = above the target, dashed red line = target | load forecast | the history import (minutes) or a few days |
-| **Typical week** | Heat map weekday x hour (0-23), two panels: *typical* and *highest values*; darker = more import, red = above the target | load forecast | the history import or about 2 weeks |
+| **Typical week** | Heat map weekday x hour (0-23), two panels: *typical* and *highest values*; colour from dark blue via teal, green and yellow to orange = more import (each panel scaled to its own maximum), red = above the target | load forecast | the history import or about 2 weeks |
 | **Highest quarter hour per day** | Last 6 weeks, one bar per day, red above the limit, dashed line = limit | `peaks_by_day` of the sensor *Peak today* | a day per bar; earlier days via *Import history* (hourly means = lower bound) |
 | **Peak per month** | One bar per month with the value, dashed outline = estimate without the guard, line = limit | month history of the sensor *Peak this month* | a month per bar, or via *Import history* |
 | **Hourly graph** | Standard statistics graph of the quarter-hour peaks per hour, last 3 days | recorder statistics | a few hours |
@@ -400,6 +441,8 @@ from the database to keep it small.
 | `switch` Use peak already reached, Message on intervention, Calculate cost and savings | default on |
 | `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
 | `switch` Learn and show the load forecast | default on |
+| `switch` Early warning before an intervention (default off), Weekly report (default on) | optional messages |
+| `sensor` Weekly report | state = week, attribute `text`, `peak_kw`, `days_over`, `interventions`, `unconfirmed` |
 | `sensor` Typical import now, Expected peak in 24 h, Next peak risk | forecast, attributes `windows`, `hours`, `profile` |
 | `sensor` Charge plan | states and attributes see *Charge plan* |
 | `switch` Calculate the charge plan (default on), Also carry out the charge plan (always off after a restart) | |

@@ -35,6 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         TodayPeakSensor(w),
         MonthPeakSensor(w),
         InterventionsTodaySensor(w),
+        WeeklyReportSensor(w),
     ])
 
 
@@ -63,6 +64,25 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "target_kw": w.guard.values.get("target_kw"),
             "configuration": w.configuration(),
         }
+
+
+class WeeklyReportSensor(WaechterEntity, SensorEntity):
+    """The last weekly report: the state is the week, the attribute `text` the message."""
+
+    _unrecorded_attributes = frozenset({"text"})
+    _attr_icon = "mdi:calendar-week"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "weekly_report")
+
+    @property
+    def native_value(self) -> str | None:
+        return self.waechter.weekly.get("week")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        keep = ("text", "peak_kw", "peak_day", "days_over", "days_with_data", "interventions", "observed", "unconfirmed", "sent", "partial")
+        return {k: v for k, v in self.waechter.weekly.items() if k in keep}
 
 
 class ValueSensor(WaechterEntity, SensorEntity):

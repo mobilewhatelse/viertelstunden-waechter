@@ -18,6 +18,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         FeatureSwitch(w, "notify_intervention", "notify_intervention", "mdi:bell-ring"),
         FeatureSwitch(w, "costs_enabled", "costs_enabled", "mdi:currency-eur"),
         FeatureSwitch(w, "forecast_enabled", "forecast_enabled", "mdi:chart-timeline-variant"),
+        OffByDefaultSwitch(w, "prewarn", "prewarn", "mdi:bell-alert-outline"),
+        FeatureSwitch(w, "weekly_report_enabled", "weekly_enabled", "mdi:calendar-week"),
         FeatureSwitch(w, "charge_plan_enabled", "plan_enabled", "mdi:ev-station"),
         ExecuteSwitch(w, "charge_plan_execute", "plan_execute", "mdi:play-circle-outline"),
     ])
@@ -47,6 +49,15 @@ class FeatureSwitch(WaechterEntity, SwitchEntity, RestoreEntity):
         setattr(self.waechter, self._attr, False)
         self.async_write_ha_state()
         await self.waechter.async_refresh()
+
+
+class OffByDefaultSwitch(FeatureSwitch):
+    """An optional feature that is off until it is switched on; the last state is restored after a restart."""
+
+    async def async_added_to_hass(self) -> None:
+        await WaechterEntity.async_added_to_hass(self)
+        last = await self.async_get_last_state()
+        setattr(self.waechter, self._attr, last is not None and last.state == "on")
 
 
 class ExecuteSwitch(FeatureSwitch):

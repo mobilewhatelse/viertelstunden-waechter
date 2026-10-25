@@ -162,6 +162,9 @@
           "planned": "Geplant",
           "infeasible": "Ziel nicht erreichbar"
         }
+      },
+      "weekly_report": {
+        "name": "Wochenbericht"
       }
     },
     "switch": {
@@ -182,6 +185,12 @@
       },
       "charge_plan_execute": {
         "name": "Ladeplan auch ausführen"
+      },
+      "prewarn": {
+        "name": "Vorwarnung vor einem Eingriff"
+      },
+      "weekly_report_enabled": {
+        "name": "Wochenbericht"
       }
     }
   },
@@ -709,6 +718,20 @@
         "months": {
           "name": "Monate",
           "description": "Liste von {month, peak_kw}."
+        }
+      }
+    },
+    "send_week_report": {
+      "name": "Wochenbericht senden",
+      "description": "Sendet den Bericht der letzten vollen Woche (oder der laufenden Woche) als Meldung.",
+      "fields": {
+        "current_week": {
+          "name": "Laufende Woche",
+          "description": "Nur die laufende Woche bisher statt der letzten vollen Woche."
+        },
+        "push": {
+          "name": "Als Meldung senden",
+          "description": "Zusätzlich als Meldung an die Benachrichtigungsdienste senden."
         }
       }
     }

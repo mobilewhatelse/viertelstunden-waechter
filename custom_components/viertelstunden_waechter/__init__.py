@@ -62,6 +62,7 @@ async def _reload(hass: HomeAssistant, entry: WaechterEntry) -> None:
 
 SERVICE_CREATE_DASHBOARD = "create_dashboard"
 SERVICE_IMPORT_HISTORY = "import_history"
+SERVICE_WEEK_REPORT = "send_week_report"
 
 
 def _register_services(hass: HomeAssistant) -> None:
@@ -77,6 +78,19 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_IMPORT_HISTORY, handle_import,
         schema=vol.Schema({vol.Optional("days", default=[]): list, vol.Optional("months", default=[]): list}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    async def handle_week(call: ServiceCall) -> dict[str, Any]:
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries or getattr(entries[0], "runtime_data", None) is None:
+            raise ServiceValidationError("The guard is not set up")
+        rep = await entries[0].runtime_data.send_week_report(call.data["current_week"], call.data["push"])
+        return {k: v for k, v in rep.items() if k != "text"} | {"text": rep["text"]}
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_WEEK_REPORT, handle_week,
+        schema=vol.Schema({vol.Optional("current_week", default=False): cv.boolean, vol.Optional("push", default=True): cv.boolean}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 

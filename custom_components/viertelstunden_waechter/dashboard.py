@@ -30,6 +30,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "cost_month": "Leistungspreis diesen Monat", "cost_without": "Ohne Wächter (Schätzung)", "saving_month": "Ersparnis Monat",
         "saving_year": "Ersparnis Jahr", "saved_now": "Entlastung jetzt",
         "typical_now": "Typisch jetzt", "expected_peak": "Erwartete Spitze 24 h", "next_risk": "Nächstes Risiko",
+        "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
+        "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
         "today": "Heute", "no_decisions": "Noch keine Entscheidungen heute.", "devices": "Geräte und Prioritäten",
         "measure": "Messung", "grid": "Netzbezug", "counter": "Bezugszähler", "lock": "Sperre „Aktiv“",
         "prio": "Prio", "device": "Gerät", "action": "Eingriff", "controls": "Steuert",
@@ -71,6 +73,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "cost_month": "Demand charge this month", "cost_without": "Without the guard (estimate)", "saving_month": "Savings this month",
         "saving_year": "Savings this year", "saved_now": "Relief now",
         "typical_now": "Typical now", "expected_peak": "Expected peak in 24 h", "next_risk": "Next risk",
+        "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
+        "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
         "today": "Today", "no_decisions": "No decisions yet today.", "devices": "Devices and priorities",
         "measure": "Measurement", "grid": "Grid import", "counter": "Import counter", "lock": "Lock for \"Active\"",
         "prio": "Prio", "device": "Device", "action": "Action", "controls": "Controls",
@@ -260,6 +264,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "entities", "title": x["features"], "entities": [
                     {"entity": ids["paid_peak"], "name": x["paid_peak"]}, {"entity": ids["notify_intervention"], "name": x["notify"]},
                     {"entity": ids["costs_enabled"], "name": x["costs_on"]}, {"entity": ids["forecast_enabled"], "name": x["forecast_on"]},
+                    {"entity": ids["prewarn"], "name": x["prewarn"]}, {"entity": ids["weekly_report_enabled"], "name": x["weekly_on"]},
                     {"entity": ids["price_low"], "name": x["price_low"]}, {"entity": ids["price_high"], "name": x["price_high"]},
                     {"entity": ids["price_threshold"], "name": x["threshold"]}]},
                 {"type": "markdown", "title": x["devices"], "content": _config_markdown(ids, x)},
@@ -317,6 +322,8 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "markdown", "content": _months_markdown(ids, x)},
                 {"type": "heading", "heading": x["interventions"], "icon": "mdi:counter"},
                 {"type": "markdown", "content": _interventions_markdown(ids, x)},
+                {"type": "heading", "heading": x["weekly"], "icon": "mdi:calendar-week"},
+                {"type": "markdown", "content": "{% set r = state_attr('" + ids["weekly_report"] + "', 'text') %}{{ (r | replace('\n', '  \n')) if r else '" + x["no_report"] + "' }}"},
             ]},
         ],
     }
@@ -326,7 +333,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
 ENTITY_KEYS: dict[str, str] = {
     "mode": "select", "strategy": "select",
     "limit": "number", "margin": "number", "price_low": "number", "price_high": "number", "price_threshold": "number",
-    "paid_peak": "switch", "notify_intervention": "switch", "costs_enabled": "switch", "forecast_enabled": "switch",
+    "paid_peak": "switch", "notify_intervention": "switch", "prewarn": "switch", "weekly_report_enabled": "switch", "weekly_report": "sensor", "costs_enabled": "switch", "forecast_enabled": "switch",
     "status": "sensor", "forecast": "sensor", "allowed": "sensor", "quarter_energy": "sensor", "last_quarter": "sensor",
     "today_peak": "sensor", "month_peak": "sensor", "interventions_today": "sensor", "cost_month": "sensor",
     "cost_without": "sensor", "savings_month": "sensor", "savings_year": "sensor", "saved_now": "sensor",

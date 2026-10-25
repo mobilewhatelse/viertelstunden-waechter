@@ -383,7 +383,7 @@ gezeichnet aus den Attributen der Sensoren; die Farben passen zu hellen und dunk
 | Diagramm | Was es zeigt | Quelle | Gefüllt nach |
 |---|---|---|---|
 | **Prognose** | Ein Balken je Stunde für die nächsten 24 h: voll = typischer Netzbezug, hell = höchster erwarteter Wert, rot = über dem Ziel, rot gestrichelt = Ziel | Lastprognose | Verlaufsimport (Minuten) oder einigen Tagen |
-| **Typische Woche** | Wärmebild Wochentag × Stunde (0–23) in zwei Feldern: *Typisch* und *Höchste Werte*; dunkler = mehr Bezug, rot = über dem Ziel | Lastprognose | Verlaufsimport oder etwa 2 Wochen |
+| **Typische Woche** | Wärmebild Wochentag × Stunde (0–23) in zwei Feldern: *Typisch* und *Höchste Werte*; Farbe von dunkelblau über türkis, grün und gelb bis orange = mehr Bezug (jedes Feld auf seinen eigenen Höchstwert skaliert), rot = über dem Ziel | Lastprognose | Verlaufsimport oder etwa 2 Wochen |
 | **Höchste Viertelstunde je Tag** | Letzte 6 Wochen, ein Balken je Tag, rot über der Grenze, gestrichelt = Grenze | Attribut `peaks_by_day` des Sensors *Spitze heute* | ein Tag je Balken; frühere Tage per *Verlauf importieren* (Stundenmittel = Untergrenze) |
 | **Spitze je Monat** | Ein Balken je Monat mit Wert, gestrichelter Umriss = Schätzung ohne Wächter, Linie = Grenze | Monatsverlauf des Sensors *Spitze im Monat* | ein Monat je Balken oder per *Verlauf importieren* |
 | **Stundengraph** | Standard-Statistikgraph der Viertelstunden-Spitzen je Stunde, letzte 3 Tage | Langzeitstatistik | einigen Stunden |
@@ -397,6 +397,51 @@ Balken „noch zu wenig Daten“; das ist bei einer frischen Installation normal
 - Ohne Adresse: Das YAML wird zurückgegeben und als Benachrichtigung angezeigt; in ein neues Dashboard einfügen
   (drei Punkte > Bearbeiten > Rohkonfigurations-Editor). Das ist der robustere Weg, falls sich in Home Assistant intern
   etwas ändert.
+
+---
+
+## 3e. Rückmeldung, Vorwarnung und Wochenbericht
+
+### Rückmeldung nach dem Befehl (immer an)
+
+Ein „erledigt“ nach einem Dienstaufruf beweist nichts: Eine Cloud-Wallbox nimmt den Befehl an und ignoriert ihn, ein Stecker
+ist offline. Der Wächter liest deshalb etwa **60 Sekunden nach jedem echten Eingriff** zurück, ob er angekommen ist:
+
+| Gerät | Was zu sehen sein muss |
+|---|---|
+| Wallbox | der Strom-Wert steht höchstens beim neuen Wert, und nach der Phasenpause liegt die Ladeleistung nicht deutlich über dem, was der neue Strom erlaubt |
+| Schaltbares Gerät | der Schalter ist aus |
+| Drossel | die Zahl hat den neuen Wert |
+| Batterie / Einstellung | der Freigabewert steht (es gibt nichts mehr freizugeben) |
+
+Fehlt die Wirkung, wird der Befehl **einmal wiederholt**. Fehlt sie wieder, schreibt der Wächter es ins Protokoll, sendet eine
+Meldung je Gerät (höchstens alle 30 Minuten) und lässt dieses Gerät **10 Minuten aus**: Der nächste Hebel der Reihenfolge kommt
+dran, statt auf ein Gerät zu warten, das nicht reagiert. Reagiert es später wieder, wird es wieder benutzt. Das Zurückgeben wird
+nicht geprüft: Klappt es nicht, bleibt das Gerät begrenzt und der Wächter versucht es erneut. Im Beobachtungsmodus wird nichts
+geprüft (es wird ja nichts gesendet). Die Zahl steht im Attribut `unconfirmed` und im Wochenbericht; im Protokoll heißt es
+„keine Reaktion … Befehl wird wiederholt“ und „Befehl nicht umgesetzt“.
+
+### Vorwarnung (Schalter, Standard aus)
+
+Schalter **Vorwarnung vor einem Eingriff**: Eine Meldung je Viertelstunde, wenn die Prognose der laufenden Viertelstunde 90 %
+der Grenze erreicht und der Wächter noch nicht eingegriffen hat (ein Eingriff sendet eine eigene Meldung). Gut im Beobachtungsmodus,
+um zu sehen, wie oft eine Viertelstunde knapp wird. Braucht Benachrichtigungsdienste in den allgemeinen Einstellungen.
+
+### Wochenbericht (Schalter, Standard an)
+
+Montags ab 07:00 sendet der Wächter einen kurzen Bericht über die letzte volle Woche (Montag bis Sonntag): höchste Viertelstunde
+mit Tag und Uhrzeit, Tage über der Grenze, Eingriffe (echt, beobachtet, nicht umgesetzt), Spitze des Monats und – wenn Preise
+eingetragen sind – Kosten und geschätzte Ersparnis. Ohne Messwerte der Woche (neue Installation) wird nichts gesendet.
+Der letzte Bericht steht im Sensor **Wochenbericht** (Zustand = Woche, Attribut `text`) und am Ende der Ansicht Statistik.
+Der Dienst **Wochenbericht senden** (`viertelstunden_waechter.send_week_report`, Felder `current_week`, `push`) erzeugt ihn auf
+Wunsch, zum Beispiel zum Ansehen:
+
+```yaml
+action: viertelstunden_waechter.send_week_report
+data:
+  current_week: true   # die laufende Woche bisher statt der letzten vollen Woche
+  push: false          # nur den Sensor füllen, keine Meldung senden
+```
 
 ---
 
@@ -466,6 +511,7 @@ hat. Er braucht dann oft weniger zu tun – wichtig sind Abweichungen in Reihenf
   freigegeben.
 - Höchste Auszeit je Gerät wird immer eingehalten.
 - Unplausible Zählersprünge (nach einem Ausfall) werden verworfen.
+- Jeder echte Eingriff wird nach etwa 60 s zurückgelesen: einmal wiederholt, dann gemeldet und das Gerät 10 min ausgelassen (siehe 3e).
 - Entscheidungen nach Mittelwerten (Herd und Wasserkocher takten): Abschalten nach dem 1-Minuten-Mittel,
   Zurückgeben erst, wenn 2 Minuten lang genug Luft war.
 - Der Wächter ersetzt **nicht** die Absicherung im Verteiler und kein vorgeschriebenes Lastmanagement.

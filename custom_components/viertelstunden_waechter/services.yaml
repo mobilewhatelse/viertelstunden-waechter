@@ -5,6 +5,18 @@ create_dashboard:
       example: "waechter"
       selector:
         text:
+send_week_report:
+  fields:
+    current_week:
+      required: false
+      default: false
+      selector:
+        boolean:
+    push:
+      required: false
+      default: true
+      selector:
+        boolean:
 import_history:
   fields:
     days:

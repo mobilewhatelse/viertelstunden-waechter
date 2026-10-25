@@ -26,6 +26,7 @@ from .const import (
 from .forecast import LoadModel, hourly, risk_windows, weekly_profile
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
+from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
     DeviceConfig, Guard, Reading,
@@ -78,6 +79,11 @@ class Waechter:
         # switchable features (default on) and the tariff prices
         self.paid_peak = True            # an already reached month peak above the limit raises the limit for the month
         self.notify_intervention = True  # message at the first intervention (at most every 30 minutes)
+        self.prewarn = False             # message before an intervention: the quarter hour heads for the limit (default off)
+        self.weekly_enabled = True       # weekly report on Monday morning
+        self.weekly: dict[str, Any] = {}  # the last report
+        self._prewarn_q: datetime | None = None
+        self._miss_push: dict[str, datetime] = {}
         self.costs_enabled = True        # compute cost and savings
         self.price_low = 0.0             # EUR per kW and year up to the threshold
         self.price_high = 0.0            # EUR per kW and year above the threshold
@@ -118,6 +124,7 @@ class Waechter:
         self.month_peak = data.get("month_peak", {})
         self.day_peaks = data.get("day_peaks", {})
         self.months = data.get("months", {})
+        self.weekly = data.get("weekly", {})
         self._battery_orig = data.get("battery_orig", {})
         self._plan_paused = bool(data.get("plan_paused"))  # resumed by the first cycle (the plan switch is off)
         if self.month_peak.get("month") and self.month_peak["month"] not in self.months:
@@ -256,6 +263,8 @@ class Waechter:
             await self._run(acts, execute)
             if execute:
                 await self._push_intervention(acts, now)
+            await self._prewarning(now, needed)
+            await self._weekly_due(now)
             if self.guard.finished_quarter_kw is not None:
                 self._quarter_done(self.guard.finished_quarter_kw, self.guard.finished_unguarded_kw, now)
             self._maybe_bootstrap()
@@ -320,6 +329,54 @@ class Waechter:
             return
         self._last_push = now
         await self._exec(Action("", "notify", None, f"Eingriff: {first.text}"))
+
+    async def _prewarning(self, now: datetime, needed: bool) -> None:
+        """Optional message before an intervention: once per quarter hour when the forecast of the running quarter
+        reaches 90 % of the limit and the guard has not intervened yet (an intervention sends its own message)."""
+        v = self.guard.values
+        if not self.prewarn or self.mode == MODE_OFF or not needed or self.guard.state == "no_data":
+            return
+        fc, limit = v.get("forecast_kw"), v.get("limit_kw")
+        q = v.get("quarter")
+        if fc is None or not limit or q is None or self._prewarn_q == q or self.guard.interventions:
+            return
+        if fc >= 0.9 * float(limit):
+            self._prewarn_q = q
+            await self._exec(Action("", "notify", None,
+                                    f"Vorwarnung: Die Viertelstunde läuft auf {fc:.1f} kW zu (Grenze {float(limit):.1f} kW, "
+                                    f"Bezug jetzt {float(v.get('grid_kw') or 0.0):.1f} kW)"))
+
+    def build_week(self, start, days: int = 7) -> dict[str, Any]:
+        month = (start + timedelta(days=days - 1)).strftime("%Y-%m")
+        mp = self.months.get(month, {}).get("kw")
+        return week_report(self.day_peaks, self.counts, self.limit_kw, start, days, float(mp) if mp else None,
+                           self.month_costs(month) if mp else None, self.hass.config.language)
+
+    async def send_week_report(self, current: bool = False, push: bool = True) -> dict[str, Any]:
+        """The last full week (Mon-Sun), or with `current` the running week so far."""
+        today = dt_util.now().date()
+        monday = today - timedelta(days=today.weekday())
+        rep = self.build_week(monday if current else monday - timedelta(days=7), today.weekday() + 1 if current else 7)
+        self.weekly = {**rep, "sent": dt_util.now().isoformat(timespec="seconds"), "partial": current}
+        self._store.async_delay_save(self._data, 5)
+        if push:
+            await self._exec(Action("", "notify", None, rep["text"]))
+        async_dispatcher_send(self.hass, self.signal)
+        return rep
+
+    async def _weekly_due(self, now: datetime) -> None:
+        """Monday from 07:00: report the week that ended yesterday, once."""
+        if not self.weekly_enabled or now.weekday() != 0 or now.hour < 7:
+            return
+        last_week = (now - timedelta(days=7)).date()
+        label = week_label(last_week)
+        if self.weekly.get("week") == label and not self.weekly.get("partial"):
+            return
+        rep = self.build_week(now.date() - timedelta(days=7))
+        if rep["days_with_data"] == 0:
+            self.weekly = {**rep, "sent": None, "partial": False}  # nothing to report (fresh installation)
+            return
+        await self.send_week_report(False, True)
 
     def _quarter_done(self, kw: float, unguarded_kw: float | None, now: datetime) -> None:
         self.last_quarter_kw = kw
@@ -545,6 +602,9 @@ class Waechter:
         for a in acts:
             if a.text:
                 self._log(a, not execute)
+            if a.kind == "unconfirmed" and execute:
+                day = self.counts.setdefault(dt_util.now().strftime("%Y-%m-%d"), {"real": 0, "shadow": 0})
+                day["miss"] = day.get("miss", 0) + 1
             if not execute or a.kind == "log":
                 continue
             try:
@@ -583,7 +643,12 @@ class Waechter:
             await self._call("script", "turn_on", {"entity_id": d[D_ON_SCRIPT]})
         elif a.kind == "script_off" and d.get(D_OFF_SCRIPT):
             await self._call("script", "turn_on", {"entity_id": d[D_OFF_SCRIPT]})
-        elif a.kind == "notify":
+        elif a.kind in ("notify", "unconfirmed"):
+            if a.kind == "unconfirmed":  # a device that keeps ignoring commands must not send a message every cycle
+                last = self._miss_push.get(a.device_id)
+                if last is not None and (dt_util.now() - last) < timedelta(minutes=30):
+                    return
+                self._miss_push[a.device_id] = dt_util.now()
             for svc in [s.strip() for s in str(self.cfg.get(CONF_NOTIFY) or "").split(",") if "." in s]:
                 domain, service = svc.split(".", 1)
                 try:
@@ -639,6 +704,7 @@ class Waechter:
             "battery_orig": self._battery_orig,
             "plan_paused": self._plan_paused,
             "day_peaks": self.day_peaks,
+            "weekly": self.weekly,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,
             "interventions": self.guard.interventions if self.executing else {},

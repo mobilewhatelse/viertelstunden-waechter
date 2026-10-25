@@ -47,6 +47,8 @@ FAST_AVG_S = 60
 STEP_TOLERANCE_S = 25        # one cycle of slack when checking how long something held
 WALLBOX_UP_AFTER_S = 90
 MISSING_DATA_S = 90           # no grid reading this long: give everything back
+VERIFY_S = 60                # an intervention must show in the readings after this long, else it is repeated once
+MISS_REST_MIN = 10            # a device that did not follow is left alone this long, the next lever is used
 MAX_PLAUSIBLE_KW = 60.0       # counter jumps after an outage are not real peaks
 CHARGING_W = 500.0
 
@@ -163,6 +165,8 @@ class Guard:
         self.finished_unguarded_kw: float | None = None  # estimated average without the guard, set when a quarter ends
         self._last_saved = 0.0
         self._restored: dict[str, datetime] = {}
+        self._pending: dict[str, dict[str, Any]] = {}  # interventions waiting for their confirmation
+        self.misses = 0                    # interventions that never showed in the readings (since start)
         self._now = datetime.min
 
     # ---------- persistence ----------
@@ -250,6 +254,7 @@ class Guard:
         }
         self._last_saved = self._saved_kw(readings)
         self.values["saved_kw"] = round(self._last_saved, 2)
+        self.values["unconfirmed"] = self.misses
 
         if grid_kw is None:
             if self._missing_since is None:
@@ -272,6 +277,7 @@ class Guard:
         room = min(allowed, target) - sum(x[1] for x in slow) / len(slow) if held else -1.0
         self.values["room_kw"] = round(room, 2)
 
+        checks = self._verify(now, readings)
         actions = self._forced_releases(now, readings)
         if not actions:
             if excess > 0.1:
@@ -281,8 +287,86 @@ class Guard:
                     for t in self._wb.values():
                         t["too_little"] = None
                 actions = self._release(now, room, readings)
+        self._register(now, readings, actions)
         self.state = "intervening" if self.interventions else "ready"
-        return actions
+        return checks + actions
+
+    # ---------- confirmation: did the device really follow? ----------
+
+    def _register(self, now: datetime, readings: dict[str, Reading], acts: list[Action]) -> None:
+        """Remember what must show in the readings (only when the commands are really executed)."""
+        if not self.real_effect:
+            return
+        for a in acts:
+            dev = self.devices.get(a.device_id)
+            if dev is None or not a.intervention:
+                continue
+            if a.kind == "set_current":
+                r = readings.get(dev.id) or Reading()
+                phase_switch = any(x.kind == "set_phase" and x.device_id == dev.id for x in acts)
+                kw = float(a.value) * (self.v1 if self._phases(dev, r) == 1 else self.v3) / 1000.0
+                self._set_pending(dev.id, a, now, expect_kw=kw, power_after=PHASE_PAUSE_S if phase_switch else 0)
+            elif a.kind in ("turn_off", "set_value", "battery_release"):
+                self._set_pending(dev.id, a, now)
+
+    def _set_pending(self, dev_id: str, a: Action, now: datetime, **extra: Any) -> None:
+        """A newer command for the same device replaces the expectation but not the waiting time: a device
+        that ignores every command must not keep postponing its own check."""
+        old = self._pending.get(dev_id)
+        self._pending[dev_id] = {"act": a, "act_at": now, "since": old["since"] if old else now,
+                                 "tries": old["tries"] if old else 0, **extra}
+
+    def _followed(self, dev: DeviceConfig, pend: dict[str, Any], r: Reading | None, age: float) -> str:
+        """'' if the reading shows the intervention, else what is wrong."""
+        a: Action = pend["act"]
+        if r is None or not r.available:
+            return "Gerät nicht erreichbar"
+        if a.kind == "set_current":
+            if r.current_a is None or r.current_a > float(a.value) + 0.5:
+                return f"Strom steht bei {r.current_a:g} A statt {a.value} A" if r.current_a is not None else "kein Stromwert"
+            if _secs(pend["act_at"], self._now) >= max(VERIFY_S, pend["power_after"]) - 5 and (r.power_w or 0.0) / 1000.0 > pend["expect_kw"] * 1.2 + 0.4:
+                return f"Leistung {(r.power_w or 0.0) / 1000.0:.1f} kW trotz {a.value} A"
+        elif a.kind == "turn_off":
+            if r.is_on is not False:
+                return "Gerät ist noch an"
+        elif a.kind == "set_value":
+            if r.value is None or abs(r.value - float(a.value)) > dev.step / 2 + 1e-9:
+                return f"Wert steht bei {r.value:g} statt {a.value:g}" if r.value is not None else "kein Wert"
+        elif a.kind == "battery_release":
+            if r.releasable:
+                return "Freigabe nicht übernommen"
+        return ""
+
+    def _verify(self, now: datetime, readings: dict[str, Reading]) -> list[Action]:
+        """Check the pending interventions: repeat once, then report and leave the device alone for a while,
+        so the next lever of the order is used instead of waiting for a device that does not react."""
+        acts: list[Action] = []
+        for dev_id in list(self._pending):
+            pend, dev = self._pending[dev_id], self.devices.get(dev_id)
+            if dev is None or dev_id not in self.interventions:
+                del self._pending[dev_id]
+                continue
+            age = _secs(pend["since"], now)
+            if age < VERIFY_S - 5:  # the cycle is 20 s, so the check happens at about 60 s
+                continue
+            problem = self._followed(dev, pend, readings.get(dev_id), age)
+            if not problem:
+                del self._pending[dev_id]
+            elif pend["tries"] < 1:
+                pend["tries"] += 1
+                pend["since"] = pend["act_at"] = now
+                a: Action = pend["act"]
+                self._last_action = now
+                if dev.kind in (KIND_WALLBOX, KIND_THROTTLE):
+                    self._wbt(dev_id)["changed"] = now
+                acts.append(Action(dev_id, a.kind, a.value, f"{dev.name}: keine Reaktion ({problem}), Befehl wird wiederholt", False))
+            else:
+                del self._pending[dev_id]
+                self.misses += 1
+                self._rest_until[dev_id] = now + timedelta(minutes=MISS_REST_MIN)
+                acts.append(Action(dev_id, "unconfirmed", None,
+                                   f"{dev.name}: Befehl nicht umgesetzt ({problem}). Das Gerät wird {MISS_REST_MIN} min ausgelassen, der nächste Hebel kommt dran", False))
+        return acts
 
     # ---------- savings estimate ----------
 
@@ -695,5 +779,6 @@ class Guard:
     def forget(self) -> None:
         """Drop interventions without touching devices (they were only simulated in observe mode)."""
         self.interventions = {}
+        self._pending = {}
         self._wb = {}
         self._last_action = self._last_release = None

@@ -162,6 +162,9 @@
           "planned": "Planned",
           "infeasible": "Target not reachable"
         }
+      },
+      "weekly_report": {
+        "name": "Weekly report"
       }
     },
     "switch": {
@@ -182,6 +185,12 @@
       },
       "charge_plan_execute": {
         "name": "Also carry out the charge plan"
+      },
+      "prewarn": {
+        "name": "Early warning before an intervention"
+      },
+      "weekly_report_enabled": {
+        "name": "Weekly report"
       }
     }
   },
@@ -709,6 +718,20 @@
         "months": {
           "name": "Months",
           "description": "List of {month, peak_kw}."
+        }
+      }
+    },
+    "send_week_report": {
+      "name": "Send the weekly report",
+      "description": "Sends the report of the last full week (or the running week) as a message.",
+      "fields": {
+        "current_week": {
+          "name": "Running week",
+          "description": "Only the running week so far instead of the last full week."
+        },
+        "push": {
+          "name": "Send the message",
+          "description": "Also send it as a message to the notify services."
         }
       }
     }

@@ -18,6 +18,31 @@ class PeakTests(unittest.TestCase):
         self.assertTrue(house.pool_on and house.heater_on)
         self.assertEqual((house.current, house.phase_option), (9, "Auto"))
 
+    def test_deaf_wallbox_is_repeated_reported_and_the_next_lever_is_used(self):
+        house = House(cooker=[(5, 40, 7.0)])
+        house.deaf_wb = True
+        guard = engine.Guard(devices())
+        _, log = run(house, guard, 40)
+        text = "\n".join(log)
+        self.assertIn("Befehl wird wiederholt", text)
+        self.assertIn("Befehl nicht umgesetzt", text)
+        self.assertGreaterEqual(guard.misses, 1)
+        self.assertIn("Pool aus", text, "the next lever must be used while the wallbox is ignored")
+
+    def test_working_devices_are_never_reported(self):
+        house = House(cooker=[(5, 35, 7.0), (10, 25, 3.5)])
+        guard = engine.Guard(devices())
+        _, log = run(house, guard, 90)
+        self.assertEqual(guard.misses, 0)
+        self.assertNotIn("nicht umgesetzt", "\n".join(log))
+        self.assertNotIn("wiederholt", "\n".join(log))
+
+    def test_switch_that_follows_is_not_reported(self):
+        house = House(cooker=[(5, 40, 7.0)], car=False)
+        guard = engine.Guard(devices(prio_pool=1, prio_heater=2))
+        _, log = run(house, guard, 30, verbose=False)
+        self.assertEqual(guard.misses, 0)
+
     def test_car_gets_full_current_back_when_there_is_room(self):
         house = House(cooker=[(5, 20, 7.0)], heater=False, pool=False)
         quarters, _ = run(house, engine.Guard(devices()), 60, limit=13.0)

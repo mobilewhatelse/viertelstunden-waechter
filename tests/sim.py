@@ -44,6 +44,7 @@ class House:
         self.has_throttle = throttle  # a heat pump with a power limit in percent: 3 kW at 100 %
         self.thr_value = 100.0
         self.comfort = comfort
+        self.deaf_wb = False       # the wallbox accepts no commands (cloud problem, wrong entity ...)
 
     def _car_setpoint_kw(self) -> float:
         if not self.car_wants:
@@ -84,6 +85,8 @@ class House:
 
     def apply(self, a, t_min: float) -> None:
         if a.device_id == "wb":
+            if self.deaf_wb:
+                return
             if a.kind == "set_current":
                 self.current = int(a.value)
                 self.min_current_seen = min(self.min_current_seen, self.current)
