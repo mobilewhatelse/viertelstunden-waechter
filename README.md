@@ -48,6 +48,27 @@ Safety:
 - A *lock entity* refuses active mode, e.g. while another guard still runs.
 - Implausible counter jumps (after an outage) are ignored.
 
+> **Deutsche Anleitung:** [docs/ANLEITUNG.md](docs/ANLEITUNG.md) – Einrichtung, Messung, Beispiele, Umstellen.
+
+## Grid measurement: what the guard needs
+
+Two sensors, from any integration (no HACS needed for them):
+
+| Sensor | Unit | Required | Note |
+|---|---|---|---|
+| Grid import power | W or kW | yes | updated every few seconds; a net sensor (negative = export) also works, negative counts as 0 |
+| Grid import energy counter | Wh, kWh or MWh | recommended | makes the quarter-hour energy exact after restarts |
+
+Typical sources, all with integrations built into Home Assistant:
+
+1. **The inverter's own meter** at the grid connection point (Fronius, SMA, Huawei, SolarEdge, …).
+2. **The utility smart meter's customer interface** (in Austria: optical/M-Bus interface, key from the grid
+   operator) with a reader via **ESPHome** or **MQTT**. About one value per second – the best source.
+3. **A meter in the distribution board**, e.g. a 3-phase energy meter via its integration or **Modbus**.
+
+**Not suitable:** the grid operator's web portal. Its 15-minute values arrive the next day – fine for
+statistics, far too late for control.
+
 ## Installation
 
 HACS → ⋮ → Custom repositories → this repository, category *Integration* → install → restart Home Assistant →
@@ -64,6 +85,25 @@ Then **Configure**:
 Each device has a **priority** (1 = restricted first, 10 = only if nothing else helps), an optional
 *intervention only while* entity, and for switches/scripts a maximum off time.
 
+The guard knows no brands, only roles. Any wallbox whose integration offers a settable charging current works
+(phase switching optional); a home battery is controlled through two small scripts, because every battery is
+controlled differently. Wallboxes that can only be started and stopped are not supported (the car is never
+stopped).
+
+### Seeing what is configured
+
+- **Configure** shows the sources and all devices in priority order above the menu.
+- The status sensor carries the attribute `configuration` (for a dashboard card, example in the German guide).
+- ⋮ → **Download diagnostics**: configuration, current values, interventions and the recent log.
+
+### From observe to active
+
+1. Run a few evenings in **Observe only** and read the status attribute `today` (lines marked "observed").
+2. If an older guard or automation still controls the same devices, set it as *lock entity*: active mode is
+   refused while it is on.
+3. Switch the old one off, set **Active**, watch one evening with the car charging and the cooker on.
+4. Back: set **Observe only** – everything the guard changed is given back immediately.
+
 ## Entities
 
 | Entity | Meaning |
@@ -71,9 +111,10 @@ Each device has a **priority** (1 = restricted first, 10 = only if nothing else 
 | `select` Mode | Off / Observe only / Active |
 | `select` Strategy | Least loss of comfort / Strict priority order |
 | `number` Limit, Safety margin | kW |
-| `sensor` Status | with attributes `interventions`, `recent`, `today` (log lines with reasons) |
+| `sensor` Status | with attributes `interventions`, `recent`, `today` (log lines with reasons), `configuration` |
 | `sensor` Quarter-hour energy so far, forecast, allowed import now | running quarter hour |
 | `sensor` Last quarter hour | kW, with long-term statistics |
+| `sensor` Peak today | kW, attribute `days`: peak per day of the last 31 days with time |
 | `sensor` Peak this month | kW |
 | `sensor` Interventions today | count, attribute `observed` for observe mode |
 
