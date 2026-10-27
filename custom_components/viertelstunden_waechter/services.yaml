@@ -5,6 +5,39 @@ create_dashboard:
       example: "waechter"
       selector:
         text:
+export_csv:
+  fields:
+    kind:
+      required: false
+      default: quarters
+      selector:
+        select:
+          options:
+            - quarters
+            - days
+    days:
+      required: false
+      default: 31
+      selector:
+        number:
+          min: 1
+          max: 400
+          mode: box
+    format:
+      required: false
+      default: standard
+      selector:
+        select:
+          options:
+            - standard
+            - excel_de
+explain_today:
+  fields:
+    push:
+      required: false
+      default: false
+      selector:
+        boolean:
 send_week_report:
   fields:
     current_week:

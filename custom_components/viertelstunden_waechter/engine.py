@@ -19,6 +19,11 @@ from datetime import datetime, timedelta
 from itertools import combinations
 from typing import Any
 
+try:
+    from .messages import Messages
+except ImportError:  # loaded as a plain module (tests, simulation)
+    from messages import Messages
+
 V1 = 230.0
 V3 = 3 * 230.0
 
@@ -139,7 +144,9 @@ def _clamp(v: int, lo: int, hi: int) -> int:
 class Guard:
     """Keeps the quarter-hour average of the grid import below a target."""
 
-    def __init__(self, devices: list[DeviceConfig], strategy: str = STRATEGY_COMFORT, voltage: float = V1) -> None:
+    def __init__(self, devices: list[DeviceConfig], strategy: str = STRATEGY_COMFORT, voltage: float = V1,
+                 lang: str = "de") -> None:
+        self.t = Messages(lang)           # texts of the log lines in the language of Home Assistant
         self.v1 = float(voltage)          # voltage of one phase (230 V in Europe)
         self.v3 = 3.0 * float(voltage)    # three phases
         self.devices: dict[str, DeviceConfig] = {d.id: d for d in devices}
@@ -265,13 +272,13 @@ class Guard:
                 self._missing_since = now
             if _secs(self._missing_since, now) >= MISSING_DATA_S:
                 self.state = "no_data"
-                return self.release_all(now, readings, "Messwerte fehlen")
+                return self.release_all(now, readings, self.t("r_missing"))
             return []
         self._missing_since = None
 
         if not enabled:
             self.state = "idle"
-            return self.release_all(now, readings, "nicht nötig") if self.interventions else []
+            return self.release_all(now, readings, self.t("r_not_needed")) if self.interventions else []
 
         # headroom that fits permanently (not the rest budget near :15): average of the last two minutes,
         # counted only since the last change, so a release is judged on the situation after the previous one
@@ -296,7 +303,7 @@ class Guard:
                     self._smooth = False
                 for a in actions:
                     if a.text:
-                        a.text = f"Vorausschauend ({reserve_text}): {a.text}"
+                        a.text = self.t("ahead", why=reserve_text, text=a.text)
             else:
                 if room > 0:  # only real, lasting headroom ends the wait for 1-phase (a cooker's off-phase does not)
                     for t in self._wb.values():
@@ -335,21 +342,21 @@ class Guard:
         """'' if the reading shows the intervention, else what is wrong."""
         a: Action = pend["act"]
         if r is None or not r.available:
-            return "Gerät nicht erreichbar"
+            return self.t("unreachable")
         if a.kind == "set_current":
             if r.current_a is None or r.current_a > float(a.value) + 0.5:
-                return f"Strom steht bei {r.current_a:g} A statt {a.value} A" if r.current_a is not None else "kein Stromwert"
+                return self.t("cur_not", cur=r.current_a, want=a.value) if r.current_a is not None else self.t("no_cur")
             if _secs(pend["act_at"], self._now) >= max(VERIFY_S, pend["power_after"]) - 5 and (r.power_w or 0.0) / 1000.0 > pend["expect_kw"] * 1.2 + 0.4:
-                return f"Leistung {(r.power_w or 0.0) / 1000.0:.1f} kW trotz {a.value} A"
+                return self.t("power_despite", kw=(r.power_w or 0.0) / 1000.0, want=a.value)
         elif a.kind == "turn_off":
             if r.is_on is not False:
-                return "Gerät ist noch an"
+                return self.t("still_on")
         elif a.kind == "set_value":
             if r.value is None or abs(r.value - float(a.value)) > dev.step / 2 + 1e-9:
-                return f"Wert steht bei {r.value:g} statt {a.value:g}" if r.value is not None else "kein Wert"
+                return self.t("val_not", cur=r.value, want=float(a.value)) if r.value is not None else self.t("no_val")
         elif a.kind == "battery_release":
             if r.releasable:
-                return "Freigabe nicht übernommen"
+                return self.t("rel_not")
         return ""
 
     def _verify(self, now: datetime, readings: dict[str, Reading]) -> list[Action]:
@@ -374,13 +381,13 @@ class Guard:
                 self._last_action = now
                 if dev.kind in (KIND_WALLBOX, KIND_THROTTLE):
                     self._wbt(dev_id)["changed"] = now
-                acts.append(Action(dev_id, a.kind, a.value, f"{dev.name}: keine Reaktion ({problem}), Befehl wird wiederholt", False))
+                acts.append(Action(dev_id, a.kind, a.value, self.t("retry", name=dev.name, problem=problem), False))
             else:
                 del self._pending[dev_id]
                 self.misses += 1
                 self._rest_until[dev_id] = now + timedelta(minutes=MISS_REST_MIN)
                 acts.append(Action(dev_id, "unconfirmed", None,
-                                   f"{dev.name}: Befehl nicht umgesetzt ({problem}). Das Gerät wird {MISS_REST_MIN} min ausgelassen, der nächste Hebel kommt dran", False))
+                                   self.t("miss", name=dev.name, problem=problem, min=MISS_REST_MIN), False))
         return acts
 
     # ---------- savings estimate ----------
@@ -485,7 +492,7 @@ class Guard:
             if not smooth_only and forecast > limit_kw and rest_h < 0.1 and self._notified_q != self.quarter:
                 self._notified_q = self.quarter
                 return [Action("", "notify", round(forecast, 1),
-                               f"Grenze nicht zu halten: Prognose {forecast:.1f} kW (Grenze {limit_kw:.1f} kW), alle Hebel ausgeschöpft")]
+                               self.t("limit_lost", fc=forecast, limit=limit_kw))]
             return []
         first = self._choose(opts, excess)[0]  # one step per cycle, gentlest of the chosen set first
         dev, r = first.device, readings[first.device.id]
@@ -494,19 +501,19 @@ class Guard:
         elif dev.kind == KIND_SWITCH:
             pw = r.power_w if r.power_w is not None else dev.power_w
             self.interventions[dev.id] = {"since": now.isoformat(), "watt": pw}
-            acts = [Action(dev.id, "turn_off", None, f"{dev.name} aus ({pw:.0f} W, {excess:.1f} kW zu viel)")]
+            acts = [Action(dev.id, "turn_off", None, self.t("sw_off", name=dev.name, w=pw, excess=excess))]
         elif dev.kind == KIND_THROTTLE:
             acts = self._thr_reduce(dev, r, min(excess + 0.2, first.reduction_kw + 0.2), now, excess)
         elif dev.kind == KIND_BATTERY:
             self.interventions[dev.id] = {"since": now.isoformat(), "soc": r.soc}
-            soc = f", Ladestand {r.soc:.0f} %" if r.soc is not None else ""
-            acts = [Action(dev.id, "battery_release", None, f"{dev.name}: Batterie freigegeben ({excess:.1f} kW zu viel{soc})")]
+            soc = self.t("soc_part", soc=r.soc) if r.soc is not None else ""
+            acts = [Action(dev.id, "battery_release", None, self.t("bat_rel", name=dev.name, excess=excess, soc=soc))]
         elif dev.kind == KIND_SETTING:
             self.interventions[dev.id] = {"since": now.isoformat(), "soc": r.soc}
-            acts = [Action(dev.id, "battery_release", None, f"{dev.name}: Einstellung geändert ({excess:.1f} kW zu viel)")]
+            acts = [Action(dev.id, "battery_release", None, self.t("set_rel", name=dev.name, excess=excess))]
         else:
             self.interventions[dev.id] = {"since": now.isoformat()}
-            acts = [Action(dev.id, "script_on", None, f"{dev.name}: Notfall-Eingriff ({excess:.1f} kW zu viel)")]
+            acts = [Action(dev.id, "script_on", None, self.t("script_on", name=dev.name, excess=excess))]
         if acts:
             self._last_action = now
         return acts
@@ -549,7 +556,7 @@ class Guard:
             return []
         self.interventions.setdefault(dev.id, {"since": now.isoformat(), "orig_value": cur})
         self._wbt(dev.id)["changed"] = now
-        return [Action(dev.id, "set_value", new, f"{dev.name} {cur:g} → {new:g} ({excess:.1f} kW zu viel)")]
+        return [Action(dev.id, "set_value", new, self.t("thr_down", name=dev.name, cur=cur, new=new, excess=excess))]
 
     def _thr_release(self, dev: DeviceConfig, r: Reading, room: float, now: datetime, force: bool) -> list[Action]:
         iv = self.interventions[dev.id]
@@ -558,13 +565,13 @@ class Guard:
         orig = float(iv.get("orig_value", dev.max_value))
         if force:
             del self.interventions[dev.id]
-            return [Action(dev.id, "set_value", orig, f"{dev.name} wieder {orig:g}", False)]
+            return [Action(dev.id, "set_value", orig, self.t("thr_back", name=dev.name, v=orig), False)]
         hold = max(WALLBOX_UP_AFTER_S, dev.hold_min * 60)
         if _secs(t["changed"], now) < hold:
             return []
         if cur >= orig - 1e-9:
             del self.interventions[dev.id]
-            return [Action(dev.id, "log", None, f"{dev.name} wieder frei", False)]
+            return [Action(dev.id, "log", None, self.t("free", name=dev.name), False)]
         p = (r.power_w or 0.0) / 1000.0
         if p >= 0.3 and cur > 0:
             per_step = p * dev.step / cur
@@ -574,7 +581,7 @@ class Guard:
             return []
         new = min(orig, cur + dev.step)
         t["changed"] = now
-        acts = [Action(dev.id, "set_value", new, f"{dev.name} {cur:g} → {new:g} (wieder mehr Luft)", False)]
+        acts = [Action(dev.id, "set_value", new, self.t("thr_up", name=dev.name, cur=cur, new=new), False)]
         if new >= orig - 1e-9:
             del self.interventions[dev.id]
         return acts
@@ -632,22 +639,22 @@ class Guard:
             a = int(goal * 1000.0 / self.v3)
             if a >= dev.min_current:
                 if a < cur:
-                    acts = [Action(dev.id, "set_current", a, f"{dev.name} {cur} A -> {a} A (3-phasig, {excess:.1f} kW zu viel)")]
+                    acts = [Action(dev.id, "set_current", a, self.t("wb3_down", name=dev.name, cur=cur, new=a, excess=excess))]
             elif cur > dev.min_current:
                 t["too_little"] = now
                 acts = [Action(dev.id, "set_current", dev.min_current,
-                               f"{dev.name} {cur} A -> {dev.min_current} A (3-phasig, {excess:.1f} kW zu viel)")]
+                               self.t("wb3_down", name=dev.name, cur=cur, new=dev.min_current, excess=excess))]
             elif dev.one_phase_option:
                 a1 = _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)
                 acts = [Action(dev.id, "set_current", a1, ""),
                         Action(dev.id, "set_phase", dev.one_phase_option,
-                               f"{dev.name} auf 1-phasig {a1} A ({excess:.1f} kW zu viel), kurze Ladepause durch Phasenwechsel")]
+                               self.t("wb_to1", name=dev.name, a=a1, excess=excess))]
                 t["too_little"] = None
                 t["phase"] = now
         else:
             a1 = _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)
             if a1 < cur:
-                acts = [Action(dev.id, "set_current", a1, f"{dev.name} 1-phasig {cur} A -> {a1} A")]
+                acts = [Action(dev.id, "set_current", a1, self.t("wb1_down", name=dev.name, cur=cur, new=a1))]
         if acts:
             iv = self.interventions.setdefault(dev.id, {
                 "since": now.isoformat(), "orig_current": cur, "orig_phase": r.phase_option,
@@ -664,9 +671,9 @@ class Guard:
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         orig = int(iv.get("orig_current") or dev.max_current)
         if force or not self._charging(dev.id, r, now):
-            acts = [Action(dev.id, "set_current", orig, f"{dev.name} wieder {orig} A", False)]
+            acts = [Action(dev.id, "set_current", orig, self.t("wb_back", name=dev.name, a=orig), False)]
             if iv.get("switched") and iv.get("orig_phase"):
-                acts.append(Action(dev.id, "set_phase", iv["orig_phase"], f"{dev.name} wieder {iv['orig_phase']}", False))
+                acts.append(Action(dev.id, "set_phase", iv["orig_phase"], self.t("wb_phase_back", name=dev.name, opt=iv["orig_phase"]), False))
                 t["phase"] = now
             del self.interventions[dev.id]
             t["changed"] = now
@@ -685,13 +692,13 @@ class Guard:
                 t["changed"] = t["phase"] = now
                 return [Action(dev.id, "set_current", dev.min_current, "", False),
                         Action(dev.id, "set_phase", iv["orig_phase"],
-                               f"{dev.name} wieder 3-phasig ({dev.min_current} A), kurze Ladepause durch Phasenwechsel", False)]
+                               self.t("wb_to3", name=dev.name, a=dev.min_current), False)]
             t["room3"] = None
             top = dev.max_current if iv.get("switched") else orig
             if cur < top and room > self.v1 / 1000.0 + 0.15:
                 new = min(top, cur + max(1, int((room - 0.15) * 1000.0 / self.v1)))
                 t["changed"] = now
-                acts = [Action(dev.id, "set_current", new, f"{dev.name} 1-phasig {cur} A -> {new} A (wieder mehr Luft)", False)]
+                acts = [Action(dev.id, "set_current", new, self.t("wb1_up", name=dev.name, cur=cur, new=new), False)]
                 if not iv.get("switched") and new >= orig:
                     del self.interventions[dev.id]
                 return acts
@@ -699,14 +706,14 @@ class Guard:
         if room > self.v3 / 1000.0 + 0.15 and cur < orig:
             new = min(orig, cur + max(1, int((room - 0.15) * 1000.0 / self.v3)))
             t["changed"] = now
-            acts = [Action(dev.id, "set_current", new, f"{dev.name} {cur} A -> {new} A (wieder mehr Luft)", False)]
+            acts = [Action(dev.id, "set_current", new, self.t("wb3_up", name=dev.name, cur=cur, new=new), False)]
             if new >= orig:
                 del self.interventions[dev.id]
-                acts.append(Action(dev.id, "log", None, f"{dev.name} wieder frei ({new} A)", False))
+                acts.append(Action(dev.id, "log", None, self.t("free_a", name=dev.name, a=new), False))
             return acts
         if cur >= orig:
             del self.interventions[dev.id]  # someone else raised it meanwhile
-            return [Action(dev.id, "log", None, f"{dev.name} wieder frei", False)]
+            return [Action(dev.id, "log", None, self.t("free", name=dev.name), False)]
         return []
 
     # ---------- releasing ----------
@@ -733,15 +740,15 @@ class Guard:
                 return []
             del self.interventions[dev.id]
             if r.is_on is False and r.restore_allowed and r.available:
-                return [Action(dev.id, "turn_on", None, f"{dev.name} wieder an", False)]
-            return [Action(dev.id, "log", None, f"{dev.name} bleibt aus (Zeitplan oder inzwischen anders geschaltet)", False)]
+                return [Action(dev.id, "turn_on", None, self.t("sw_on", name=dev.name), False)]
+            return [Action(dev.id, "log", None, self.t("sw_stays", name=dev.name), False)]
         need = dev.power_w / 1000.0
         if not force and room <= need:
             return []
         del self.interventions[dev.id]
         if dev.kind in SETTING_KINDS:
-            return [Action(dev.id, "battery_restore", None, f"{dev.name}: wieder wie vorher", False)]
-        return [Action(dev.id, "script_off", None, f"{dev.name}: Eingriff zurückgenommen", False)]
+            return [Action(dev.id, "battery_restore", None, self.t("bat_back", name=dev.name), False)]
+        return [Action(dev.id, "script_off", None, self.t("script_off", name=dev.name), False)]
 
     def _release(self, now: datetime, room: float, readings: dict[str, Reading]) -> list[Action]:
         if not self.interventions or _secs(self._last_release, now) < RELEASE_EVERY_S or _secs(self._last_action, now) < SETTLE_S:
@@ -771,8 +778,8 @@ class Guard:
             dev = self.devices[dev_id]
             r = readings.get(dev_id)
             if dev.kind in GUARDED_KINDS and r is not None and r.soc is not None and r.soc < dev.min_soc:
-                what = "Ladestand" if dev.kind == KIND_BATTERY else "Schutzwert"
-                acts.append(Action(dev_id, "log", None, f"{dev.name}: {what} {r.soc:g} unter dem Mindestwert ({dev.min_soc:g})", False))
+                what = self.t("word_soc") if dev.kind == KIND_BATTERY else self.t("word_guard")
+                acts.append(Action(dev_id, "log", None, self.t("below_min", name=dev.name, what=what, v=r.soc, min=dev.min_soc), False))
                 acts += self._release_one(dev, r, 0.0, now, True)
                 self._rest_until[dev_id] = now + timedelta(minutes=10)
                 continue
@@ -780,7 +787,7 @@ class Guard:
                 continue
             since = datetime.fromisoformat(self.interventions[dev_id]["since"])
             if (now - since).total_seconds() >= dev.max_off_min * 60:
-                acts.append(Action(dev_id, "log", None, f"{dev.name}: höchste Auszeit ({dev.max_off_min:.0f} min) erreicht", False))
+                acts.append(Action(dev_id, "log", None, self.t("max_off", name=dev.name, min=dev.max_off_min), False))
                 acts += self._release_one(dev, readings.get(dev_id) or Reading(available=False), 0.0, now, True)
                 self._rest_until[dev_id] = now + timedelta(minutes=dev.max_off_min)
         return acts
@@ -790,7 +797,7 @@ class Guard:
         for dev_id in sorted(list(self.interventions), key=lambda i: -self.devices[i].priority):
             acts += self._release_one(self.devices[dev_id], readings.get(dev_id) or Reading(available=False), 99.0, now, True)
         if acts and reason:
-            acts.insert(0, Action("", "log", None, f"Alles freigegeben: {reason}", False))
+            acts.insert(0, Action("", "log", None, self.t("all_free", reason=reason), False))
         for t in self._wb.values():
             t["too_little"] = t["room3"] = None
         return acts

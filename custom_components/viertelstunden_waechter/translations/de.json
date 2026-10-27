@@ -35,14 +35,16 @@
           "lock_entity": "„Aktiv“ sperren, solange",
           "notify_services": "Benachrichtigungsdienste",
           "startup_mode": "Betriebsart nach Neustart",
-          "mains_voltage": "Netzspannung"
+          "mains_voltage": "Netzspannung",
+          "ai_task_entity": "KI-Aufgabe für den Erklärer"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
           "lock_entity": "Optional. Solange sie an ist, wird „Aktiv“ verweigert und der Wächter beobachtet nur (z. B. ein älterer Wächter, der noch läuft).",
           "notify_services": "Optional, mit Komma getrennt, z. B. notify.mobile_app_handy. Für den Fall, dass die Grenze nicht zu halten ist.",
           "startup_mode": "Wiederherstellen = die Betriebsart von vor dem Neustart.",
-          "mains_voltage": "Spannung einer Phase (230 V in Europa). Damit werden Ampere in Kilowatt umgerechnet."
+          "mains_voltage": "Spannung einer Phase (230 V in Europa). Damit werden Ampere in Kilowatt umgerechnet.",
+          "ai_task_entity": "Optional: die KI-Aufgabe (Einstellungen > Geräte > KI-Aufgaben), die der Erklärer benutzt. Sie wählen das Modell; der Wächter hat keinen eigenen Schlüssel."
         }
       }
     }
@@ -165,6 +167,9 @@
       },
       "weekly_report": {
         "name": "Wochenbericht"
+      },
+      "ai_explanation": {
+        "name": "Erklärung des Tages"
       }
     },
     "switch": {
@@ -194,6 +199,12 @@
       },
       "predictive": {
         "name": "Vorausschauend drosseln nach Prognose"
+      },
+      "battery_reserve": {
+        "name": "Akku-Reserve vor einer Spitze"
+      },
+      "ai_explainer": {
+        "name": "KI-Erklärer"
       }
     }
   },
@@ -375,7 +386,10 @@
             "max_off_min": "Höchste Dauer",
             "restore_original": "Vorherige Werte wiederherstellen",
             "off_script": "Skript nach dem Zurücknehmen",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "reserve_entity": "Einstellung, die die Ladung hält",
+            "reserve_value": "Wert, der die Ladung hält",
+            "reserve_lead_min": "Beginn vor einem Risikofenster"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
@@ -388,7 +402,10 @@
             "max_off_min": "0 = ohne Grenze. Danach wird die Batterie auf jeden Fall zurückgenommen.",
             "restore_original": "An: Die Werte von vor der Freigabe werden wiederhergestellt – aber nur die, die noch den Freigabewert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen, z. B. damit Ihre eigene Automation die Batterie setzt.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
+            "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
+            "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze."
           }
         },
         "reconfigure": {
@@ -407,7 +424,10 @@
             "max_off_min": "Höchste Dauer",
             "restore_original": "Vorherige Werte wiederherstellen",
             "off_script": "Skript nach dem Zurücknehmen",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "reserve_entity": "Einstellung, die die Ladung hält",
+            "reserve_value": "Wert, der die Ladung hält",
+            "reserve_lead_min": "Beginn vor einem Risikofenster"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
@@ -420,7 +440,10 @@
             "max_off_min": "0 = ohne Grenze. Danach wird die Batterie auf jeden Fall zurückgenommen.",
             "restore_original": "An: Die Werte von vor der Freigabe werden wiederhergestellt – aber nur die, die noch den Freigabewert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen, z. B. damit Ihre eigene Automation die Batterie setzt.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
+            "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
+            "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze."
           }
         }
       },
@@ -735,6 +758,34 @@
         "push": {
           "name": "Als Meldung senden",
           "description": "Zusätzlich als Meldung an die Benachrichtigungsdienste senden."
+        }
+      }
+    },
+    "export_csv": {
+      "name": "Als CSV exportieren",
+      "description": "Schreibt das Viertelstunden-Lastprofil oder die Tagesspitzen nach config/viertelstunden_waechter/export/ (kein öffentlicher Ordner).",
+      "fields": {
+        "kind": {
+          "name": "Was",
+          "description": "quarters = jede Viertelstunde (120 Tage aufbewahrt), days = Tagesspitzen (400 Tage)."
+        },
+        "days": {
+          "name": "Tage",
+          "description": "Wie viele Tage zurück."
+        },
+        "format": {
+          "name": "Format",
+          "description": "standard = Komma und Dezimalpunkt, excel_de = Semikolon und Dezimalkomma (für Excel auf Deutsch)."
+        }
+      }
+    },
+    "explain_today": {
+      "name": "Heute erklären",
+      "description": "Fragt die KI-Aufgabe nach einer kurzen Erklärung der heutigen Eingriffe (ohne Eingriffe wird keine KI gefragt).",
+      "fields": {
+        "push": {
+          "name": "Als Meldung senden",
+          "description": "Zusätzlich an die Benachrichtigungsdienste senden."
         }
       }
     }

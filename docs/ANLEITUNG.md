@@ -332,6 +332,51 @@ genug Messwerte – der Verlaufsimport füllt das Profil zuerst mit Stundenmitte
 machen es in einigen Wochen genau. Im **Beobachtungsmodus** wird nur protokolliert, was er tun würde. Empfehlung: nach ein paar Tagen
 einschalten, wenn das Wochenprofil stimmig aussieht.
 
+### Sprache
+
+Alles folgt der Sprache von Home Assistant: Deutsch bei deutschen Installationen, Englisch bei jeder anderen Sprache. Das gilt
+für Einrichtungsdialoge, Entitätsnamen, Dienste, Dashboard, Wochenbericht, KI-Erklärer und (seit 0.13) auch für die Protokollzeilen und
+Meldungen des Wächters („Wallbox 16 A -> 12 A (3-phasig, 1.7 kW zu viel)“). Zeilen, die schon im Protokoll stehen, bleiben in ihrer Sprache.
+
+### Haus und Auto getrennt, Akku-Reserve, Export, KI-Erklärer (0.13)
+
+**Haus und Auto getrennt (automatisch).** Mit einem Wallbox-Eintrag lernt der Wächter aus denselben Viertelstunden zwei Muster: das Haus ohne
+Wallbox (gemessener Bezug minus Wallbox-Leistung) und die Wallbox allein. Die Prognose zählt normalerweise beides zusammen. Sagt ein
+Fahrzeug-Eintrag, dass das Auto **voll** ist (Ladestand am Ziel) oder **nicht angesteckt** (die optionale Entität *verbunden* ist aus), und
+lädt die Wallbox nicht, rechnet die Prognose ohne Auto: Das übliche Laden am Abend ist dann kein Risikofenster, *Vorausschauend drosseln* hält
+dafür keine Reserve und die *Akku-Reserve* hält den Akku nicht dafür. Der Ladeplan nutzt nur das Haus (das Auto plant er selbst; vor 0.13
+hat er es doppelt gezählt). Ältere Daten (Verlaufsimport, Monate vor dem Update) bleiben Summen, bis neue Viertelstunden sie ersetzen
+(8 Werte je Platz).
+
+**Akku-Reserve vor einer Spitze** (Schalter, **Standard aus**). Beim Batterie-Eintrag tragen Sie eine *Einstellung, die die Ladung hält*, und
+ihren Wert ein (z. B. maximale Ausgangsleistung auf einen niedrigen Wert oder einen Modus wie Standby) sowie, wie viele Minuten vor einem
+Risikofenster sie beginnt (Standard 60). Mit dem Schalter setzt der Wächter sie vor dem Fenster, damit der Akku nicht für den Eigenverbrauch
+leer läuft und im Notfall noch helfen kann; nach dem Fenster stellt er den Wert zurück, den er vorgefunden hat. Er fasst nur Akkus mit
+einer solchen Einstellung an, tut nichts, solange er den Akku für einen Notfall freigegeben hat, protokolliert jeden Schritt („Akku-Reserve:
+… hält die Ladung …“) und protokolliert im Beobachtungsmodus nur. Nach einem Neustart oder beim Entladen der Integration wird ein gehaltener
+Akku zuerst zurückgestellt. Wenn eigene Automationen dieselbe Einstellung ändern (z. B. beim Autoladen), entscheiden Sie, wer zuständig
+ist – der Wächter stellt nur zurück, solange noch sein eigener Wert gesetzt ist.
+
+**CSV-Export** (Dienst `viertelstunden_waechter.export_csv`). Schreibt das Viertelstunden-Lastprofil (120 Tage aufbewahrt: Beginn, Ende,
+Bezug in kW und kWh, Schätzung ohne Wächter, Wallbox in kW) oder die Tagesspitzen (400 Tage) nach `config/viertelstunden_waechter/export/`
+– kein öffentlicher Ordner. Format `standard` (Komma, Dezimalpunkt) oder `excel_de` (Semikolon, Dezimalkomma). Kleine Dateien kommen
+zusätzlich in der Antwort des Dienstes zurück.
+
+```yaml
+action: viertelstunden_waechter.export_csv
+data:
+  kind: quarters      # oder days
+  days: 31
+  format: excel_de
+```
+
+**KI-Erklärer** (Schalter, **Standard aus und nach jedem Neustart aus**). In den allgemeinen Einstellungen eine *KI-Aufgabe* wählen
+(Einstellungen > Geräte > KI-Aufgaben; Sie wählen das Modell, Cloud oder lokal – der Wächter hat keinen eigenen Schlüssel). Jeden Abend um
+21 Uhr macht der Erklärer aus dem Protokoll des Tages 2 bis 4 einfache Sätze („Um 16:45 wurde die Wallbox von 16 auf 12 A gesenkt, weil …“),
+zeigt sie im Sensor *Erklärung des Tages* und in der Ansicht Statistik und sendet sie über die Benachrichtigungsdienste. An einem Tag ohne
+Eingriff wird keine KI gefragt (dann ein fester Satz). Höchstens 4 KI-Aufrufe am Tag; die KI schreibt nur Text – sie entscheidet und schaltet
+nie. Dienst `viertelstunden_waechter.explain_today` (Feld `push`) fragt auf Wunsch.
+
 ## 3c. Ladeplan fürs Auto
 
 Gerätetyp **Fahrzeug (Ladeplan)**. Er plant, in welchen Viertelstunden das Auto laden soll, damit es bis zur nächsten
@@ -540,7 +585,7 @@ hat. Er braucht dann oft weniger zu tun – wichtig sind Abweichungen in Reihenf
 
 ## 7a. Geplant (noch nicht gebaut)
 
-Die Reihenfolge ist ein Vorschlag, kein Versprechen.
+Erledigt in 0.13: Haus und Auto getrennt, Akku-Reserve, CSV-Export, KI-Erklärer. Die Reihenfolge ist ein Vorschlag, kein Versprechen.
 
 1. **Veröffentlichung:** Der Installationstest auf einem frischen Home Assistant 2026.10.3 (Docker, `tests/install`) ist am 25.10.2026
    bestanden (Einrichtung von Grund auf, Geräte, Beobachten und Aktiv, Rückgabe, Dienste, Neustart) und **hassfest besteht**. Offen sind die
@@ -548,18 +593,15 @@ Die Reihenfolge ist ein Vorschlag, kein Versprechen.
    anderen Installationen.
 2. **Tests mit echter Hardware** für *Leistung drosseln*, *Einstellungen ändern* (Wärmepumpen) und die Batterie-Freigabe anderer Hersteller;
    bis dahin nur im Simulator getestet. Testberichte sind willkommen (Vorlage *Gerätetestbericht*).
-3. **Akku-Reserve vor einer erwarteten Spitze:** kurz vor einem Risikofenster den Akku nicht für den Eigenverbrauch entladen, damit er im
-   Notfall helfen kann.
-4. **Ladeplan näher an den Risikofenstern** und ein *Tagesplan* aus Solarprognose, Abfahrtszeiten und dem gelernten Lastmuster.
-5. **Fahrzeug voll:** ein Auto, das sein Ziel erreicht hat, nicht mehr als Last zählen.
-6. **Kompakte „Heute“-Karte** (Viertelstundenkurve, Eingriffe, Prognose) für das Handy.
-7. **Export und Anbindungen (optional, nur auf Wunsch):** ein Export des Viertelstunden-Lastprofils (CSV) und, wo eine Plattform eine
-   dokumentierte Schnittstelle anbietet, ein Connector, der die Daten dorthin sendet (z. B. Plattformen für Energiegemeinschaften). Ein
+3. **Ladeplan näher an den Risikofenstern** und ein *Tagesplan* aus Solarprognose, Abfahrtszeiten und dem gelernten Lastmuster.
+4. **Kompakte „Heute“-Karte** (Viertelstundenkurve, Eingriffe, Prognose) für das Handy.
+5. **Anbindungen (optional, nur auf Wunsch):** Den CSV-Export gibt es seit 0.13; wo eine Plattform eine dokumentierte Schnittstelle
+   anbietet, könnte ein Connector die Daten dorthin senden (z. B. Plattformen für Energiegemeinschaften). Ein
    Connector hängt ganz von der Schnittstelle der anderen Plattform ab und ist ein eigener, optionaler Teil: Es verlässt nichts die
    Installation, solange der Nutzer es nicht einrichtet.
-8. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
+6. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
 
-### Geplant: KI-Funktionen
+### KI-Funktionen (Erklärer seit 0.13 gebaut, die anderen geplant)
 
 Optional, **Standard aus und nach einem Neustart aus**, mit Tageskostengrenze. Die KI wird über die *KI-Aufgabe* (`ai_task`) von Home Assistant
 benutzt: Jeder Nutzer wählt sein Modell (Cloud oder lokal), es ist kein Schlüssel eingebaut. **Die Regel: Die KI erklärt, berät und plant –
@@ -568,7 +610,7 @@ der Verwendung gegen harte Grenzen geprüft.
 
 | Funktion | Was sie macht | Risiko |
 |---|---|---|
-| **Erklärer** | macht aus den Eingriffen des Tages einen kurzen Text, auf Wunsch als Meldung („Pool 12 min pausiert, damit das Auto bis 7 Uhr voll wird“) | keines, nur lesen |
+| **Erklärer** (gebaut, 0.13) | macht aus den Eingriffen des Tages einen kurzen Text, auf Wunsch als Meldung („Pool 12 min pausiert, damit das Auto bis 7 Uhr voll wird“) | keines, nur lesen |
 | **Wochenrückblick mit Vorschlägen** | „Dreimal knapp, immer sonntags 18 Uhr mit Backrohr und Auto. Vorschlag: Ladestart auf 20 Uhr.“ Ohne Bestätigung ändert sich nichts | gering |
 | **Einrichtung im Gespräch** | ein Satz wie „Pool ist mir egal, die Kühltruhe darf höchstens 30 min aus sein“ wird zum Vorschlag für Geräte, Prioritäten und höchste Auszeit, den der Nutzer bestätigt | gering |
 | **Frage an den Wächter** | „Warum war gestern Abend die Wallbox gedrosselt?“ per Assist, Chat oder MCP-Server von Home Assistant | keines |

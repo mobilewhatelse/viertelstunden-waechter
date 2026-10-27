@@ -152,6 +152,7 @@ def main():
     subs = [
         ("wallbox", {"name": "Wallbox", "priority": 1, "power_entity": "sensor.wallbox_leistung", "current_entity": "input_number.wb_strom", "min_current": 6, "max_current": 16}),
         ("switch", {"name": "Poolpumpe", "priority": 2, "switch_entity": "input_boolean.pool_pumpe", "power_entity": "sensor.pool_leistung", "min_power_w": 150, "power_w": 750, "max_off_min": 0, "pause_min": 0}),
+        ("battery", {"name": "Akku", "priority": 10, "soc_entity": "sensor.akku_ladestand", "min_soc": 30, "release_entity_1": "input_number.akku_ausgang_w", "release_value_1": "2000", "power_w": 800, "max_off_min": 0, "restore_original": True, "reserve_entity": "input_number.akku_ausgang_w", "reserve_value": "50", "reserve_lead_min": 60}),
         ("vehicle", {"name": "Auto", "soc_entity": "sensor.auto_ladestand", "target_soc": 80, "capacity_kwh": 60, "departure_entity": "input_datetime.abfahrt", "charge_kw_max": 11, "charge_kw_min": 1.4, "house_base_kw": 0.5, "charge_efficiency": 90}),
     ]
     for kind, data in subs:
@@ -161,10 +162,12 @@ def main():
     time.sleep(20)
     ents = states_like("viertelstunden_wachter")
     names = sorted(e["entity_id"] for e in ents)
-    log(len(ents) >= 30, "Entitaeten der Integration angelegt", f"{len(ents)} Stueck")
+    log(len(ents) >= 37, "Entitaeten der Integration angelegt", f"{len(ents)} Stueck")
     need = ["select.viertelstunden_wachter_betriebsart", "sensor.viertelstunden_wachter_status", "number.viertelstunden_wachter_grenze",
             "switch.viertelstunden_wachter_vorausschauend_drosseln_nach_prognose", "switch.viertelstunden_wachter_vorwarnung_vor_einem_eingriff",
-            "switch.viertelstunden_wachter_wochenbericht", "sensor.viertelstunden_wachter_wochenbericht", "sensor.viertelstunden_wachter_ladeplan"]
+            "switch.viertelstunden_wachter_wochenbericht", "sensor.viertelstunden_wachter_wochenbericht", "sensor.viertelstunden_wachter_ladeplan",
+            "switch.viertelstunden_wachter_akku_reserve_vor_einer_spitze", "switch.viertelstunden_wachter_ki_erklarer",
+            "sensor.viertelstunden_wachter_erklarung_des_tages"]
     missing = [n for n in need if n not in names]
     log(not missing, "Wichtige Entitaeten vorhanden", f"fehlen: {missing}" if missing else "")
     if missing:
@@ -183,6 +186,8 @@ def main():
         "switch.viertelstunden_wachter_bereits_erreichte_spitze_nutzen": "on",
         "switch.viertelstunden_wachter_lastprognose_lernen_und_anzeigen": "on",
         "switch.viertelstunden_wachter_ladeplan_auch_ausfuhren": "off",
+        "switch.viertelstunden_wachter_akku_reserve_vor_einer_spitze": "off",
+        "switch.viertelstunden_wachter_ki_erklarer": "off",
     }
     bad = {k: val(k) for k, v in defaults.items() if val(k) != v}
     log(not bad, "Standardwerte der Schalter wie dokumentiert", str(bad) if bad else "")
@@ -231,6 +236,22 @@ def main():
     log(s == 200 and "Wochenbericht" in txt, "Dienst 'Wochenbericht senden' erzeugt den Bericht", txt.replace("\n", " | ")[:140])
     s, d = svc("viertelstunden_waechter", "import_history", {"days": [{"date": "2026-10-01", "kw": 7.8, "at": "18:15"}], "months": [{"month": "2026-10", "peak_kw": 9.1}]}, resp=True)
     log(s == 200 and (d.get("service_response") or {}).get("days") == 1, "Dienst 'Verlauf importieren'", str(d.get("service_response") if isinstance(d, dict) else d))
+    # the export and the learning need at least one finished quarter hour (the test may start in the middle of one)
+    lq = wait_for(lambda: state("sensor.viertelstunden_wachter_letzte_viertelstunde") and
+                  state("sensor.viertelstunden_wachter_letzte_viertelstunde")["state"] not in ("unknown", "unavailable"), 960, 15)
+    log(bool(lq), "Erste Viertelstunde abgeschlossen und gelernt", (lq or {}).get("state", "") + " kW" if lq else "")
+    s, d = svc("viertelstunden_waechter", "export_csv", {"kind": "days", "days": 400, "format": "excel_de"}, resp=True)
+    r = (d.get("service_response") or {}) if isinstance(d, dict) else {}
+    log(s == 200 and r.get("rows", 0) >= 1 and "date;peak_kw;at" in (r.get("csv") or ""), "Dienst 'Als CSV exportieren' (Tagesspitzen)", f"{r.get('rows')} Zeilen, {r.get('path')}")
+    s, d = svc("viertelstunden_waechter", "export_csv", {"kind": "quarters", "days": 2}, resp=True)
+    r = (d.get("service_response") or {}) if isinstance(d, dict) else {}
+    log(s == 200 and r.get("rows", 0) >= 1 and (r.get("csv") or "").startswith("start,end,import_kw"), "Dienst 'Als CSV exportieren' (Viertelstunden)", f"{r.get('rows')} Zeilen")
+    s, d = svc("viertelstunden_waechter", "explain_today", {"push": False}, resp=True)
+    r = (d.get("service_response") or {}) if isinstance(d, dict) else {}
+    log(s == 200 and r.get("source") == "none" and "AI task" in str(r.get("error")), "Dienst 'Heute erklaeren' ohne KI-Aufgabe: sauberer Hinweis, kein Absturz", str(r.get("error")))
+    ex = state("sensor.viertelstunden_wachter_erklarung_des_tages")
+    log(ex is not None and ex["state"] not in ("unavailable",), "Sensor 'Erklaerung des Tages'", ex["state"] if ex else "")
+    log(float(val("input_number.akku_ausgang_w")) == 800.0, "Akku-Reserve aus: Akku unveraendert", f"{val('input_number.akku_ausgang_w')} W")
     cp = state("sensor.viertelstunden_wachter_ladeplan")
     log(cp is not None, "Ladeplan-Sensor vorhanden", str(cp["state"]) if cp else "")
 
@@ -248,6 +269,7 @@ def main():
     log(val("select.viertelstunden_wachter_betriebsart") == "active", "Betriebsart bleibt nach Neustart erhalten", str(val("select.viertelstunden_wachter_betriebsart")))
     log(val("switch.viertelstunden_wachter_wochenbericht") == "on" and val("switch.viertelstunden_wachter_vorwarnung_vor_einem_eingriff") == "off", "Schalter bleiben nach Neustart erhalten")
     log(val("switch.viertelstunden_wachter_ladeplan_auch_ausfuhren") == "off", "'Ladeplan auch ausfuehren' ist nach Neustart aus")
+    log(val("switch.viertelstunden_wachter_ki_erklarer") == "off", "'KI-Erklaerer' ist nach Neustart aus")
 
     # ---------- Log ----------
     logs = subprocess.run(["docker", "logs", CONTAINER], capture_output=True, text=True).stdout

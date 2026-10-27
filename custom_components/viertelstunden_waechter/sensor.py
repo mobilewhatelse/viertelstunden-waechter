@@ -36,6 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         MonthPeakSensor(w),
         InterventionsTodaySensor(w),
         WeeklyReportSensor(w),
+        ExplanationSensor(w),
     ])
 
 
@@ -65,6 +66,25 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "target_kw": w.guard.values.get("target_kw"),
             "configuration": w.configuration(),
         }
+
+
+class ExplanationSensor(WaechterEntity, SensorEntity):
+    """The explanation of the day (AI explainer, or a plain sentence on a day without interventions)."""
+
+    _unrecorded_attributes = frozenset({"text"})
+    _attr_icon = "mdi:robot-outline"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "ai_explanation")
+
+    @property
+    def native_value(self) -> str | None:
+        return self.waechter.explanation.get("date")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        keep = ("text", "source", "entity", "created", "error")
+        return {k: v for k, v in self.waechter.explanation.items() if k in keep}
 
 
 class WeeklyReportSensor(WaechterEntity, SensorEntity):

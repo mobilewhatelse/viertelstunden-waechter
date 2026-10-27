@@ -16,6 +16,7 @@ CONF_LOCK = "lock_entity"               # optional: "active" is refused while th
 CONF_NOTIFY = "notify_services"         # optional: comma-separated notify services
 CONF_STARTUP_MODE = "startup_mode"
 CONF_VOLTAGE = "mains_voltage"          # voltage of one phase, default 230 V
+CONF_AI_TASK = "ai_task_entity"         # optional: AI task entity for the explainer
 CONF_DEVICES = "devices"
 
 # device settings
@@ -66,6 +67,9 @@ D_START_VALUE = "start_value"
 D_STOP = "stop_entity"                  # ... and the one that pauses it
 D_STOP_VALUE = "stop_value"                   # minimum pause after taking back (compressor protection)
 D_OFF_SCRIPT = "off_script"
+D_RESERVE_ENTITY = "reserve_entity"     # battery: setting that keeps the charge (battery reserve before a peak) ...
+D_RESERVE_VALUE = "reserve_value"       # ... and the value that does so
+D_RESERVE_LEAD = "reserve_lead_min"     # battery: start holding this long before a forecast risk window
 
 MODE_OFF = "off"
 MODE_OBSERVE = "observe"

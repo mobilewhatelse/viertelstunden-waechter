@@ -6,6 +6,10 @@ hourly statistics (an hourly mean is a lower bound for its four quarters, so pea
 
 Per slot:  typical = median,  high = second highest sample (the highest if fewer than four samples).
 A quarter hour is a *risk* if its `high` exceeds the target and at least `MIN_SAMPLES` samples exist.
+
+With a wallbox the guard learns two models from the same quarter hours: the house without the wallbox and the wallbox
+alone. `combine()` adds them sample by sample (the total as before); when the car is full or not plugged in, the house
+model alone is the forecast, so a usual evening charging does not show as a risk on a day it cannot happen.
 """
 
 from __future__ import annotations
@@ -103,6 +107,28 @@ def reserve_kw(model: LoadModel, when: datetime, target_kw: float, cap: float = 
     if spike < RESERVE_MIN_KW:
         return 0.0, None
     return round(spike, 2), {"typical": p[0], "high": p[1], "n": p[2]}
+
+
+def combine(house: LoadModel, wallbox: LoadModel) -> LoadModel:
+    """House plus wallbox, sample by sample. Both learn the same quarter hours, so the lists are aligned at their end;
+    older house samples without a wallbox part (history import, data from before the split) are totals already."""
+    slots: dict[int, list[float]] = {}
+    for slot in set(house.slots) | set(wallbox.slots):
+        h = house.slots.get(slot, [])
+        w = wallbox.slots.get(slot, [])
+        n = max(len(h), len(w))
+        h = [0.0] * (n - len(h)) + h
+        w = [0.0] * (n - len(w)) + w
+        slots[slot] = [round(a + b, 3) for a, b in zip(h, w)][-MAX_SAMPLES:]
+    return LoadModel(slots)
+
+
+def reserve_window(windows: list[dict[str, Any]], now: datetime, lead_min: float) -> dict[str, Any] | None:
+    """The risk window that is running or starts within `lead_min` minutes, else None."""
+    for w in windows:
+        if w["start"] - timedelta(minutes=lead_min) <= now < w["end"]:
+            return w
+    return None
 
 
 def risk_windows(series: list[dict[str, Any]], target_kw: float, min_samples: int = MIN_SAMPLES) -> list[dict[str, Any]]:

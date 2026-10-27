@@ -6,6 +6,22 @@ Format: newest first. German version below each English block is a short summary
 
 - (nothing yet)
 
+## 0.13.0 - 2026-10-27
+
+- **House and car apart:** with a wallbox the forecast learns the house and the wallbox separately; a full or unplugged
+  car is left out of the forecast, the risk windows, *Throttle ahead* and *Battery reserve*. The charge plan no longer
+  counts the car twice.
+- **Battery reserve before a peak** (switch, default off): holds the battery with a configurable setting before a
+  forecast risk window and puts the previous value back afterwards.
+- **CSV export** (service `export_csv`): quarter-hour load profile (120 days) or daily peaks (400 days), standard or
+  German Excel format, written to `config/viertelstunden_waechter/export/`.
+- **AI explainer** (switch, default off, off after restart): daily explanation of the interventions via a Home
+  Assistant AI task entity, sensor *Explanation of the day*, service `explain_today`; at most 4 AI calls per day.
+- **English log lines and messages:** the guard's own texts follow the Home Assistant language (German or English).
+
+*Deutsch:* Haus und Auto in der Prognose getrennt (volles oder nicht angestecktes Auto zählt nicht), Akku-Reserve vor einer
+Spitze (Standard aus), CSV-Export, KI-Erklärer (Standard aus); Protokoll und Meldungen auch auf Englisch.
+
 ## 0.12.1 - 2026-10-25
 
 - Dashboard: the tile *Next risk* showed "Unknown" when no risk window is expected. It is now a text card: "none in the

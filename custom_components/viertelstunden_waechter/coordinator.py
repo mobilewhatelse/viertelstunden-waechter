@@ -22,8 +22,12 @@ from .const import (
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
+    CONF_AI_TASK, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
-from .forecast import LoadModel, hourly, reserve_kw, risk_windows, weekly_profile
+from .explain import build_instructions, extract_text, plain_summary
+from .messages import Messages
+from .export import days_csv, quarters_csv
+from .forecast import LoadModel, combine, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
 from .report import week_label, week_report
@@ -46,6 +50,9 @@ def _same_value(state: str, wanted: str) -> bool:
         return False
 LOG_KEEP = 200
 DAYS_KEEP = 400
+QUARTERS_KEEP = 120 * 96   # quarter-hour history for the export: 120 days
+AI_CALLS_PER_DAY = 4
+EXPLAIN_AT_HOUR = 21
 CALL_TIMEOUT_S = 15
 
 
@@ -62,8 +69,9 @@ class Waechter:
         }
         self.guard = Guard(
             [DeviceConfig.from_dict(d) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT,
-            float(self.cfg.get(CONF_VOLTAGE, 230.0)),
+            float(self.cfg.get(CONF_VOLTAGE, 230.0)), hass.config.language,
         )
+        self.t = Messages(hass.config.language)  # texts of the log lines and messages
         self.mode = MODE_OBSERVE
         self.limit_kw = float(self.cfg.get(CONF_LIMIT, 10.0))
         self.margin_kw = float(self.cfg.get(CONF_MARGIN, 0.5))
@@ -102,8 +110,23 @@ class Waechter:
         self._solar_cache: tuple[datetime, dict[datetime, float] | None] | None = None
         # load forecast: learned typical grid import per weekday and quarter hour
         self.forecast_enabled = True
-        self.model = LoadModel()
+        self.model = LoadModel()         # house without the wallbox (all of it without a wallbox entry)
+        self.wb_model = LoadModel()      # the wallbox alone
         self.forecast: dict[str, Any] = {}
+        self._wbq: dict[str, Any] = {"q": None, "kwh": 0.0, "t": None}  # wallbox energy of the running quarter hour
+        self._wb_last: tuple[datetime, float] | None = None              # (start, kW) of the last finished quarter
+        self._wb_kw_now = 0.0
+        # battery reserve before a forecast peak (switch, default off)
+        self.battery_reserve = False
+        self._reserve: dict[str, dict[str, Any]] = {}   # battery devices held now: entity, original value, until
+        self._reserve_seen: dict[str, str] = {}         # observe mode: window already logged per device
+        # quarter-hour history for the export
+        self.quarters: list[list[Any]] = []
+        self._quarters_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.quarters")
+        # AI explainer (switch, default off and off after every restart)
+        self.ai_explainer = False
+        self.explanation: dict[str, Any] = {}
+        self._ai_calls: dict[str, int] = {}
         self._forecast_at: datetime | None = None
         self._bootstrapped = False
         self._bootstrapping = False
@@ -135,11 +158,18 @@ class Waechter:
         self.last_quarter_kw = data.get("last_quarter_kw")
         model_data = await self._model_store.async_load() or {}
         self.model = LoadModel.from_dict(model_data)
+        self.wb_model = LoadModel.from_dict(model_data.get("wallbox") or {})
+        self.quarters = (await self._quarters_store.async_load() or {}).get("rows", [])
+        self.explanation = data.get("explanation", {})
+        self._ai_calls = data.get("ai_calls", {})
+        self._reserve = data.get("reserve", {})
+        if self._reserve:
+            await self._end_reserve_all(self.t("r_restart"))  # restarted while a battery was held: give it back first
         self._bootstrapped = bool(model_data.get("bootstrapped"))
         if data.get("executing") and data.get("interventions"):
             # Home Assistant restarted while the guard had changed devices: give them back first
             self.guard.load({"interventions": data["interventions"]})
-            await self._run(self.guard.release_all(dt_util.now(), self._readings(), "Neustart"), True)
+            await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_restart")), True)
         self.guard.forget()
         self._unsub = async_track_time_interval(self.hass, self._tick, UPDATE_INTERVAL)
 
@@ -151,7 +181,8 @@ class Waechter:
             self.plan_execute = False
             await self._execute_plan(dt_util.now())  # resume a charging the plan had paused
             if self.executing and self.guard.interventions:
-                await self._run(self.guard.release_all(dt_util.now(), self._readings(), "Integration beendet"), True)
+                await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_unload")), True)
+            await self._end_reserve_all(self.t("r_unload"))
             self.executing = False
             self.guard.forget()
         await self._store.async_save(self._data())
@@ -247,15 +278,16 @@ class Waechter:
             execute = self.mode == MODE_ACTIVE and not locked
             if execute != self.executing:
                 if self.executing:  # leaving active mode: give back what was really changed
-                    await self._run(self.guard.release_all(now, readings, "Betriebsart geändert"), True)
+                    await self._run(self.guard.release_all(now, readings, self.t("r_mode")), True)
                 self.guard.forget()  # interventions seen in observe mode never happened
                 self.executing = execute
+            self._wb_accumulate(now, readings)
             needed = self._is_on(self.cfg.get(CONF_CONDITION), True)
             grid = self._power_kw(self.cfg.get(CONF_GRID_POWER))
             self.guard.real_effect = execute
             reserve, info = 0.0, None
             if self.predictive and self.forecast_enabled and self.mode != MODE_OFF:
-                reserve, info = reserve_kw(self.model, now, self.effective_limit(now) - self.margin_kw)
+                reserve, info = reserve_kw(self._view_now(), now, self.effective_limit(now) - self.margin_kw)
             acts = self.guard.step(
                 now,
                 max(0.0, grid) if grid is not None else None,
@@ -265,7 +297,7 @@ class Waechter:
                 self.margin_kw,
                 self.mode != MODE_OFF and needed,
                 reserve,
-                f"laut Prognose Spitzen bis {info['high']:.1f} kW, typisch {info['typical']:.1f} kW" if info else "",
+                self.t("why_forecast", high=info["high"], typ=info["typical"]) if info else "",
             )
             await self._run(acts, execute)
             if execute:
@@ -278,6 +310,8 @@ class Waechter:
             self._update_forecast(now)
             await self._update_plan(now)
             await self._execute_plan(now)
+            await self._battery_reserve_step(now, execute)
+            await self._explain_due(now)
             self.status = self._status(locked, needed)
             self._store.async_delay_save(self._data, 10)
         async_dispatcher_send(self.hass, self.signal)
@@ -340,10 +374,10 @@ class Waechter:
             self._session += [f"{now:%H:%M:%S} {a.text}" for a in done]
         if reductions and (self._last_push is None or (now - self._last_push) >= timedelta(minutes=30)):
             self._last_push = now
-            await self._exec(Action("", "notify", None, "Eingriff: " + "; ".join(a.text for a in reductions)))
+            await self._exec(Action("", "notify", None, self.t("push_iv", text="; ".join(a.text for a in reductions))))
         if self._session and not self.guard.interventions:
             lines = self._session[:15] + ([f"... (+{len(self._session) - 15})"] if len(self._session) > 15 else [])
-            await self._exec(Action("", "notify", None, "Eingriff beendet, alles wieder freigegeben. Das habe ich gemacht:\n" + "\n".join(lines)))
+            await self._exec(Action("", "notify", None, self.t("push_done") + "\n" + "\n".join(lines)))
             self._session = []
 
     async def _prewarning(self, now: datetime, needed: bool) -> None:
@@ -359,8 +393,7 @@ class Waechter:
         if fc >= 0.9 * float(limit):
             self._prewarn_q = q
             await self._exec(Action("", "notify", None,
-                                    f"Vorwarnung: Die Viertelstunde läuft auf {fc:.1f} kW zu (Grenze {float(limit):.1f} kW, "
-                                    f"Bezug jetzt {float(v.get('grid_kw') or 0.0):.1f} kW)"))
+                                    self.t("prewarn", fc=fc, limit=float(limit), now=float(v.get("grid_kw") or 0.0))))
 
     def build_week(self, start, days: int = 7) -> dict[str, Any]:
         month = (start + timedelta(days=days - 1)).strftime("%Y-%m")
@@ -403,9 +436,20 @@ class Waechter:
         m["ug"] = max(float(m.get("ug") or 0.0), kw, unguarded_kw or 0.0)
         for k in sorted(self.months)[:-15]:
             del self.months[k]
+        total = unguarded_kw if unguarded_kw is not None else kw
+        wb_kw = self._wb_last[1] if self._wb_last is not None and self._wb_last[0] == start else None
         if self.forecast_enabled:  # learn what the load would be without the guard
-            self.model.add(start, unguarded_kw if unguarded_kw is not None else kw)
+            if self._has_wallbox() and wb_kw is not None:
+                house = max(0.0, kw - wb_kw)          # measured import minus measured wallbox
+                self.model.add(start, house)
+                self.wb_model.add(start, max(0.0, total - house))  # the wallbox, including what the guard held back
+            else:
+                self.model.add(start, total)
             self._model_store.async_delay_save(self._model_data, 120)
+        self.quarters.append([start.isoformat(timespec="minutes"), round(kw, 3),
+                              round(total, 3), round(wb_kw, 3) if wb_kw is not None else None])
+        del self.quarters[:-QUARTERS_KEEP]
+        self._quarters_store.async_delay_save(lambda: {"rows": self.quarters}, 300)
         if self.month_peak.get("month") != month or kw > float(self.month_peak.get("kw") or 0.0):
             self.month_peak = {"month": month, "kw": kw, "at": start.isoformat()}
         day = start.strftime("%Y-%m-%d")
@@ -417,7 +461,7 @@ class Waechter:
     # ---------- load forecast ----------
 
     def _model_data(self) -> dict[str, Any]:
-        return {**self.model.to_dict(), "bootstrapped": self._bootstrapped}
+        return {**self.model.to_dict(), "wallbox": self.wb_model.to_dict(), "bootstrapped": self._bootstrapped}
 
     def _update_forecast(self, now: datetime) -> None:
         if not self.forecast_enabled:
@@ -427,7 +471,9 @@ class Waechter:
             return
         self._forecast_at = now
         target = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
-        series = self.model.horizon(now, 24)
+        car = self._car_may_charge()
+        view = self._view_all() if car else self.model
+        series = view.horizon(now, 24)
         highs = [q["high"] for q in series if q["high"] is not None]
         self.forecast = {
             "target": target,
@@ -435,7 +481,8 @@ class Waechter:
             "peak": max(highs) if highs else None,
             "windows": risk_windows(series, target),
             "hours": hourly(series),
-            "profile": weekly_profile(self.model),
+            "profile": weekly_profile(self._view_all()),
+            "vehicle_included": car,
             "samples": self.model.samples,
             "slots": self.model.slots_with_data,
         }
@@ -479,6 +526,186 @@ class Waechter:
             _LOGGER.warning("Load forecast: history could not be read: %s", err)
         finally:
             self._bootstrapping = False
+
+    # ---------- house and wallbox apart ----------
+
+    def _has_wallbox(self) -> bool:
+        return any(d[D_KIND] == KIND_WALLBOX for d in self.raw_devices.values())
+
+    def _wb_accumulate(self, now: datetime, readings: dict[str, Reading]) -> None:
+        """Energy of all wallboxes in the running quarter hour (for learning the house without the wallbox)."""
+        p = sum((r.power_w or 0.0) for dev_id, r in readings.items()
+                if self.raw_devices.get(dev_id, {}).get(D_KIND) == KIND_WALLBOX) / 1000.0
+        self._wb_kw_now = p
+        q = now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0)
+        w = self._wbq
+        if w["q"] != q:
+            if w["q"] is not None and w["q"] == q - timedelta(minutes=15):
+                self._wb_last = (w["q"], round(w["kwh"] / 0.25, 3))
+            w.update({"q": q, "kwh": 0.0, "t": max(q, w["t"]) if w["t"] else now})
+        if w["t"] is not None:
+            w["kwh"] += p * max(0.0, min(60.0, (now - w["t"]).total_seconds())) / 3600.0
+        w["t"] = now
+
+    def _car_may_charge(self) -> bool:
+        """False only if a vehicle entry says the car is full or not plugged in (and the wallbox is idle)."""
+        if not self._has_wallbox() or self._wb_kw_now >= 1.0:
+            return True
+        v = self._vehicle()
+        if v is None:
+            return True
+        if v.get(D_CONNECTED) and not self._is_on(v.get(D_CONNECTED), True):
+            return False
+        soc = self._float(v.get(D_SOC))
+        target = self._float(v.get(D_TARGET_ENTITY))
+        target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
+        return soc is None or soc < target - 0.5
+
+    def _view_all(self) -> LoadModel:
+        return combine(self.model, self.wb_model) if self.wb_model.slots else self.model
+
+    def _view_now(self) -> LoadModel:
+        return self._view_all() if self._car_may_charge() else self.model
+
+    # ---------- battery reserve before a forecast peak ----------
+
+    async def _battery_reserve_step(self, now: datetime, execute: bool) -> None:
+        """Before a forecast risk window keep the battery charged (one setting, e.g. low output power or a mode),
+        afterwards put it back. Only batteries with a reserve setting, only with the switch on. A battery the guard
+        has released for an emergency is left alone until it is given back."""
+        windows = (self.forecast.get("windows") or []) if self.forecast_enabled else []
+        for dev_id, d in self.raw_devices.items():
+            if d[D_KIND] != KIND_BATTERY or not d.get(D_RESERVE_ENTITY) or d.get(D_RESERVE_VALUE) in (None, ""):
+                continue
+            if dev_id in self.guard.interventions:
+                continue
+            win = reserve_window(windows, now, float(d.get(D_RESERVE_LEAD, 60))) if (
+                self.battery_reserve and self.mode != MODE_OFF) else None
+            held = self._reserve.get(dev_id)
+            name = d.get(D_NAME, dev_id)
+            if win is not None and held is None:
+                text = self.t("res_hold", name=name, start=f"{win['start']:%H:%M}", end=f"{win['end']:%H:%M}",
+                              high=win["high_kw"])
+                if not execute:
+                    key = win["start"].isoformat()
+                    if self._reserve_seen.get(dev_id) != key:
+                        self._reserve_seen[dev_id] = key
+                        self._log(Action(dev_id, "log", None, text, False), True)
+                    continue
+                ent, val = d[D_RESERVE_ENTITY], str(d[D_RESERVE_VALUE])
+                st = self._state(ent)
+                try:
+                    await self._set_entity(ent, val)
+                except Exception as err:  # noqa: BLE001
+                    self._log(Action(dev_id, "log", None, self.t("res_fail", name=name, err=err), False), False)
+                    continue
+                self._reserve[dev_id] = {"entity": ent, "value": val, "orig": st.state if st else None,
+                                         "until": win["end"].isoformat()}
+                self._log(Action(dev_id, "log", None, text, False), False)
+            elif held is not None and (win is None or not execute):
+                await self._end_reserve(dev_id, self.t("r_risk_over") if win is None else self.t("r_mode"))
+
+    async def _end_reserve(self, dev_id: str, reason: str) -> None:
+        held = self._reserve.pop(dev_id, None)
+        if not held:
+            return
+        name = self.raw_devices.get(dev_id, {}).get(D_NAME, dev_id)
+        st = self._state(held["entity"])
+        if held.get("orig") is not None and st is not None and _same_value(st.state, str(held["value"])):
+            try:
+                await self._set_entity(held["entity"], str(held["orig"]))
+            except Exception as err:  # noqa: BLE001
+                self._log(Action(dev_id, "log", None, self.t("res_back_fail", name=name, err=err), False), False)
+                return
+            self._log(Action(dev_id, "log", None, self.t("res_end", reason=reason, name=name), False), False)
+        else:
+            self._log(Action(dev_id, "log", None, self.t("res_end_changed", reason=reason, name=name), False), False)
+
+    async def _end_reserve_all(self, reason: str) -> None:
+        for dev_id in list(self._reserve):
+            await self._end_reserve(dev_id, reason)
+
+    # ---------- export ----------
+
+    async def export_csv(self, kind: str = "quarters", days: int = 31, fmt: str = "standard") -> dict[str, Any]:
+        """Write the quarter-hour load profile or the daily peaks as CSV to /config/viertelstunden_waechter/export/
+        (not a public folder). Returns the path, the number of rows and - for small files - the CSV itself."""
+        now = dt_util.now()
+        since = now - timedelta(days=max(1, int(days)))
+        if kind == "days":
+            text, n = days_csv(self.day_peaks, fmt, since.strftime("%Y-%m-%d"))
+            name = f"tagesspitzen_{since:%Y-%m-%d}_{now:%Y-%m-%d}.csv"
+        else:
+            text, n = quarters_csv(self.quarters, fmt, since)
+            name = f"lastgang_{since:%Y-%m-%d}_{now:%Y-%m-%d}.csv"
+        path = self.hass.config.path(DOMAIN, "export", name)
+
+        def _write() -> None:
+            import os
+
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(text)
+
+        await self.hass.async_add_executor_job(_write)
+        return {"path": path, "rows": n, "csv": text if n <= 2000 else None}
+
+    # ---------- AI explainer ----------
+
+    async def explain_today(self, push: bool = False) -> dict[str, Any]:
+        """A short explanation of today's interventions by the AI task chosen in the settings. Without interventions
+        no AI is asked. At most AI_CALLS_PER_DAY calls per day; never switches anything."""
+        now = dt_util.now()
+        day = now.strftime("%Y-%m-%d")
+        lines = self.log_lines(50, today_only=True)
+        counts = self.counts.get(day, {})
+        interventions = int(counts.get("real", 0)) + int(counts.get("shadow", 0))
+        peak = self.day_peaks.get(day, {})
+        peak_kw = float(peak["kw"]) if peak.get("kw") is not None else None
+        lang = self.hass.config.language
+        result: dict[str, Any] = {"date": day, "created": now.isoformat(timespec="seconds"), "source": "rule", "text": ""}
+        entity = self.cfg.get(CONF_AI_TASK)
+        if interventions == 0:
+            result["text"] = plain_summary(lang, 0, peak_kw, self.limit_kw)
+        elif not entity:
+            result.update({"source": "none", "error": "no AI task entity in the settings"})
+        elif self._ai_calls.get(day, 0) >= AI_CALLS_PER_DAY:
+            result.update({"source": "none", "error": f"limit of {AI_CALLS_PER_DAY} AI calls per day reached"})
+        else:
+            self._ai_calls = {day: self._ai_calls.get(day, 0) + 1}
+            instructions = build_instructions(
+                lang, now.strftime("%d.%m.%Y"), lines, self.limit_kw,
+                float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw)), peak_kw, peak.get("at"),
+                interventions, int(counts.get("miss", 0)), self.mode == MODE_OBSERVE,
+            )
+            try:
+                async with asyncio.timeout(90):
+                    resp = await self.hass.services.async_call(
+                        "ai_task", "generate_data",
+                        {"task_name": "Viertelstunden-Wächter", "instructions": instructions, "entity_id": entity},
+                        blocking=True, return_response=True,
+                    )
+                result.update({"source": "ai", "entity": entity, "text": extract_text(resp)})
+                if not result["text"]:
+                    result.update({"source": "none", "error": "empty answer"})
+            except Exception as err:  # noqa: BLE001 - the explainer is optional
+                _LOGGER.warning("AI explainer failed: %s", err)
+                result.update({"source": "none", "error": str(err)})
+        self.explanation = result
+        self._store.async_delay_save(self._data, 5)
+        if push and result.get("text"):
+            await self._exec(Action("", "notify", None, result["text"]))
+        async_dispatcher_send(self.hass, self.signal)
+        return result
+
+    async def _explain_due(self, now: datetime) -> None:
+        """Every evening once, with the switch on."""
+        if not self.ai_explainer or now.hour < EXPLAIN_AT_HOUR:
+            return
+        if self.explanation.get("date") == now.strftime("%Y-%m-%d") and self.explanation.get("auto"):
+            return
+        await self.explain_today(push=True)
+        self.explanation["auto"] = True  # once per evening, also after an error
 
     # ---------- charge plan ----------
 
@@ -560,7 +787,7 @@ class Waechter:
         target = self._float(v.get(D_TARGET_ENTITY))
         target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
         hours = max(2, min(48, int((departure - now).total_seconds() // 3600) + 2))
-        series = self.model.horizon(now, hours)
+        series = self.model.horizon(now, hours)  # the house without the wallbox: the plan adds the car itself
         solar = await self._solar_kw(now)
         target_kw = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
         plan = make_plan(
@@ -601,16 +828,16 @@ class Waechter:
                     return  # nothing to pause with; the plan stays advice
                 await self._vehicle_command(v, "stop")
                 self._plan_paused = True
-                self._log(Action("", "log", None, "Ladeplan: Laden pausiert (außerhalb der geplanten Zeiten)", False), False)
+                self._log(Action("", "log", None, self.t("plan_pause"), False), False)
             else:
                 if v.get(D_START):
                     await self._vehicle_command(v, "start")
                 self._plan_paused = False
-                self._log(Action("", "log", None, "Ladeplan: Laden freigegeben", False), False)
+                self._log(Action("", "log", None, self.t("plan_go"), False), False)
             self._plan_cmd_at = now
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Charge plan command failed: %s", err)
-            self._log(Action("", "log", None, f"Ladeplan: Befehl fehlgeschlagen ({err})", False), False)
+            self._log(Action("", "log", None, self.t("plan_fail", err=err), False), False)
 
     # ---------- executing ----------
 
@@ -627,7 +854,7 @@ class Waechter:
                 await self._exec(a)
             except Exception as err:  # noqa: BLE001 - a failing device must not stop the guard
                 _LOGGER.warning("Action %s for %s failed: %s", a.kind, a.device_id, err)
-                self._log(Action(a.device_id, "log", None, f"Fehler: {a.text or a.kind} ({err})", False), False)
+                self._log(Action(a.device_id, "log", None, self.t("error", what=a.text or a.kind, err=err), False), False)
 
     async def _call(self, domain: str, service: str, data: dict[str, Any]) -> None:
         async with asyncio.timeout(CALL_TIMEOUT_S):
@@ -721,6 +948,9 @@ class Waechter:
             "plan_paused": self._plan_paused,
             "day_peaks": self.day_peaks,
             "weekly": self.weekly,
+            "explanation": self.explanation,
+            "ai_calls": self._ai_calls,
+            "reserve": self._reserve,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,
             "interventions": self.guard.interventions if self.executing else {},
@@ -736,7 +966,7 @@ class Waechter:
                 continue
             t = dt_util.parse_datetime(x["t"])
             stamp = t.strftime("%H:%M:%S" if today_only else "%d.%m. %H:%M:%S") if t else x["t"]
-            lines.append(f"{stamp}  {'(beobachtet) ' if x.get('shadow') else ''}{x['text']}")
+            lines.append(f"{stamp}  {self.t('observed') + ' ' if x.get('shadow') else ''}{x['text']}")
             if len(lines) >= limit:
                 break
         return lines

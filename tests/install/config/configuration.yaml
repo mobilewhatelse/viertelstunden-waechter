@@ -23,6 +23,14 @@ input_number:
     initial: 400
     unit_of_measurement: W
     mode: box
+  akku_ausgang_w:
+    name: Akku Ausgangsleistung
+    min: 0
+    max: 2000
+    step: 1
+    initial: 800
+    unit_of_measurement: W
+    mode: box
   wb_strom:
     name: Wallbox Ladestrom
     min: 6
@@ -66,6 +74,10 @@ template:
         device_class: power
         state_class: measurement
         state: "{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) }}"
+      - name: Akku Ladestand
+        unique_id: akku_soc
+        unit_of_measurement: "%"
+        state: "70"
       - name: Auto Ladestand
         unique_id: auto_soc
         unit_of_measurement: "%"

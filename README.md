@@ -219,7 +219,8 @@ as "charging current setting". The guard then changes the helper and the automat
 
 ### Roadmap
 
-Nothing in this list is built yet. The order is a proposal, not a promise.
+Nothing in this list is built yet (done in 0.13: house and car apart, battery reserve, CSV export, AI explainer).
+The order is a proposal, not a promise.
 
 **Planned**
 
@@ -229,26 +230,23 @@ Nothing in this list is built yet. The order is a proposal, not a promise.
    and real-world reports from other installations.
 2. **Real-hardware tests** of *Throttle power* and *Change settings* (heat pumps) and of the battery release on other
    makes - until then they are simulator-tested only. Test reports are welcome (issue template *device test report*).
-3. **Battery reserve before an expected peak:** do not discharge the battery for self-consumption shortly before a
-   forecast risk window, so it can still help in an emergency.
-4. **Charge plan closer to the risk windows:** avoid forecast peaks when placing the charging quarters, and a *daily
+3. **Charge plan closer to the risk windows:** avoid forecast peaks when placing the charging quarters, and a *daily
    plan* that combines solar forecast, departure times and the learned load pattern.
-5. **Vehicle is full:** stop counting a car that has reached its target as a load.
-6. **Compact "today" dashboard card** (quarter-hour curve, interventions, forecast) for phones.
-7. **Export and connectors (optional, opt-in):** an export of the quarter-hour load profile (CSV) and, where a platform
-   offers a documented interface, a connector that sends the data there (for example platforms for energy
+4. **Compact "today" dashboard card** (quarter-hour curve, interventions, forecast) for phones.
+5. **Connectors (optional, opt-in):** the CSV export exists (0.13); where a platform offers a documented interface, a
+   connector could send the data there (for example platforms for energy
    communities). A connector depends entirely on the other platform's interface and is a separate optional part:
    nothing leaves the installation unless the user sets it up.
-8. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
+6. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
 
-**Planned: AI features** (optional, **off by default and off after a restart**, with a daily cost limit). The AI is used
+**AI features** (the explainer is built in 0.13, the others are planned; optional, **off by default and off after a restart**, with a daily cost limit). The AI is used
 through Home Assistant's *AI task* entity, so every user chooses the model (cloud or local) and no key is built in.
 **The rule: the AI explains, advises and plans - what is switched now is always decided by the fixed rules** (every 20
 seconds, also without internet), and every AI proposal is checked against hard limits before it is used.
 
 | Function | What it does | Risk |
 |---|---|---|
-| **Explainer** | Turns the day's interventions into a short text, optionally as a message ("Pool paused 12 min so the car is full by 7") | none, read only |
+| **Explainer** (built, 0.13) | Turns the day's interventions into a short text, optionally as a message ("Pool paused 12 min so the car is full by 7") | none, read only |
 | **Weekly review with suggestions** | "Three tight quarter hours, all Sundays at 18:00 with oven and car. Suggestion: start charging at 20:00." Nothing changes without confirmation | low |
 | **Set-up by conversation** | A sentence like "the pool does not matter, the freezer may be off 30 min at most" becomes a proposal for devices, priorities and maximum off time that the user confirms | low |
 | **Ask the guard** | "Why was the wallbox throttled yesterday evening?" via Assist, chat or the Home Assistant MCP server | none |
@@ -304,7 +302,7 @@ device (at most every 30 minutes) and leaves that device alone for 10 minutes, s
 is used** instead of waiting for a device that does not react. When the device follows later, it is used again.
 Releases (giving back) are not checked: if one fails, the device simply stays limited and the guard tries again.
 Observe mode does not check anything (nothing is sent). The count is the attribute `unconfirmed` and appears in the
-weekly report; log lines read "no reaction ... command repeated" and "command not carried out".
+weekly report; log lines read "no reaction ... repeating the command" and "command not carried out".
 
 **Early warning** – switch *Early warning before an intervention*, **default off**. One message per quarter hour
 when the forecast of the running quarter hour reaches 90 % of the limit while the guard has not yet intervened
@@ -325,6 +323,54 @@ data:
   current_week: true   # the running week so far instead of the last full week
   push: false          # only create the sensor, send no message
 ```
+
+### Language
+
+Everything follows the language of Home Assistant: German for German installations, English for every other
+language. That covers the set-up dialogs, entity names, services, the dashboard, the weekly report, the AI explainer and
+(since 0.13) the log lines and messages of the guard ("Wallbox 16 A -> 12 A (3-phase, 1.7 kW too much)"). Lines that
+are already in the log keep the language they were written in.
+
+### House and car apart, battery reserve, export, AI explainer (0.13)
+
+**House and car apart (automatic).** With a wallbox entry the guard learns two patterns from the same quarter hours:
+the house without the wallbox (measured import minus the wallbox power) and the wallbox alone. The forecast normally
+adds them up. If a vehicle entry says the car is **full** (state of charge at its target) or **not plugged in** (the
+optional *connected* entity is off), and the wallbox is idle, the forecast leaves the car out: the usual evening charging
+is then no risk window, *Throttle ahead* keeps no reserve for it and *Battery reserve* does not hold the battery for it.
+The charge plan uses the house alone (it adds the car itself; before 0.13 it counted the car twice). Older data (history
+import, months before the update) stay totals until they are replaced by new quarter hours (8 samples per slot).
+
+**Battery reserve before a peak** (switch, **default off**). For a battery entry you can enter a *setting that keeps the
+charge* and its value (for example the maximum output power set to a low value, or a mode such as standby) and how many
+minutes before a forecast risk window it starts (default 60). With the switch on, the guard sets it before the window,
+so the battery is not emptied for self-consumption and can still help in an emergency; after the window it puts back
+the value it found. It only touches batteries with such a setting, does nothing while it has released the battery for an
+emergency, logs every step ("Akku-Reserve: ... hält die Ladung ...") and only logs in observe mode. After a restart or
+when the integration is unloaded a held battery is given back first. If your own automations change the same setting
+(for example while the car charges), decide which one is in charge - the guard only puts a value back while it is still
+the one it set.
+
+**CSV export** (service `viertelstunden_waechter.export_csv`). Writes the quarter-hour load profile (kept 120 days:
+start, end, import kW and kWh, estimate without the guard, wallbox kW) or the daily peaks (400 days) to
+`config/viertelstunden_waechter/export/` - not a public folder. Format `standard` (comma, decimal point) or `excel_de`
+(semicolon, decimal comma). Small files are also returned in the service response.
+
+```yaml
+action: viertelstunden_waechter.export_csv
+data:
+  kind: quarters      # or days
+  days: 31
+  format: excel_de
+```
+
+**AI explainer** (switch, **default off and off after every restart**). Choose an *AI task* entity in the general
+settings (Settings > Devices > AI tasks; you pick the model, cloud or local - the guard has no key of its own). Every
+evening at 21:00 the explainer turns the day's log into 2-4 plain sentences ("The wallbox was lowered from 16 to 12 A
+at 16:45 while ..."), shows them in the sensor *Explanation of the day* and the statistics view and sends them via the
+notify services. On a day without interventions no AI is asked (a fixed sentence instead). At most 4 AI calls per day;
+the AI only writes text - it never decides or switches anything. Service `viertelstunden_waechter.explain_today`
+(field `push`) asks on demand.
 
 ### Load forecast
 
@@ -496,6 +542,8 @@ from the database to keep it small.
 | `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
 | `switch` Learn and show the load forecast | default on |
 | `switch` Throttle ahead using the forecast (default off), Early warning before an intervention (default off), Weekly report (default on) | optional |
+| `switch` Battery reserve before a peak (default off), AI explainer (default off, off after restart) | optional |
+| `sensor` Explanation of the day | state = date, attributes `text`, `source` (ai / rule / none), `error` |
 | `sensor` Weekly report | state = week, attribute `text`, `peak_kw`, `days_over`, `interventions`, `unconfirmed` |
 | `sensor` Typical import now, Expected peak in 24 h, Next peak risk | forecast, attributes `windows`, `hours`, `profile` |
 | `sensor` Charge plan | states and attributes see *Charge plan* |

@@ -19,6 +19,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         FeatureSwitch(w, "costs_enabled", "costs_enabled", "mdi:currency-eur"),
         FeatureSwitch(w, "forecast_enabled", "forecast_enabled", "mdi:chart-timeline-variant"),
         OffByDefaultSwitch(w, "predictive", "predictive", "mdi:crystal-ball"),
+        OffByDefaultSwitch(w, "battery_reserve", "battery_reserve", "mdi:battery-lock"),
+        ExecuteSwitch(w, "ai_explainer", "ai_explainer", "mdi:robot-outline"),
         OffByDefaultSwitch(w, "prewarn", "prewarn", "mdi:bell-alert-outline"),
         FeatureSwitch(w, "weekly_report_enabled", "weekly_enabled", "mdi:calendar-week"),
         FeatureSwitch(w, "charge_plan_enabled", "plan_enabled", "mdi:ev-station"),
@@ -62,8 +64,8 @@ class OffByDefaultSwitch(FeatureSwitch):
 
 
 class ExecuteSwitch(FeatureSwitch):
-    """Carry out the charge plan. Always OFF after a restart (a plan that pauses charging must be switched on on
-    purpose); turning it off lets the car charge normally again."""
+    """Always OFF after a restart: carry out the charge plan (a plan that pauses charging must be switched on on
+    purpose; turning it off lets the car charge normally again) and the AI explainer (it may cost money)."""
 
     async def async_added_to_hass(self) -> None:
         await WaechterEntity.async_added_to_hass(self)

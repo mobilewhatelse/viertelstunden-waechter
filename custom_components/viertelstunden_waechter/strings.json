@@ -35,14 +35,16 @@
           "lock_entity": "Block active mode while",
           "notify_services": "Notify services",
           "startup_mode": "Mode after a restart",
-          "mains_voltage": "Mains voltage"
+          "mains_voltage": "Mains voltage",
+          "ai_task_entity": "AI task for the explainer"
         },
         "data_description": {
           "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
           "lock_entity": "Optional. While this is on, active mode is refused and the guard only observes (e.g. an older guard that is still running).",
           "notify_services": "Optional, comma-separated, e.g. notify.mobile_app_phone. Used when the limit cannot be held.",
           "startup_mode": "Restore = the mode it had before the restart.",
-          "mains_voltage": "Voltage of one phase (230 V in Europe). Used to convert amps into kilowatts."
+          "mains_voltage": "Voltage of one phase (230 V in Europe). Used to convert amps into kilowatts.",
+          "ai_task_entity": "Optional: the AI task entity (Settings > Devices > AI tasks) the explainer uses. You choose the model; the guard has no key of its own."
         }
       }
     }
@@ -165,6 +167,9 @@
       },
       "weekly_report": {
         "name": "Weekly report"
+      },
+      "ai_explanation": {
+        "name": "Explanation of the day"
       }
     },
     "switch": {
@@ -194,6 +199,12 @@
       },
       "predictive": {
         "name": "Throttle ahead using the forecast"
+      },
+      "battery_reserve": {
+        "name": "Battery reserve before a peak"
+      },
+      "ai_explainer": {
+        "name": "AI explainer"
       }
     }
   },
@@ -375,7 +386,10 @@
             "max_off_min": "Maximum duration",
             "restore_original": "Put the previous values back",
             "off_script": "Script after taking back",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "reserve_entity": "Setting that keeps the charge",
+            "reserve_value": "Value that keeps the charge",
+            "reserve_lead_min": "Start before a risk window"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
@@ -388,7 +402,10 @@
             "max_off_min": "0 = no limit. After this time the battery is taken back in any case.",
             "restore_original": "On: the values from before the release are put back - but only those still holding the release value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back, e.g. to let your own automation set the battery.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
+            "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
+            "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak."
           }
         },
         "reconfigure": {
@@ -407,7 +424,10 @@
             "max_off_min": "Maximum duration",
             "restore_original": "Put the previous values back",
             "off_script": "Script after taking back",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "reserve_entity": "Setting that keeps the charge",
+            "reserve_value": "Value that keeps the charge",
+            "reserve_lead_min": "Start before a risk window"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
@@ -420,7 +440,10 @@
             "max_off_min": "0 = no limit. After this time the battery is taken back in any case.",
             "restore_original": "On: the values from before the release are put back - but only those still holding the release value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back, e.g. to let your own automation set the battery.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
+            "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
+            "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak."
           }
         }
       },
@@ -735,6 +758,34 @@
         "push": {
           "name": "Send the message",
           "description": "Also send it as a message to the notify services."
+        }
+      }
+    },
+    "export_csv": {
+      "name": "Export as CSV",
+      "description": "Writes the quarter-hour load profile or the daily peaks to config/viertelstunden_waechter/export/ (not a public folder).",
+      "fields": {
+        "kind": {
+          "name": "What",
+          "description": "quarters = every quarter hour (kept 120 days), days = daily peaks (400 days)."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many days back."
+        },
+        "format": {
+          "name": "Format",
+          "description": "standard = comma and decimal point, excel_de = semicolon and decimal comma."
+        }
+      }
+    },
+    "explain_today": {
+      "name": "Explain today",
+      "description": "Asks the AI task for a short explanation of today's interventions (without interventions no AI is asked).",
+      "fields": {
+        "push": {
+          "name": "Send the message",
+          "description": "Also send it to the notify services."
         }
       }
     }

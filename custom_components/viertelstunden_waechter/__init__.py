@@ -63,6 +63,8 @@ async def _reload(hass: HomeAssistant, entry: WaechterEntry) -> None:
 SERVICE_CREATE_DASHBOARD = "create_dashboard"
 SERVICE_IMPORT_HISTORY = "import_history"
 SERVICE_WEEK_REPORT = "send_week_report"
+SERVICE_EXPORT = "export_csv"
+SERVICE_EXPLAIN = "explain_today"
 
 
 def _register_services(hass: HomeAssistant) -> None:
@@ -91,6 +93,34 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_WEEK_REPORT, handle_week,
         schema=vol.Schema({vol.Optional("current_week", default=False): cv.boolean, vol.Optional("push", default=True): cv.boolean}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    def _guard():
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries or getattr(entries[0], "runtime_data", None) is None:
+            raise ServiceValidationError("The guard is not set up")
+        return entries[0].runtime_data
+
+    async def handle_export(call: ServiceCall) -> dict[str, Any]:
+        return await _guard().export_csv(call.data["kind"], call.data["days"], call.data["format"])
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_EXPORT, handle_export,
+        schema=vol.Schema({
+            vol.Optional("kind", default="quarters"): vol.In(["quarters", "days"]),
+            vol.Optional("days", default=31): vol.All(vol.Coerce(int), vol.Range(min=1, max=400)),
+            vol.Optional("format", default="standard"): vol.In(["standard", "excel_de"]),
+        }),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    async def handle_explain(call: ServiceCall) -> dict[str, Any]:
+        return await _guard().explain_today(call.data["push"])
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_EXPLAIN, handle_explain,
+        schema=vol.Schema({vol.Optional("push", default=False): cv.boolean}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 
