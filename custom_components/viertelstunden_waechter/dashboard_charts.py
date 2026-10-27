@@ -103,7 +103,7 @@ def daily(ids: dict[str, str], limit_label: str, legend: str, none_text: str, da
         "{% set pw = W - L - R %}{% set ph = H - T - B %}{% set n = @N@ %}{% set bw = pw / n %}"
         + _fill(SVG_OPEN, H="240") + _axis() +
         "{% for i in range(n) %}{% set day = today - timedelta(days=n - 1 - i) %}{% set v = peaks.get(day.strftime('%Y-%m-%d')) %}{% set x = L + i * bw %}"
-        "{% if v is not none %}{% set hh = [v / ns.vmax * ph, 0] | max %}{% set c = '@RED@' if v > target else '@BLUE@' %}"
+        "{% if v is not none %}{% set hh = [v / ns.vmax * ph, 2] | max %}{% set c = '@RED@' if v > target else '@BLUE@' %}"
         "{% set ns.g = ns.g ~ \"<rect x='\" ~ (x + 1) ~ \"' y='\" ~ (T + ph - hh) ~ \"' width='\" ~ (bw - 2) ~ \"' height='\" ~ hh ~ \"' rx='2' fill='\" ~ c ~ \"'/>\" %}{% endif %}"
         "{% if day.weekday() == 0 %}{% set ns.g = ns.g ~ \"<text x='\" ~ (x + bw / 2) ~ \"' y='\" ~ (H - 10) ~ \"' text-anchor='middle' fill='@GREY@'>\" ~ day.strftime('%d.%m.') ~ \"</text>\" %}{% endif %}"
         "{% endfor %}"
@@ -145,7 +145,7 @@ def today_quarters(ids: dict[str, str], limit_label: str, legend: str, none_text
         "{% set pw = W - L - R %}{% set ph = H - T - B %}{% set bw = pw / 96 %}"
         + _fill(SVG_OPEN, H="240") + _axis() +
         "{% for q in qs %}{% set slot = (q[0][0:2] | int) * 4 + ((q[0][3:5] | int) // 15) %}{% set x = L + slot * bw %}"
-        "{% set hh = [q[1] / ns.vmax * ph, 0] | max %}{% set c = '@RED@' if q[1] > target else '@BLUE@' %}"
+        "{% set hh = [q[1] / ns.vmax * ph, 2] | max %}{% set c = '@RED@' if q[1] > target else '@BLUE@' %}"
         "{% set ns.g = ns.g ~ \"<rect x='\" ~ x ~ \"' y='\" ~ (T + ph - hh) ~ \"' width='\" ~ (bw - 0.6) ~ \"' height='\" ~ hh ~ \"' rx='1' fill='\" ~ c ~ \"'/>\" %}"
         "{% endfor %}"
         "{% for hh2 in [0, 6, 12, 18] %}{% set ns.g = ns.g ~ \"<text x='\" ~ (L + hh2 * 4 * bw) ~ \"' y='\" ~ (H - 10) ~ \"' fill='@GREY@'>\" ~ hh2 ~ \"</text>\" %}{% endfor %}"

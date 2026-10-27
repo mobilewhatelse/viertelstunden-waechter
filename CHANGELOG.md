@@ -19,6 +19,7 @@ Format: newest first. German version below each English block is a short summary
   Assistant AI task entity, sensor *Explanation of the day*, service `explain_today`; at most 4 AI calls per day.
 - **Dashboard view *Today*** for the phone: status, forecast bar against the target, mode switch, peaks, the quarter
   hours of today, the latest log lines and the explanation of the day (one column, standard cards only).
+- Charts of quarter hours and daily peaks: every bar is at least 2 pixels high, so a quiet day does not look empty.
 - **English log lines and messages:** the guard's own texts follow the Home Assistant language (German or English).
 
 *Deutsch:* Haus und Auto in der Prognose getrennt (volles oder nicht angestecktes Auto zählt nicht), Akku-Reserve vor einer
