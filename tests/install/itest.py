@@ -195,8 +195,9 @@ def main():
     # ---------- Beobachtungsmodus ----------
     svc("input_boolean", "turn_on", {"entity_id": "input_boolean.auto_laedt"})
     svc("input_number", "set_value", {"entity_id": "input_number.hauslast_w", "value": 2000})
-    st = wait_for(lambda: val("sensor.viertelstunden_wachter_status") in ("would_intervene",), 120)
-    log(bool(st), "Beobachtungsmodus erkennt die Ueberschreitung (13,8 kW)", str(val("sensor.viertelstunden_wachter_status")))
+    # late in a quarter hour with little energy so far the budget is large: the guard acts when the next one begins
+    st = wait_for(lambda: val("sensor.viertelstunden_wachter_status") in ("would_intervene",), 960, 10)
+    log(bool(st), "Beobachtungsmodus erkennt die Ueberschreitung (13,8 kW, spaetestens ab der naechsten Viertelstunde)", str(val("sensor.viertelstunden_wachter_status")))
     log(float(val("input_number.wb_strom")) == 16.0, "Beobachtungsmodus schaltet nichts (Wallbox bleibt 16 A)", str(val("input_number.wb_strom")))
 
     # ---------- Aktiv ----------
@@ -237,9 +238,8 @@ def main():
     s, d = svc("viertelstunden_waechter", "import_history", {"days": [{"date": "2026-10-01", "kw": 7.8, "at": "18:15"}], "months": [{"month": "2026-10", "peak_kw": 9.1}]}, resp=True)
     log(s == 200 and (d.get("service_response") or {}).get("days") == 1, "Dienst 'Verlauf importieren'", str(d.get("service_response") if isinstance(d, dict) else d))
     # the export and the learning need at least one finished quarter hour (the test may start in the middle of one)
-    lq = wait_for(lambda: state("sensor.viertelstunden_wachter_letzte_viertelstunde") and
-                  state("sensor.viertelstunden_wachter_letzte_viertelstunde")["state"] not in ("unknown", "unavailable"), 960, 15)
-    log(bool(lq), "Erste Viertelstunde abgeschlossen und gelernt", (lq or {}).get("state", "") + " kW" if lq else "")
+    lq = wait_for(lambda: val("sensor.viertelstunden_wachter_letzte_viertelstunde") not in (None, "unknown", "unavailable"), 960, 15)
+    log(bool(lq), "Erste Viertelstunde abgeschlossen und gelernt", f"{val('sensor.viertelstunden_wachter_letzte_viertelstunde')} kW")
     s, d = svc("viertelstunden_waechter", "export_csv", {"kind": "days", "days": 400, "format": "excel_de"}, resp=True)
     r = (d.get("service_response") or {}) if isinstance(d, dict) else {}
     log(s == 200 and r.get("rows", 0) >= 1 and "date;peak_kw;at" in (r.get("csv") or ""), "Dienst 'Als CSV exportieren' (Tagesspitzen)", f"{r.get('rows')} Zeilen, {r.get('path')}")
