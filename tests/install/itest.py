@@ -96,6 +96,36 @@ def wait_for(pred, timeout, step=5):
     return None
 
 
+def ws_session():
+    """Minimal websocket client (package `websockets`): returns send(msg) -> list of messages up to the result."""
+    from websockets.sync.client import connect
+
+    ws = connect(BASE.replace("http", "ws") + "/api/websocket", max_size=None)
+    ws.recv()
+    ws.send(json.dumps({"type": "auth", "access_token": TOKEN}))
+    if json.loads(ws.recv()).get("type") != "auth_ok":
+        raise RuntimeError("websocket auth failed")
+    counter = [0]
+
+    def call(msg, want_event=False):
+        counter[0] += 1
+        msg = {**msg, "id": counter[0]}
+        ws.send(json.dumps(msg))
+        out = []
+        for _ in range(8):
+            m = json.loads(ws.recv())
+            if m.get("id") != msg["id"]:
+                continue
+            out.append(m)
+            if m.get("type") == "result" and not (want_event and m.get("success")):
+                break
+            if m.get("type") == "event":
+                break
+        return out
+
+    return call, ws
+
+
 def flow_finish(path, init_body, user_input):
     s, d = api("POST", path, init_body)
     if s != 200:
@@ -222,7 +252,7 @@ def main():
     # ---------- Rueckgabe ----------
     svc("input_boolean", "turn_off", {"entity_id": "input_boolean.auto_laedt"})
     svc("input_number", "set_value", {"entity_id": "input_number.hauslast_w", "value": 300})
-    back = wait_for(lambda: float(val("input_number.wb_strom")) == 16.0 and val("input_boolean.pool_pumpe") == "on", 420, 10)
+    back = wait_for(lambda: float(val("input_number.wb_strom")) == 16.0 and val("input_boolean.pool_pumpe") == "on", 900, 10)  # several levers are given back one after another
     log(bool(back), "Rueckgabe: Wallbox wieder 16 A und Pool wieder an nach Ende der Last",
         f"{val('input_number.wb_strom')} A, Pool {val('input_boolean.pool_pumpe')}")
     st = wait_for(lambda: val("sensor.viertelstunden_wachter_status") == "ready", 120)
@@ -252,6 +282,29 @@ def main():
     ex = state("sensor.viertelstunden_wachter_erklarung_des_tages")
     log(ex is not None and ex["state"] not in ("unavailable",), "Sensor 'Erklaerung des Tages'", ex["state"] if ex else "")
     log(float(val("input_number.akku_ausgang_w")) == 800.0, "Akku-Reserve aus: Akku unveraendert", f"{val('input_number.akku_ausgang_w')} W")
+    # the generated dashboard: save it into a dashboard and render EVERY markdown card with the strict template engine
+    try:
+        call, ws = ws_session()
+        r = call({"type": "lovelace/dashboards/create", "url_path": "waechter-test", "title": "Test", "icon": "mdi:shield", "show_in_sidebar": False, "require_admin": False, "mode": "storage"})
+        log(bool(r) and r[0].get("success"), "Dashboard-Seite fuer den Test angelegt", str(r[0].get("error")) if r else "")
+        s, d = svc("viertelstunden_waechter", "create_dashboard", {"dashboard": "waechter-test"}, resp=True)
+        log(s == 200 and (d.get("service_response") or {}).get("saved") == "waechter-test", "Dienst 'Dashboard erstellen' speichert in ein Dashboard", str(d)[:120])
+        cfg = call({"type": "lovelace/config", "url_path": "waechter-test"})[0].get("result") or {}
+        views = cfg.get("views", [])
+        log([v.get("path") for v in views] == ["waechter", "heute", "statistik"], "Dashboard hat die Ansichten Waechter, Heute (Handy), Statistik", str([v.get("path") for v in views]))
+        cards = [c for v in views for sec in v.get("sections", []) for c in sec.get("cards", []) if c.get("type") == "markdown"]
+        bad = []
+        for c in cards:
+            m = call({"type": "render_template", "template": c["content"], "timeout": 20, "strict": True}, want_event=True)
+            res = m[-1]
+            if res.get("type") == "result" and not res.get("success"):
+                bad.append(f"{c['content'][:60]!r}: {res.get('error')}")
+            elif res.get("type") == "event" and not str(res["event"].get("result", "x")).strip():
+                bad.append(f"{c['content'][:60]!r}: leer")
+        log(len(cards) >= 15 and not bad, f"Alle {len(cards)} Markdown-Karten des Dashboards rendern ohne Fehler (strenger Modus)", "; ".join(bad)[:300])
+        ws.close()
+    except Exception as err:  # noqa: BLE001
+        log(False, "Dashboard-Pruefung", f"{type(err).__name__}: {err}")
     cp = state("sensor.viertelstunden_wachter_ladeplan")
     log(cp is not None, "Ladeplan-Sensor vorhanden", str(cp["state"]) if cp else "")
 

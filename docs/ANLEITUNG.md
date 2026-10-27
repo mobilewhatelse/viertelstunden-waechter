@@ -437,10 +437,18 @@ Geplant, Ziel nicht erreichbar) mit den Attributen `windows`, `text`, `needed_kw
 ## 3d. Fertiges Dashboard
 
 Der Dienst **Dashboard erstellen** (`viertelstunden_waechter.create_dashboard`) baut ein fertiges Dashboard mit den
-Entitäten **Ihrer** Installation (egal wie das Gerät heißt, auf Deutsch oder Englisch): die Übersicht (Einstellungen,
-Zusatzfunktionen, Geräte und Prioritäten, Jetzt, Kosten und Ersparnis) und *Statistik und Prognose* (24-Stunden-Vorschau
-als Balken, Wochenprofil, Spitzen der letzten Tage, Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten
-benutzt.
+Entitäten **Ihrer** Installation (egal wie das Gerät heißt, auf Deutsch oder Englisch) in drei Ansichten: die Übersicht
+(Einstellungen, Zusatzfunktionen, Geräte und Prioritäten, Jetzt, Kosten und Ersparnis), **Heute** – eine kompakte, einspaltige
+Ansicht fürs Handy – und *Statistik und Prognose* (24-Stunden-Vorschau als Balken, Wochenprofil, Spitzen der letzten Tage,
+Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten benutzt.
+
+**Die Ansicht *Heute* (fürs Handy)** zeigt von oben nach unten: den Status des Wächters; einen Balken mit der Prognose der laufenden
+Viertelstunde gegen das Ziel (weißer Strich = Ziel, roter gestrichelter Strich = Grenze; grün = sicher darunter, gelb = knapp, rot =
+über der Grenze); die Betriebsart (unterwegs zwischen *Aus*, *Nur beobachten* und *Aktiv* umschalten); Spitze heute, Spitze im Monat
+und Eingriffe heute; ein Diagramm aller abgeschlossenen Viertelstunden von heute (rot = über der Grenze); die letzten Zeilen des
+Protokolls von heute; und die Erklärung des Tages, wenn der KI-Erklärer an ist. Die Viertelstunden kommen aus dem Attribut
+`today_quarters` des Sensors *Letzte Viertelstunde*. Am Handy das Dashboard öffnen und die Ansicht *Heute* wählen; es ist keine
+zusätzliche Karte nötig.
 
 Die Ansicht *Statistik und Prognose* braucht nichts Zusätzliches: Die Diagramme sind SVG-Bilder in normalen Markdown-Karten,
 gezeichnet aus den Attributen der Sensoren; die Farben passen zu hellen und dunklen Designs.
@@ -585,7 +593,7 @@ hat. Er braucht dann oft weniger zu tun – wichtig sind Abweichungen in Reihenf
 
 ## 7a. Geplant (noch nicht gebaut)
 
-Erledigt in 0.13: Haus und Auto getrennt, Akku-Reserve, CSV-Export, KI-Erklärer. Die Reihenfolge ist ein Vorschlag, kein Versprechen.
+Erledigt in 0.13: Haus und Auto getrennt, Akku-Reserve, CSV-Export, KI-Erklärer, englische Texte, die Handy-Ansicht *Heute*. Die Reihenfolge ist ein Vorschlag, kein Versprechen.
 
 1. **Veröffentlichung:** Der Installationstest auf einem frischen Home Assistant 2026.10.3 (Docker, `tests/install`) ist am 25.10.2026
    bestanden (Einrichtung von Grund auf, Geräte, Beobachten und Aktiv, Rückgabe, Dienste, Neustart) und **hassfest besteht**. Offen sind die
@@ -594,12 +602,11 @@ Erledigt in 0.13: Haus und Auto getrennt, Akku-Reserve, CSV-Export, KI-Erklärer
 2. **Tests mit echter Hardware** für *Leistung drosseln*, *Einstellungen ändern* (Wärmepumpen) und die Batterie-Freigabe anderer Hersteller;
    bis dahin nur im Simulator getestet. Testberichte sind willkommen (Vorlage *Gerätetestbericht*).
 3. **Ladeplan näher an den Risikofenstern** und ein *Tagesplan* aus Solarprognose, Abfahrtszeiten und dem gelernten Lastmuster.
-4. **Kompakte „Heute“-Karte** (Viertelstundenkurve, Eingriffe, Prognose) für das Handy.
-5. **Anbindungen (optional, nur auf Wunsch):** Den CSV-Export gibt es seit 0.13; wo eine Plattform eine dokumentierte Schnittstelle
+4. **Anbindungen (optional, nur auf Wunsch):** Den CSV-Export gibt es seit 0.13; wo eine Plattform eine dokumentierte Schnittstelle
    anbietet, könnte ein Connector die Daten dorthin senden (z. B. Plattformen für Energiegemeinschaften). Ein
    Connector hängt ganz von der Schnittstelle der anderen Plattform ab und ist ein eigener, optionaler Teil: Es verlässt nichts die
    Installation, solange der Nutzer es nicht einrichtet.
-6. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
+5. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
 
 ### KI-Funktionen (Erklärer seit 0.13 gebaut, die anderen geplant)
 

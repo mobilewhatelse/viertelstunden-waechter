@@ -289,6 +289,7 @@ class SavingsYearSensor(WaechterEntity, SensorEntity):
 
 
 class LastQuarterSensor(WaechterEntity, SensorEntity):
+    _unrecorded_attributes = frozenset({"today_quarters"})
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_device_class = SensorDeviceClass.POWER
     _attr_native_unit_of_measurement = UnitOfPower.KILO_WATT
@@ -300,6 +301,10 @@ class LastQuarterSensor(WaechterEntity, SensorEntity):
     @property
     def native_value(self) -> float | None:
         return self.waechter.last_quarter_kw
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"today_quarters": self.waechter.today_quarters()}
 
 
 class TodayPeakSensor(WaechterEntity, SensorEntity):

@@ -35,6 +35,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "ai_title": "Erklärung des Tages", "ai_none": "Noch keine Erklärung. Der Erklärer schreibt abends um 21 Uhr, wenn er eingeschaltet und in den Einstellungen eine KI-Aufgabe gewählt ist.",
         "predictive": "Vorausschauend drosseln nach Prognose (Standard aus)", "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
+        "view_today": "Heute", "now_title": "Jetzt", "now_of": "Prognose dieser Viertelstunde / Ziel", "legend_now": "Weißer Strich = Ziel, roter gestrichelter Strich = Grenze. Grün = sicher darunter, gelb = knapp, rot = über der Grenze.", "quarters_title": "Die Viertelstunden von heute", "legend_quarters": "Jeder Balken eine abgeschlossene Viertelstunde, rot = über der Grenze.", "last_iv": "Letzte Eingriffe", "no_iv_today": "Heute noch keine Eingriffe.", "mode_title": "Betriebsart",
         "today": "Heute", "no_decisions": "Noch keine Entscheidungen heute.", "devices": "Geräte und Prioritäten",
         "measure": "Messung", "grid": "Netzbezug", "counter": "Bezugszähler", "lock": "Sperre „Aktiv“",
         "prio": "Prio", "device": "Gerät", "action": "Eingriff", "controls": "Steuert",
@@ -81,6 +82,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "ai_title": "Explanation of the day", "ai_none": "No explanation yet. The explainer writes at 21:00 when it is switched on and an AI task is chosen in the settings.",
         "predictive": "Throttle ahead using the forecast (default off)", "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
+        "view_today": "Today", "now_title": "Now", "now_of": "Forecast of this quarter hour / target", "legend_now": "White mark = target, red dashed mark = limit. Green = safely below, yellow = close, red = above the limit.", "quarters_title": "Today's quarter hours", "legend_quarters": "Each bar one finished quarter hour, red = above the limit.", "last_iv": "Latest interventions", "no_iv_today": "No interventions yet today.", "mode_title": "Mode",
         "today": "Today", "no_decisions": "No decisions yet today.", "devices": "Devices and priorities",
         "measure": "Measurement", "grid": "Grid import", "counter": "Import counter", "lock": "Lock for \"Active\"",
         "prio": "Prio", "device": "Device", "action": "Action", "controls": "Controls",
@@ -142,6 +144,15 @@ def _config_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% endfor %}\n"
         "[" + x["change"] + "](/config/integrations/integration/viertelstunden_waechter)"
         "{% else %}" + x["loading"] + "{% endif %}"
+    )
+
+
+def _recent_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """The latest lines of today's log (phone view)."""
+    s = ids["status"]
+    return (
+        "{% set s = '" + s + "' %}{% set z = (state_attr(s, 'today') or [])[:6] %}"
+        "{% for l in z %}- {{ l }}\n{% else %}" + x["no_iv_today"] + "{% endfor %}"
     )
 
 
@@ -270,7 +281,7 @@ def _tile(entity: str, name: str) -> dict[str, Any]:
 
 
 def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
-    """Two views: the daily overview and statistics with forecast."""
+    """Three views: the daily overview, the compact view for the phone ("today") and statistics with forecast."""
     x = _t(lang)
     main = {
         "title": x["view_main"], "path": "waechter", "type": "sections", "max_columns": 3,
@@ -304,6 +315,27 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 _tile(ids["savings_month"], x["saving_month"]), _tile(ids["savings_year"], x["saving_year"]),
                 _tile(ids["saved_now"], x["saved_now"]),
                 {"type": "markdown", "content": x["estimate"]},
+            ]},
+        ],
+    }
+    today = {
+        "title": x["view_today"], "path": "heute", "type": "sections", "max_columns": 1,
+        "sections": [
+            {"type": "grid", "cards": [
+                {"type": "heading", "heading": x["now_title"], "icon": "mdi:shield-half-full"},
+                _tile(ids["status"], x["status"]),
+                {"type": "markdown", "content": charts.now_bar(ids, x["now_of"], x["legend_now"])},
+                {"type": "entities", "entities": [{"entity": ids["mode"], "name": x["mode_title"]}]},
+                _tile(ids["today_peak"], x["peak_today"]), _tile(ids["month_peak"], x["peak_month"]),
+                _tile(ids["interventions_today"], x["iv_today"]),
+            ]},
+            {"type": "grid", "cards": [
+                {"type": "heading", "heading": x["quarters_title"], "icon": "mdi:chart-bar"},
+                {"type": "markdown", "content": charts.today_quarters(ids, x["limit_label"], x["legend_quarters"], x["enough_data"])},
+                {"type": "heading", "heading": x["last_iv"], "icon": "mdi:counter"},
+                {"type": "markdown", "content": _recent_markdown(ids, x)},
+                {"type": "heading", "heading": x["ai_title"], "icon": "mdi:robot-outline"},
+                {"type": "markdown", "content": "{% set r = state_attr('" + ids["ai_explanation"] + "', 'text') %}{{ r if r else '" + x["ai_none"] + "' }}"},
             ]},
         ],
     }
@@ -350,7 +382,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
             ]},
         ],
     }
-    return [main, stats]
+    return [main, today, stats]
 
 
 ENTITY_KEYS: dict[str, str] = {

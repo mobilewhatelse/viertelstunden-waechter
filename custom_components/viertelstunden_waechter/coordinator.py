@@ -1009,5 +1009,13 @@ class Waechter:
         self._store.async_delay_save(self._data, 1)
         return {"days": n_days, "months": n_months}
 
+    def today_quarters(self) -> list[list[Any]]:
+        """Finished quarter hours of today as [HH:MM, kW] (for the phone view)."""
+        today = dt_util.now().strftime("%Y-%m-%d")
+        return [[str(r[0])[11:16], r[1]] for r in self.quarters if str(r[0]).startswith(today) and r[1] is not None]
+
+    def recent_lines(self, limit: int = 6) -> list[str]:
+        return self.log_lines(limit)
+
     def intervention_names(self) -> list[str]:
         return [self.raw_devices[i].get("name", i) for i in self.guard.interventions if i in self.raw_devices]

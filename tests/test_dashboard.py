@@ -18,10 +18,10 @@ def _cards(views):
 
 
 class DashboardTests(unittest.TestCase):
-    def test_two_views_in_both_languages(self):
+    def test_three_views_in_both_languages(self):
         for lang in ("de", "en", "de_AT"):
             views = build_views(IDS, lang)
-            self.assertEqual([v["path"] for v in views], ["waechter", "statistik"])
+            self.assertEqual([v["path"] for v in views], ["waechter", "heute", "statistik"])
             json.dumps(views)  # must be serialisable for the storage
 
     def test_every_entity_is_used_and_nothing_else_is_referenced(self):
@@ -54,6 +54,8 @@ class DashboardTests(unittest.TestCase):
             charts.profile(IDS, "Mo,Tu,We,Th,Fr,Sa,Su", "Typical|Highest|Hour", "legend", "none"),
             charts.daily(IDS, "Limit", "legend", "none"),
             charts.months(IDS, "Limit", "legend", "none"),
+            charts.now_bar(IDS, "Forecast / target", "legend"),
+            charts.today_quarters(IDS, "Limit", "legend", "none"),
         ]
         for content in cards:
             self.assertIn("data:image/svg+xml", content)
@@ -68,8 +70,14 @@ class DashboardTests(unittest.TestCase):
 
     def test_statistics_view_contains_the_charts(self):
         for lang in ("de", "en"):
-            text = json.dumps(build_views(IDS, lang)[1])
-            self.assertEqual(text.count("data:image/svg+xml"), 4)
+            views = {v["path"]: v for v in build_views(IDS, lang)}
+            self.assertEqual(json.dumps(views["statistik"]).count("data:image/svg+xml"), 4)
+            # the compact view for the phone: status, forecast bar and the quarter hours of today
+            heute = json.dumps(views["heute"])
+            self.assertEqual(heute.count("data:image/svg+xml"), 2)
+            self.assertEqual(views["heute"]["max_columns"], 1)
+            for key in ("status", "mode", "today_peak", "month_peak", "interventions_today", "last_quarter", "ai_explanation"):
+                self.assertIn(IDS[key], heute, key)
 
     def test_german_text_in_german_installations(self):
         self.assertEqual(build_views(IDS, "de")[0]["title"], "Wächter")

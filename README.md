@@ -219,7 +219,7 @@ as "charging current setting". The guard then changes the helper and the automat
 
 ### Roadmap
 
-Nothing in this list is built yet (done in 0.13: house and car apart, battery reserve, CSV export, AI explainer).
+Nothing in this list is built yet (done in 0.13: house and car apart, battery reserve, CSV export, AI explainer, English texts, the phone view *Today*).
 The order is a proposal, not a promise.
 
 **Planned**
@@ -232,12 +232,11 @@ The order is a proposal, not a promise.
    makes - until then they are simulator-tested only. Test reports are welcome (issue template *device test report*).
 3. **Charge plan closer to the risk windows:** avoid forecast peaks when placing the charging quarters, and a *daily
    plan* that combines solar forecast, departure times and the learned load pattern.
-4. **Compact "today" dashboard card** (quarter-hour curve, interventions, forecast) for phones.
-5. **Connectors (optional, opt-in):** the CSV export exists (0.13); where a platform offers a documented interface, a
+4. **Connectors (optional, opt-in):** the CSV export exists (0.13); where a platform offers a documented interface, a
    connector could send the data there (for example platforms for energy
    communities). A connector depends entirely on the other platform's interface and is a separate optional part:
    nothing leaves the installation unless the user sets it up.
-6. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
+5. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
 
 **AI features** (the explainer is built in 0.13, the others are planned; optional, **off by default and off after a restart**, with a daily cost limit). The AI is used
 through Home Assistant's *AI task* entity, so every user chooses the model (cloud or local) and no key is built in.
@@ -468,9 +467,18 @@ target not reachable) with the attributes `windows`, `text`, `needed_kwh`, `plan
 ### Dashboard
 
 Service **Create dashboard** (`viertelstunden_waechter.create_dashboard`) builds a ready-made dashboard with the
-entities of *your* installation (whatever the device is called, in German or English): the overview (settings,
-features, devices and priorities, now, cost and savings) and *Statistics and forecast* (24-hour forecast as bars,
-weekly profile, peaks of the last days, months, interventions per day, charge plan). Only standard cards are used.
+entities of *your* installation (whatever the device is called, in German or English) in three views: the overview
+(settings, features, devices and priorities, now, cost and savings), **Today** - a compact single-column view for the
+phone - and *Statistics and forecast* (24-hour forecast as bars, weekly profile, peaks of the last days, months,
+interventions per day, charge plan). Only standard cards are used.
+
+**The view *Today* (for the phone)** shows, top to bottom: the status of the guard; one bar with the forecast of the
+running quarter hour against the target (white mark = target, red dashed mark = limit; green = safely below, yellow =
+close, red = above the limit); the mode (switch between *Off*, *Observe only* and *Active* on the go); peak today,
+peak this month and interventions today; a chart of every finished quarter hour of today (red above the limit); the
+latest lines of today's log; and the explanation of the day when the AI explainer is on. The quarter hours come from
+the attribute `today_quarters` of the sensor *Last quarter hour*. To use it as the home screen of the app, open the
+dashboard on the phone and pick the view *Today*; there is no extra card to install.
 
 The *Statistics and forecast* view (nothing to install: the charts are SVG images inside standard markdown cards,
 drawn from the sensors' attributes; the colours work on light and dark themes):
@@ -533,7 +541,7 @@ from the database to keep it small.
 | `number` Limit, Safety margin | kW |
 | `sensor` Status | with attributes `interventions`, `recent`, `today` (log lines with reasons), `configuration` |
 | `sensor` Quarter-hour energy so far, forecast, allowed import now | running quarter hour |
-| `sensor` Last quarter hour | kW, with long-term statistics |
+| `sensor` Last quarter hour | kW, with long-term statistics, attribute `today_quarters` (finished quarter hours of today) |
 | `sensor` Peak today | kW, attribute `days`: peak per day of the last 31 days with time |
 | `sensor` Peak this month | kW |
 | `sensor` Interventions today | count, attribute `observed` for observe mode |

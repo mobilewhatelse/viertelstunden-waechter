@@ -17,10 +17,12 @@ Format: newest first. German version below each English block is a short summary
   German Excel format, written to `config/viertelstunden_waechter/export/`.
 - **AI explainer** (switch, default off, off after restart): daily explanation of the interventions via a Home
   Assistant AI task entity, sensor *Explanation of the day*, service `explain_today`; at most 4 AI calls per day.
+- **Dashboard view *Today*** for the phone: status, forecast bar against the target, mode switch, peaks, the quarter
+  hours of today, the latest log lines and the explanation of the day (one column, standard cards only).
 - **English log lines and messages:** the guard's own texts follow the Home Assistant language (German or English).
 
 *Deutsch:* Haus und Auto in der Prognose getrennt (volles oder nicht angestecktes Auto zählt nicht), Akku-Reserve vor einer
-Spitze (Standard aus), CSV-Export, KI-Erklärer (Standard aus); Protokoll und Meldungen auch auf Englisch.
+Spitze (Standard aus), CSV-Export, KI-Erklärer (Standard aus); Protokoll und Meldungen auch auf Englisch; neue Dashboard-Ansicht *Heute* fürs Handy.
 
 ## 0.12.1 - 2026-10-25
 

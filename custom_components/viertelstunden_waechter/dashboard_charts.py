@@ -114,6 +114,48 @@ def daily(ids: dict[str, str], limit_label: str, legend: str, none_text: str, da
     )
 
 
+def now_bar(ids: dict[str, str], of_label: str, legend: str) -> str:
+    """One bar for the phone: the forecast of the running quarter hour against the target (mark) and the limit."""
+    return _fill(
+        "{% set f = states('@F@') | float(0) %}{% set target = state_attr('@ST@', 'target_kw') | float(9.5) %}"
+        "{% set lim = states('@LIM@') | float(10) %}{% set vmax = ([lim, f] | max) * 1.15 %}"
+        "{% set W = 720 %}{% set H = 110 %}{% set L = 12 %}{% set R = 12 %}{% set bw = W - L - R %}"
+        "{% set c = '@RED@' if f > lim else ('#e6b043' if f > target else '#8bc16f') %}"
+        "{% set fw = [[f / vmax, 0] | max, 1] | min * bw %}{% set tx = L + target / vmax * bw %}{% set lx = L + lim / vmax * bw %}"
+        "{% set g = \"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 110' font-family='Roboto,Arial,sans-serif' font-size='13'>"
+        "<text x='\" ~ L ~ \"' y='30' fill='@GREY@' font-size='15'>@OF@</text>"
+        "<text x='\" ~ (W - R) ~ \"' y='30' text-anchor='end' fill='\" ~ c ~ \"' font-size='26' font-weight='700'>\" ~ ('%.1f' | format(f)) ~ \" / \" ~ ('%.1f' | format(target)) ~ \" kW</text>"
+        "<rect x='\" ~ L ~ \"' y='48' width='\" ~ bw ~ \"' height='22' rx='11' fill='@GREY@' fill-opacity='0.25'/>"
+        "<rect x='\" ~ L ~ \"' y='48' width='\" ~ ([fw, 22] | max) ~ \"' height='22' rx='11' fill='\" ~ c ~ \"'/>"
+        "<line x1='\" ~ tx ~ \"' x2='\" ~ tx ~ \"' y1='42' y2='76' stroke='#ffffff' stroke-width='3'/>"
+        "<line x1='\" ~ lx ~ \"' x2='\" ~ lx ~ \"' y1='42' y2='76' stroke='@RED@' stroke-width='3' stroke-dasharray='4 3'/>"
+        "</svg>\" %}"
+        "![](data:image/svg+xml;utf8,{{ g | urlencode }})\n\n" + legend,
+        F=ids["forecast"], ST=ids["status"], LIM=ids["limit"], OF=of_label, GREY=GREY, RED=RED,
+    )
+
+
+def today_quarters(ids: dict[str, str], limit_label: str, legend: str, none_text: str) -> str:
+    """Bars of every finished quarter hour of today (96 slots, hours 0-23), red above the limit, with the target line."""
+    return _fill(
+        "{% set qs = state_attr('@S@', 'today_quarters') or [] %}{% set target = states('@LIM@') | float(10) %}"
+        "{% if qs %}{% set ns = namespace(vmax=target * 1.25, g='') %}"
+        "{% for q in qs %}{% if q[1] * 1.1 > ns.vmax %}{% set ns.vmax = q[1] * 1.1 %}{% endif %}{% endfor %}"
+        "{% set W = 720 %}{% set H = 240 %}{% set L = 40 %}{% set R = 12 %}{% set T = 16 %}{% set B = 30 %}"
+        "{% set pw = W - L - R %}{% set ph = H - T - B %}{% set bw = pw / 96 %}"
+        + _fill(SVG_OPEN, H="240") + _axis() +
+        "{% for q in qs %}{% set slot = (q[0][0:2] | int) * 4 + ((q[0][3:5] | int) // 15) %}{% set x = L + slot * bw %}"
+        "{% set hh = [q[1] / ns.vmax * ph, 0] | max %}{% set c = '@RED@' if q[1] > target else '@BLUE@' %}"
+        "{% set ns.g = ns.g ~ \"<rect x='\" ~ x ~ \"' y='\" ~ (T + ph - hh) ~ \"' width='\" ~ (bw - 0.6) ~ \"' height='\" ~ hh ~ \"' rx='1' fill='\" ~ c ~ \"'/>\" %}"
+        "{% endfor %}"
+        "{% for hh2 in [0, 6, 12, 18] %}{% set ns.g = ns.g ~ \"<text x='\" ~ (L + hh2 * 4 * bw) ~ \"' y='\" ~ (H - 10) ~ \"' fill='@GREY@'>\" ~ hh2 ~ \"</text>\" %}{% endfor %}"
+        + _limit_line("target", limit_label) +
+        "{% set ns.g = ns.g ~ '</svg>' %}" + SVG_IMAGE + "\n\n" + legend +
+        "{% else %}" + none_text + "{% endif %}",
+        S=ids["last_quarter"], LIM=ids["limit"], GREY=GREY, RED=RED, BLUE=BLUE,
+    )
+
+
 def months(ids: dict[str, str], limit_label: str, legend: str, none_text: str) -> str:
     """Bars per month: peak (solid), peak without the guard (outline) and the limit."""
     return _fill(
