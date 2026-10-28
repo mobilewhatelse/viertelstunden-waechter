@@ -6,6 +6,12 @@ Format: newest first. German version below each English block is a short summary
 
 - (nothing yet)
 
+## 0.13.1 - 2026-10-28
+
+- Dashboard: the explanation of the day now shows its date. An older explanation is labelled "Explanation of 27.10."
+  with the hint that today's follows at 21:00, so it can no longer pass for today's. The fixed sentence on days without
+  interventions names the day ("On 27.10. the guard did not need to intervene"). An error (for example no AI task chosen) is shown on the card.
+
 ## 0.13.0 - 2026-10-27
 
 - **House and car apart:** with a wallbox the forecast learns the house and the wallbox separately; a full or unplugged

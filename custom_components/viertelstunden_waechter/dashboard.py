@@ -33,6 +33,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "risk_none": "keines in den nächsten 24 Stunden", "risk_today": "heute", "risk_up_to": "bis",
         "reserve_on": "Akku-Reserve vor einer Spitze (Standard aus)", "ai_on": "KI-Erklärer (Standard aus, nach Neustart aus)",
         "ai_title": "Erklärung des Tages", "ai_none": "Noch keine Erklärung. Der Erklärer schreibt abends um 21 Uhr, wenn er eingeschaltet und in den Einstellungen eine KI-Aufgabe gewählt ist.",
+        "expl_from": "Erklärung vom", "expl_next": "Die Erklärung für heute kommt abends um 21 Uhr.", "expl_error": "Die Erklärung konnte nicht erstellt werden",
         "predictive": "Vorausschauend drosseln nach Prognose (Standard aus)", "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
         "view_today": "Heute", "now_title": "Jetzt", "now_of": "Prognose dieser Viertelstunde / Ziel", "legend_now": "Weißer Strich = Ziel, roter gestrichelter Strich = Grenze. Grün = sicher darunter, gelb = knapp, rot = über der Grenze.", "quarters_title": "Die Viertelstunden von heute", "legend_quarters": "Jeder Balken eine abgeschlossene Viertelstunde, rot = über der Grenze.", "last_iv": "Letzte Eingriffe", "no_iv_today": "Heute noch keine Eingriffe.", "mode_title": "Betriebsart",
@@ -80,6 +81,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "risk_none": "none in the next 24 hours", "risk_today": "today", "risk_up_to": "up to",
         "reserve_on": "Battery reserve before a peak (default off)", "ai_on": "AI explainer (default off, off after restart)",
         "ai_title": "Explanation of the day", "ai_none": "No explanation yet. The explainer writes at 21:00 when it is switched on and an AI task is chosen in the settings.",
+        "expl_from": "Explanation of", "expl_next": "The explanation for today follows in the evening at 21:00.", "expl_error": "The explanation could not be created",
         "predictive": "Throttle ahead using the forecast (default off)", "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
         "view_today": "Today", "now_title": "Now", "now_of": "Forecast of this quarter hour / target", "legend_now": "White mark = target, red dashed mark = limit. Green = safely below, yellow = close, red = above the limit.", "quarters_title": "Today's quarter hours", "legend_quarters": "Each bar one finished quarter hour, red = above the limit.", "last_iv": "Latest interventions", "no_iv_today": "No interventions yet today.", "mode_title": "Mode",
@@ -144,6 +146,18 @@ def _config_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% endfor %}\n"
         "[" + x["change"] + "](/config/integrations/integration/viertelstunden_waechter)"
         "{% else %}" + x["loading"] + "{% endif %}"
+    )
+
+
+def _explanation_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """The explanation of the day with its date: an old explanation is labelled and never shown as today's."""
+    s = ids["ai_explanation"]
+    return (
+        "{% set s = '" + s + "' %}{% set r = state_attr(s, 'text') %}{% set d = states(s) %}"
+        "{% if r %}{% if d == now().strftime('%Y-%m-%d') %}{{ r }}"
+        "{% else %}*" + x["expl_from"] + " {{ d[8:10] }}.{{ d[5:7] }}.:* {{ r }}\n\n" + x["expl_next"] + "{% endif %}"
+        "{% elif state_attr(s, 'error') %}\u26a0\ufe0f " + x["expl_error"] + ": {{ state_attr(s, 'error') }}"
+        "{% else %}" + x["ai_none"] + "{% endif %}"
     )
 
 
@@ -335,7 +349,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "heading", "heading": x["last_iv"], "icon": "mdi:counter"},
                 {"type": "markdown", "content": _recent_markdown(ids, x)},
                 {"type": "heading", "heading": x["ai_title"], "icon": "mdi:robot-outline"},
-                {"type": "markdown", "content": "{% set r = state_attr('" + ids["ai_explanation"] + "', 'text') %}{{ r if r else '" + x["ai_none"] + "' }}"},
+                {"type": "markdown", "content": _explanation_markdown(ids, x)},
             ]},
         ],
     }
@@ -376,7 +390,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "heading", "heading": x["interventions"], "icon": "mdi:counter"},
                 {"type": "markdown", "content": _interventions_markdown(ids, x)},
                 {"type": "heading", "heading": x["ai_title"], "icon": "mdi:robot-outline"},
-                {"type": "markdown", "content": "{% set r = state_attr('" + ids["ai_explanation"] + "', 'text') %}{{ r if r else '" + x["ai_none"] + "' }}"},
+                {"type": "markdown", "content": _explanation_markdown(ids, x)},
                 {"type": "heading", "heading": x["weekly"], "icon": "mdi:calendar-week"},
                 {"type": "markdown", "content": "{% set r = state_attr('" + ids["weekly_report"] + "', 'text') %}{{ (r | replace('\n', '  \n')) if r else '" + x["no_report"] + "' }}"},
             ]},

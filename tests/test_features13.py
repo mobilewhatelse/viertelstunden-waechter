@@ -84,6 +84,8 @@ class ExplainTests(unittest.TestCase):
     def test_plain_summary_and_response(self):
         self.assertIn("9,1 kW", explain.plain_summary("de", 0, 9.08, 10.0))
         self.assertIn("10,0 kW", explain.plain_summary("de", 0, 9.08, 10.0))
+        self.assertTrue(explain.plain_summary("de", 0, 9.08, 10.0, "27.10.").startswith("Am 27.10. musste"))
+        self.assertIn("on 27.10.", explain.plain_summary("en", 0, 9.08, 10.0, "27.10."))
         self.assertEqual(explain.extract_text({"conversation_id": "x", "data": " Heute ... "}), "Heute ...")
         self.assertEqual(explain.extract_text({"data": {"text": "a"}}), "a")
         self.assertEqual(explain.extract_text(None), "")

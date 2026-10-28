@@ -53,7 +53,7 @@ def build_instructions(lang: str, day: str, lines: list[str], limit_kw: float, t
     return "\n".join(parts)
 
 
-def plain_summary(lang: str, interventions: int, peak_kw: float | None, limit_kw: float) -> str:
+def plain_summary(lang: str, interventions: int, peak_kw: float | None, limit_kw: float, day: str = "") -> str:
     """Text without AI for a day without interventions (no AI call needed)."""
     de = str(lang).startswith("de")
 
@@ -63,8 +63,8 @@ def plain_summary(lang: str, interventions: int, peak_kw: float | None, limit_kw
         return f"{v:.1f}".replace(".", ",") if de else f"{v:.1f}"
 
     if de:
-        return f"Heute musste der Wächter nicht eingreifen. Die höchste Viertelstunde lag bei {num(peak_kw)} kW (Grenze {num(limit_kw)} kW)."
-    return f"The guard did not need to intervene today. The highest quarter hour was {num(peak_kw)} kW (limit {num(limit_kw)} kW)."
+        return f"{'Am ' + day if day else 'Heute'} musste der Wächter nicht eingreifen. Die höchste Viertelstunde lag bei {num(peak_kw)} kW (Grenze {num(limit_kw)} kW)."
+    return f"The guard did not need to intervene {'on ' + day.rstrip('.') if day else 'today'}. The highest quarter hour was {num(peak_kw)} kW (limit {num(limit_kw)} kW)."
 
 
 def extract_text(response: Any) -> str:

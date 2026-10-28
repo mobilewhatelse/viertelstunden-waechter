@@ -666,7 +666,7 @@ class Waechter:
         result: dict[str, Any] = {"date": day, "created": now.isoformat(timespec="seconds"), "source": "rule", "text": ""}
         entity = self.cfg.get(CONF_AI_TASK)
         if interventions == 0:
-            result["text"] = plain_summary(lang, 0, peak_kw, self.limit_kw)
+            result["text"] = plain_summary(lang, 0, peak_kw, self.limit_kw, now.strftime("%d.%m."))
         elif not entity:
             result.update({"source": "none", "error": "no AI task entity in the settings"})
         elif self._ai_calls.get(day, 0) >= AI_CALLS_PER_DAY:
