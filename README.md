@@ -3,7 +3,8 @@
 Home Assistant integration that keeps the **average grid import of every quarter hour** below a limit, by
 throttling the wallbox and switching flexible loads only as far as needed.
 
-> Status: **0.1, early test version.** Runs in observe mode first. Use at your own risk.
+> Status: **0.13, in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
+> Start in observe mode. Use at your own risk.
 
 ## What is this for?
 
