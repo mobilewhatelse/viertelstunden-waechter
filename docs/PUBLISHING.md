@@ -1,19 +1,19 @@
 # Publishing checklist (maintainer)
 
-State: 2026-10-25. Nothing here has been done except where marked. The repository is private; a draft release `v0.12.0`
-exists. Work on the integration may continue before it is published - the draft can be edited or deleted.
+State: 2026-10-29. Nothing here has been done except where marked. The repository is private; a draft release `v0.13.1`
+exists (text updated 2026-10-29). Work on the integration may continue before it is published - the draft can be edited or deleted.
 
 ## Already done
 
 - [x] hassfest passes (`docker run --rm -v "${PWD}:/github/workspace" ghcr.io/home-assistant/hassfest:latest`)
 - [x] Installation test on a fresh Home Assistant (`tests/install`)
-- [x] 65 unit tests (`python -m unittest discover tests`)
+- [x] 76 unit tests (`python -m unittest discover tests`)
 - [x] `hacs.json` (name, render_readme, minimum Home Assistant 2026.3.0), `manifest.json` complete and sorted
 - [x] Brand images in `custom_components/viertelstunden_waechter/brand/`
 - [x] Repository description and 12 topics
 - [x] Dual licence (`LICENSE`, `LICENSING.md`), README with "What is this for?", German guide, compatibility lists
-- [x] History checked: one anonymous author address, no IPs, mail addresses, names or tokens in the repository
-- [x] `CHANGELOG.md`, issue template for device test reports, draft release `v0.12.0`
+- [x] History checked (again 2026-10-29): one anonymous author address (39 commits), no IPs, mail addresses, names or tokens in the working tree or the history; only generic example entity ids and brand names in the compatibility lists
+- [x] `CHANGELOG.md`, issue template for device test reports, draft release `v0.13.1`
 
 ## Before the repository becomes public
 
@@ -33,7 +33,7 @@ exists. Work on the integration may continue before it is published - the draft 
 2. Switch the repository to **public** (Settings > General > Danger zone).
 3. Run the workflow once: the HACS validation (`hacs/action`) only works for public repositories and also checks topics,
    description, `hacs.json` and the brand files.
-4. **Publish the release** `v0.12.0` (edit the draft, check the text, publish). HACS installs the latest release.
+4. **Publish the release** `v0.13.1` (edit the draft, check the text, publish). HACS installs the latest release.
 5. Users can already add the repository as a custom repository in HACS (type *Integration*).
 6. Optional later: a pull request to the HACS default list (`hacs/default`), requires a release, passing validation
    and an active maintainer. Read the current rules first.
