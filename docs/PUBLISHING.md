@@ -16,7 +16,7 @@ checklist for every further release: tests, private-data check, CHANGELOG, `mani
 - [x] History checked (again 2026-10-29): one anonymous author address (39 commits), no IPs, mail addresses, names or tokens in the working tree or the history; only generic example entity ids and brand names in the compatibility lists
 - [x] `CHANGELOG.md`, issue template for device test reports, draft release `v0.13.1`
 
-## Before the repository becomes public
+## Before each release
 
 1. **Decide whether work continues first.** Update `CHANGELOG.md` ("Unreleased"), `manifest.json` version and the draft
    release text together.
