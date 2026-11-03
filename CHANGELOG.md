@@ -6,6 +6,21 @@ Format: newest first. German version below each English block is a short summary
 
 - (nothing yet)
 
+## 0.13.2 - 2026-11-03
+
+- **Security (review by the HACS team):** the service `create_dashboard` no longer writes into dashboards. It only builds the
+  dashboard and returns it as YAML (response key `yaml`, also as a notification) to paste into the raw configuration editor of a
+  new dashboard. Before, it could replace all views of any storage dashboard, including ones the integration never created.
+  The `dashboard` field is gone.
+- All services (`create_dashboard`, `import_history`, `send_week_report`, `export_csv`, `explain_today`) are now registered as
+  administrator services: a non-admin user can no longer call them; automations and scripts are not affected.
+- The response of `create_dashboard` also contains the dashboard as `config` (the same content as the YAML).
+- README and guide: installation leads with searching for the integration in HACS; adding a custom repository is the fallback
+  until it is in the default list. The dashboard section explains how to paste the YAML.
+
+Deutsch: `create_dashboard` schreibt nicht mehr in bestehende Dashboards, sondern liefert nur das YAML (auch als Meldung).
+Alle Dienste dürfen nur noch Administratoren aufrufen (Automationen und Skripte nicht betroffen).
+
 ## 0.13.1 - 2026-10-28
 
 - Dashboard: the explanation of the day now shows its date. An older explanation is labelled "Explanation of 27.10."

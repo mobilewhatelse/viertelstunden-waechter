@@ -73,8 +73,11 @@ statistics, far too late for control.
 
 ## Installation
 
-HACS → ⋮ → Custom repositories → this repository, category *Integration* → install → restart Home Assistant →
-Settings → Devices & services → Add integration → *Viertelstunden-Wächter*.
+Open HACS, search for **Viertelstunden-Wächter**, download it, restart Home Assistant → Settings → Devices & services →
+Add integration → *Viertelstunden-Wächter*.
+
+If HACS does not list it yet (the request for the HACS default list is still in review), add it once as a custom
+repository: HACS → ⋮ → Custom repositories → this repository, category *Integration*.
 
 Then add the devices **on the integration page**: the buttons *Add wallbox / switchable device / emergency
 action* create one entry per device; each entry has ⋮ → *Reconfigure* / *Delete*. The gear icon opens the
@@ -472,6 +475,12 @@ entities of *your* installation (whatever the device is called, in German or Eng
 (settings, features, devices and priorities, now, cost and savings), **Today** - a compact single-column view for the
 phone - and *Statistics and forecast* (24-hour forecast as bars, weekly profile, peaks of the last days, months,
 interventions per day, charge plan). Only standard cards are used.
+
+**How to use it** (administrators only): Developer tools → Actions → *Create dashboard*, run it, and copy the YAML from
+the response or from the notification it shows. Then Settings → Dashboards → Add dashboard, open it, three dots → Edit →
+three dots → Raw configuration editor, paste, save. The service **never writes into an existing dashboard**; it only
+returns the YAML. All services of the integration (`create_dashboard`, `import_history`, `send_week_report`, `export_csv`,
+`explain_today`) can only be called by administrators (or by automations and scripts).
 
 **The view *Today* (for the phone)** shows, top to bottom: the status of the guard; one bar with the forecast of the
 running quarter hour against the target (white mark = target, red dashed mark = limit; green = safely below, yellow =

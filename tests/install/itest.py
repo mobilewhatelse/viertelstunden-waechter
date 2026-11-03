@@ -288,7 +288,12 @@ def main():
         r = call({"type": "lovelace/dashboards/create", "url_path": "waechter-test", "title": "Test", "icon": "mdi:shield", "show_in_sidebar": False, "require_admin": False, "mode": "storage"})
         log(bool(r) and r[0].get("success"), "Dashboard-Seite fuer den Test angelegt", str(r[0].get("error")) if r else "")
         s, d = svc("viertelstunden_waechter", "create_dashboard", {"dashboard": "waechter-test"}, resp=True)
-        log(s == 200 and (d.get("service_response") or {}).get("saved") == "waechter-test", "Dienst 'Dashboard erstellen' speichert in ein Dashboard", str(d)[:120])
+        log(s == 400 or s == 422, "Dienst 'Dashboard erstellen' nimmt kein Dashboard als Ziel mehr an (kein Schreibweg)", f"HTTP {s}")
+        s, d = svc("viertelstunden_waechter", "create_dashboard", {}, resp=True)
+        gen = (d.get("service_response") or {}).get("config") if isinstance(d, dict) else None
+        log(s == 200 and bool(gen) and gen.get("views"), "Dienst 'Dashboard erstellen' liefert die Konfiguration", f"{len((gen or {}).get('views', []))} Ansichten")
+        sv = call({"type": "lovelace/config/save", "url_path": "waechter-test", "config": gen})
+        log(bool(sv) and sv[0].get("success"), "Konfiguration als Administrator in das Test-Dashboard gespeichert", str(sv[0].get("error")) if sv else "")
         cfg = call({"type": "lovelace/config", "url_path": "waechter-test"})[0].get("result") or {}
         views = cfg.get("views", [])
         log([v.get("path") for v in views] == ["waechter", "heute", "statistik"], "Dashboard hat die Ansichten Waechter, Heute (Handy), Statistik", str([v.get("path") for v in views]))

@@ -39,8 +39,10 @@ Zähler am Netzübergabepunkt ──Kabel──► Wechselrichter ──LAN (lok
 
 ## 2. Einrichten
 
-1. HACS → ⋮ → Benutzerdefinierte Repositories → dieses Repository, Kategorie *Integration* → herunterladen →
-   Home Assistant neu starten.
+1. HACS öffnen, nach **Viertelstunden-Wächter** suchen, herunterladen →
+   Home Assistant neu starten. (Wird es in HACS noch nicht gefunden, weil der Antrag für die Standardliste noch läuft,
+   einmalig als Benutzerdefiniertes Repository hinzufügen: HACS → ⋮ → Benutzerdefinierte Repositories → dieses
+   Repository, Kategorie *Integration*.)
 2. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Viertelstunden-Wächter**:
    Netzbezug, Bezugszähler, Grenze (z. B. 10 kW), Sicherheitsabstand (z. B. 0,5 kW).
 3. Geräte **auf der Integrationsseite** hinzufügen (siehe 3.): Schaltflächen **Wallbox / Schaltbares Gerät /
@@ -441,6 +443,12 @@ Entitäten **Ihrer** Installation (egal wie das Gerät heißt, auf Deutsch oder 
 (Einstellungen, Zusatzfunktionen, Geräte und Prioritäten, Jetzt, Kosten und Ersparnis), **Heute** – eine kompakte, einspaltige
 Ansicht fürs Handy – und *Statistik und Prognose* (24-Stunden-Vorschau als Balken, Wochenprofil, Spitzen der letzten Tage,
 Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten benutzt.
+
+**So nutzen Sie ihn** (nur Administratoren): Entwicklerwerkzeuge → Aktionen → *Dashboard erstellen* ausführen und das YAML aus der
+Antwort oder aus der angezeigten Benachrichtigung kopieren. Dann Einstellungen → Dashboards → Dashboard hinzufügen, öffnen, drei
+Punkte → Bearbeiten → drei Punkte → Roher Konfigurationseditor, einfügen, speichern. Der Dienst **schreibt nie in ein bestehendes
+Dashboard**, er liefert nur das YAML. Alle Dienste der Integration (`create_dashboard`, `import_history`, `send_week_report`,
+`export_csv`, `explain_today`) dürfen nur Administratoren aufrufen (oder Automationen und Skripte).
 
 **Die Ansicht *Heute* (fürs Handy)** zeigt von oben nach unten: den Status des Wächters; einen Balken mit der Prognose der laufenden
 Viertelstunde gegen das Ziel (weißer Strich = Ziel, roter gestrichelter Strich = Grenze; grün = sicher darunter, gelb = knapp, rot =

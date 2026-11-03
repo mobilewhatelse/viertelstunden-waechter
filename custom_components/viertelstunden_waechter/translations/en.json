@@ -725,13 +725,7 @@
   "services": {
     "create_dashboard": {
       "name": "Create dashboard",
-      "description": "Builds a ready-made dashboard (overview, statistics and forecast) with this installation's entities. With a dashboard URL it is saved into that existing dashboard (replacing its views); without, the YAML is returned and shown as a notification.",
-      "fields": {
-        "dashboard": {
-          "name": "Dashboard URL",
-          "description": "URL path of an existing, empty storage dashboard (e.g. waechter). Leave empty to get the YAML."
-        }
-      }
+      "description": "Builds a ready-made dashboard (overview, statistics and forecast) with this installation's entities. The YAML is returned and shown as a notification; paste it into a new dashboard (three dots > Edit > Raw configuration editor). The service never writes into an existing dashboard. Administrators only."
     },
     "import_history": {
       "name": "Import history",

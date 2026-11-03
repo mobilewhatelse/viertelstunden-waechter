@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.service import async_register_admin_service
 
 from .const import CONF_DEVICES, D_ID, D_KIND, D_NAME, DOMAIN, PLATFORMS
 from .coordinator import Waechter
@@ -77,8 +78,8 @@ def _register_services(hass: HomeAssistant) -> None:
             raise ServiceValidationError("The guard is not set up")
         return entries[0].runtime_data.import_history(call.data.get("days", []), call.data.get("months", []))
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_IMPORT_HISTORY, handle_import,
+    async_register_admin_service(
+        hass, DOMAIN, SERVICE_IMPORT_HISTORY, handle_import,
         schema=vol.Schema({vol.Optional("days", default=[]): list, vol.Optional("months", default=[]): list}),
         supports_response=SupportsResponse.OPTIONAL,
     )
@@ -90,8 +91,8 @@ def _register_services(hass: HomeAssistant) -> None:
         rep = await entries[0].runtime_data.send_week_report(call.data["current_week"], call.data["push"])
         return {k: v for k, v in rep.items() if k != "text"} | {"text": rep["text"]}
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_WEEK_REPORT, handle_week,
+    async_register_admin_service(
+        hass, DOMAIN, SERVICE_WEEK_REPORT, handle_week,
         schema=vol.Schema({vol.Optional("current_week", default=False): cv.boolean, vol.Optional("push", default=True): cv.boolean}),
         supports_response=SupportsResponse.OPTIONAL,
     )
@@ -105,8 +106,8 @@ def _register_services(hass: HomeAssistant) -> None:
     async def handle_export(call: ServiceCall) -> dict[str, Any]:
         return await _guard().export_csv(call.data["kind"], call.data["days"], call.data["format"])
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_EXPORT, handle_export,
+    async_register_admin_service(
+        hass, DOMAIN, SERVICE_EXPORT, handle_export,
         schema=vol.Schema({
             vol.Optional("kind", default="quarters"): vol.In(["quarters", "days"]),
             vol.Optional("days", default=31): vol.All(vol.Coerce(int), vol.Range(min=1, max=400)),
@@ -118,25 +119,25 @@ def _register_services(hass: HomeAssistant) -> None:
     async def handle_explain(call: ServiceCall) -> dict[str, Any]:
         return await _guard().explain_today(call.data["push"])
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_EXPLAIN, handle_explain,
+    async_register_admin_service(
+        hass, DOMAIN, SERVICE_EXPLAIN, handle_explain,
         schema=vol.Schema({vol.Optional("push", default=False): cv.boolean}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 
     async def handle(call: ServiceCall) -> dict[str, Any]:
-        return await _create_dashboard(hass, call.data.get("dashboard"))
+        return await _create_dashboard(hass)
 
-    hass.services.async_register(
-        DOMAIN, SERVICE_CREATE_DASHBOARD, handle,
-        schema=vol.Schema({vol.Optional("dashboard"): cv.string}),
+    async_register_admin_service(
+        hass, DOMAIN, SERVICE_CREATE_DASHBOARD, handle,
+        schema=vol.Schema({}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 
 
-async def _create_dashboard(hass: HomeAssistant, url_path: str | None) -> dict[str, Any]:
-    """Build the dashboard with this installation's entity ids; save it into an existing storage dashboard or
-    return it as YAML (also as a persistent notification) to paste into the raw configuration editor."""
+async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
+    """Build the dashboard with this installation's entity ids and return it as YAML (also shown as a persistent
+    notification) to paste into the raw configuration editor of a new dashboard. It never writes into a dashboard."""
     from homeassistant.helpers import entity_registry as er
     from homeassistant.util import yaml as ha_yaml
 
@@ -154,25 +155,10 @@ async def _create_dashboard(hass: HomeAssistant, url_path: str | None) -> dict[s
         ids[key] = entity_id
     config = {"views": build_views(ids, hass.config.language)}
 
-    if url_path:
-        try:
-            from homeassistant.components.lovelace.const import LOVELACE_DATA
-
-            dashboard = hass.data[LOVELACE_DATA].dashboards.get(url_path)
-        except (ImportError, KeyError, AttributeError):
-            dashboard = None
-        if dashboard is None or not hasattr(dashboard, "async_save"):
-            raise ServiceValidationError(
-                f"Dashboard '{url_path}' not found or not a storage dashboard. Create an empty dashboard first "
-                "(Settings > Dashboards > Add) or call the service without a dashboard to get the YAML."
-            )
-        await dashboard.async_save(config)
-        return {"saved": url_path, "views": [v["title"] for v in config["views"]]}
-
     text = ha_yaml.dump(config)
     await hass.services.async_call(
         "persistent_notification", "create",
         {"title": entries[0].title, "notification_id": f"{DOMAIN}_dashboard",
          "message": "Paste this into a new dashboard (three dots > Edit > Raw configuration editor):\n\n```yaml\n" + text + "```"},
     )
-    return {"yaml": text}
+    return {"yaml": text, "config": config}
