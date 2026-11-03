@@ -1,7 +1,8 @@
 # Publishing checklist (maintainer)
 
-State: 2026-10-29. Nothing here has been done except where marked. The repository is private; a draft release `v0.13.1`
-exists (text updated 2026-10-29). Work on the integration may continue before it is published - the draft can be edited or deleted.
+State: 2026-11-03. The repository is **public**, release `v0.13.2` is published and the integration is in the HACS
+default list (`hacs/default`). The sections below are the first-publication checklist (done) and now serve as the
+checklist for every further release: tests, private-data check, CHANGELOG, `manifest.json` version, release text.
 
 ## Already done
 

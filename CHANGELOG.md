@@ -4,7 +4,8 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
-- (nothing yet)
+- Documentation only: README status and installation text updated (now in the HACS default list), new section *Support and
+  feedback*, issue template *Bug report*, outdated dashboard-URL notes removed from README and guide.
 
 ## 0.13.2 - 2026-11-03
 

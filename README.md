@@ -3,7 +3,7 @@
 Home Assistant integration that keeps the **average grid import of every quarter hour** below a limit, by
 throttling the wallbox and switching flexible loads only as far as needed.
 
-> Status: **0.13, in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
+> Status: **0.13.2, in the HACS default list, in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
 > Start in observe mode. Use at your own risk.
 
 ## What is this for?
@@ -76,8 +76,8 @@ statistics, far too late for control.
 Open HACS, search for **Viertelstunden-Wächter**, download it, restart Home Assistant → Settings → Devices & services →
 Add integration → *Viertelstunden-Wächter*.
 
-If HACS does not list it yet (the request for the HACS default list is still in review), add it once as a custom
-repository: HACS → ⋮ → Custom repositories → this repository, category *Integration*.
+If the search does not find it (a new entry can take some hours to reach HACS), add it once as a custom repository:
+HACS → ⋮ → Custom repositories → this repository, category *Integration*.
 
 Then add the devices **on the integration page**: the buttons *Add wallbox / switchable device / emergency
 action* create one entry per device; each entry has ⋮ → *Reconfigure* / *Delete*. The gear icon opens the
@@ -228,10 +228,10 @@ The order is a proposal, not a promise.
 
 **Planned**
 
-1. **Publishing:** the installation test on a fresh Home Assistant 2026.10.3 (Docker, `tests/install`) passed on
-   2026-10-25 - config flow from scratch, devices, observe and active mode, release, services, restart - and
-   **hassfest passes**. Still open: the HACS validation (needs a public repository), repository topics, a first release,
-   and real-world reports from other installations.
+1. **Feedback from other installations:** the integration is public and in the HACS default list (0.13.2). The
+   installation test on a fresh Home Assistant 2026.10.3 (Docker, `tests/install`) passed - config flow from scratch,
+   devices, observe and active mode, release, services, restart - and hassfest and the HACS validation pass. What is
+   still missing are real-world reports from other installations (see *Support and feedback*).
 2. **Real-hardware tests** of *Throttle power* and *Change settings* (heat pumps) and of the battery release on other
    makes - until then they are simulator-tested only. Test reports are welcome (issue template *device test report*).
 3. **Charge plan closer to the risk windows:** avoid forecast peaks when placing the charging quarters, and a *daily
@@ -571,6 +571,13 @@ python tests/sim.py                    # one simulated evening: car + cooker + p
 ```
 
 `engine.py` contains all decisions and has no Home Assistant imports.
+
+## Support and feedback
+
+Bug reports and questions go to the [issues](https://github.com/mobilewhatelse/viertelstunden-waechter/issues) (templates
+*Bug report* and *Device test report*). Please add the integration version, your Home Assistant version and the
+guard's log (the *Status* sensor and the log on the device page); remove personal data first. This is a spare-time
+project: answers can take a few days, and there is no guarantee. For commercial support see [LICENSING.md](LICENSING.md).
 
 ## Licence
 
