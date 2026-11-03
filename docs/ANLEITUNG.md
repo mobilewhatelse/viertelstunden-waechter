@@ -473,12 +473,6 @@ Unter den Diagrammen stehen Tabellen für die höchsten Tage, die Monate und die
 Balken „noch zu wenig Daten“; das ist bei einer frischen Installation normal. Werden die Bilder nicht angezeigt, das Dashboard neu laden
 (in der App den Frontend-Cache leeren).
 
-- Mit einer Dashboard-Adresse (z. B. `waechter`): zuerst ein leeres Dashboard anlegen (Einstellungen > Dashboards >
-  Hinzufügen), dann den Dienst mit dessen Adresse aufrufen – die Ansichten dort werden ersetzt.
-- Ohne Adresse: Das YAML wird zurückgegeben und als Benachrichtigung angezeigt; in ein neues Dashboard einfügen
-  (drei Punkte > Bearbeiten > Rohkonfigurations-Editor). Das ist der robustere Weg, falls sich in Home Assistant intern
-  etwas ändert.
-
 ---
 
 ## 3e. Rückmeldung, Vorwarnung und Wochenbericht

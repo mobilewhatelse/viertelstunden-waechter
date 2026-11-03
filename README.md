@@ -505,11 +505,6 @@ Below the charts: tables for the highest days, the months and the interventions 
 "not enough data yet" instead of bars; that is normal on a fresh installation. If images are not shown, reload the
 dashboard (clear the frontend cache in the app).
 
-- With a dashboard URL (e.g. `waechter`): create an empty dashboard first (Settings > Dashboards > Add), then call the
-  service with its URL - its views are replaced.
-- Without a URL: the YAML is returned and shown as a notification; paste it into a new dashboard (three dots > Edit >
-  Raw configuration editor). This is the more robust way if Home Assistant changes internally.
-
 ### Importing earlier measurements
 
 Service **Import history** (`viertelstunden_waechter.import_history`) seeds the day and month peaks from an earlier
