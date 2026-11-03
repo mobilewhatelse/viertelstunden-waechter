@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .venv/
 tests/install/run/
+tests/install/report.txt
