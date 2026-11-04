@@ -19,6 +19,14 @@ If you want to use the guard in a product or service **without** the obligations
 a commercial licence is available. Please open an issue titled "Commercial licence" or contact the
 maintainer via the GitHub profile; terms are agreed individually.
 
+## Name and logo
+
+The name "Viertelstunden-Wächter" and the logo (folder `custom_components/viertelstunden_waechter/brand/`) identify this
+project. You may show them unchanged to refer to the project: in an article, a post, a link to this repository or a list of
+supported integrations. Please do not use them for your own product, for a distributed fork that is offered as something
+else, or in a way that suggests the maintainer endorses it, without asking first. The licences above cover the code; they
+do not grant rights to the name and the logo.
+
 ## Contributions
 
 To keep dual licensing possible, contributions can only be accepted if the contributor agrees that the
