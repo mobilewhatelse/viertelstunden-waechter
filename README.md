@@ -236,11 +236,14 @@ The order is a proposal, not a promise.
    makes - until then they are simulator-tested only. Test reports are welcome (issue template *device test report*).
 3. **Charge plan closer to the risk windows:** avoid forecast peaks when placing the charging quarters, and a *daily
    plan* that combines solar forecast, departure times and the learned load pattern.
-4. **Connectors (optional, opt-in):** the CSV export exists (0.13); where a platform offers a documented interface, a
+4. **A smarter house forecast:** weather, outdoor temperature and the solar forecast as additional inputs of the
+   learned load model (a colder week lifts the heating load, a sunny day lowers the grid import). The learned weekday x
+   quarter-hour pattern stays the base, the weather only corrects it; without a weather entity nothing changes.
+5. **Connectors (optional, opt-in):** the CSV export exists (0.13); where a platform offers a documented interface, a
    connector could send the data there (for example platforms for energy
    communities). A connector depends entirely on the other platform's interface and is a separate optional part:
    nothing leaves the installation unless the user sets it up.
-5. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
+6. **Dynamic tariffs:** charging by day-ahead price as one more input of the plan (only useful with such a tariff).
 
 **AI features** (the explainer is built in 0.13, the others are planned; optional, **off by default and off after a restart**, with a daily cost limit). The AI is used
 through Home Assistant's *AI task* entity, so every user chooses the model (cloud or local) and no key is built in.

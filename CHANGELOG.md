@@ -4,6 +4,7 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- Roadmap (documentation only): a smarter house forecast (weather, temperature, solar forecast) is noted as planned.
 - Documentation only: README status and installation text updated (now in the HACS default list), new section *Support and
   feedback*, issue template *Bug report*, outdated dashboard-URL notes removed from README and guide.
 

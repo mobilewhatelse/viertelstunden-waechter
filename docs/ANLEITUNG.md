@@ -604,11 +604,14 @@ Erledigt in 0.13: Haus und Auto getrennt, Akku-Reserve, CSV-Export, KI-Erklärer
 2. **Tests mit echter Hardware** für *Leistung drosseln*, *Einstellungen ändern* (Wärmepumpen) und die Batterie-Freigabe anderer Hersteller;
    bis dahin nur im Simulator getestet. Testberichte sind willkommen (Vorlage *Gerätetestbericht*).
 3. **Ladeplan näher an den Risikofenstern** und ein *Tagesplan* aus Solarprognose, Abfahrtszeiten und dem gelernten Lastmuster.
-4. **Anbindungen (optional, nur auf Wunsch):** Den CSV-Export gibt es seit 0.13; wo eine Plattform eine dokumentierte Schnittstelle
+4. **Eine klügere Hausprognose:** Wetter, Außentemperatur und Solarprognose als zusätzliche Eingänge des gelernten Lastmodells
+   (eine kältere Woche hebt die Heizlast, ein sonniger Tag senkt den Netzbezug). Das gelernte Muster aus Wochentag und Viertelstunde
+   bleibt die Grundlage, das Wetter korrigiert es nur; ohne Wetter-Entität ändert sich nichts.
+5. **Anbindungen (optional, nur auf Wunsch):** Den CSV-Export gibt es seit 0.13; wo eine Plattform eine dokumentierte Schnittstelle
    anbietet, könnte ein Connector die Daten dorthin senden (z. B. Plattformen für Energiegemeinschaften). Ein
    Connector hängt ganz von der Schnittstelle der anderen Plattform ab und ist ein eigener, optionaler Teil: Es verlässt nichts die
    Installation, solange der Nutzer es nicht einrichtet.
-5. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
+6. **Dynamische Tarife:** Laden nach Day-Ahead-Preis als weiterer Eingang des Plans (nur sinnvoll mit einem solchen Tarif).
 
 ### KI-Funktionen (Erklärer seit 0.13 gebaut, die anderen geplant)
 
