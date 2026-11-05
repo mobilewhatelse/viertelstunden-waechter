@@ -36,7 +36,9 @@
           "notify_services": "Notify services",
           "startup_mode": "Mode after a restart",
           "mains_voltage": "Mains voltage",
-          "ai_task_entity": "AI task for the explainer"
+          "ai_task_entity": "AI task for the explainer",
+          "weather_entity": "Weather entity for the forecast",
+          "outdoor_temp_entity": "Outdoor temperature sensor"
         },
         "data_description": {
           "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
@@ -44,7 +46,9 @@
           "notify_services": "Optional, comma-separated, e.g. notify.mobile_app_phone. Used when the limit cannot be held.",
           "startup_mode": "Restore = the mode it had before the restart.",
           "mains_voltage": "Voltage of one phase (230 V in Europe). Used to convert amps into kilowatts.",
-          "ai_task_entity": "Optional: the AI task entity (Settings > Devices > AI tasks) the explainer uses. You choose the model; the guard has no key of its own."
+          "ai_task_entity": "Optional: the AI task entity (Settings > Devices > AI tasks) the explainer uses. You choose the model; the guard has no key of its own.",
+          "weather_entity": "Optional: a weather entity. With it the load forecast follows the expected outdoor temperature (heating in winter, air conditioning in summer). Without it nothing changes.",
+          "outdoor_temp_entity": "Optional: an outdoor temperature sensor. More exact than the weather entity for learning, and its history lets the correction start at once instead of after some weeks."
         }
       }
     }
@@ -205,6 +209,9 @@
       },
       "ai_explainer": {
         "name": "AI explainer"
+      },
+      "weather_enabled": {
+        "name": "Weather correction of the forecast"
       }
     }
   },

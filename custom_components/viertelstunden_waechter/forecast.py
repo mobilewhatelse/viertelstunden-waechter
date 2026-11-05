@@ -14,6 +14,8 @@ model alone is the forecast, so a usual evening charging does not show as a risk
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from statistics import median
 from typing import Any
@@ -22,6 +24,71 @@ SLOTS_PER_DAY = 96
 MAX_SAMPLES = 8
 MIN_SAMPLES = 2
 MAX_PLAUSIBLE_KW = 60.0
+
+HEAT_BELOW_C = 15.0      # heating starts to add load below this outdoor temperature
+COOL_ABOVE_C = 22.0      # air conditioning starts to add load above it
+FIT_MIN_DAYS = 14
+FIT_MIN_SPREAD = 20.0    # sum of squared degrees below/above the balance point needed to fit a slope
+
+
+@dataclass(frozen=True)
+class WeatherCurve:
+    """Extra house load (kW, mean over the day) per kelvin below `heat_below` and above `cool_above`."""
+
+    heat_kw_per_k: float = 0.0
+    cool_kw_per_k: float = 0.0
+    heat_below: float = HEAT_BELOW_C
+    cool_above: float = COOL_ABOVE_C
+
+    def extra(self, temp: float) -> float:
+        return (self.heat_kw_per_k * max(0.0, self.heat_below - temp)
+                + self.cool_kw_per_k * max(0.0, temp - self.cool_above))
+
+    @property
+    def active(self) -> bool:
+        return self.heat_kw_per_k > 0.0 or self.cool_kw_per_k > 0.0
+
+
+def fit_curve(days: list[tuple[int, float, float]]) -> tuple[WeatherCurve, dict[str, Any]]:
+    """Fit the weather curve from daily records (weekday, mean house kW, mean outdoor temperature).
+
+    The weekday mean is removed first (the weekly habit is the model's job), then the rest is regressed on the heating
+    degrees (`HEAT_BELOW_C - T`) and the cooling degrees (`T - COOL_ABOVE_C`). Slopes are never negative. A slope is
+    only fitted if the days show enough spread in its range; otherwise it stays 0 (no correction)."""
+    info: dict[str, Any] = {"days": len(days), "heat": 0.0, "cool": 0.0, "r2": 0.0}
+    if len(days) < FIT_MIN_DAYS:
+        return WeatherCurve(0.0, 0.0), info
+    # within-weekday regression: remove each weekday's mean from the load AND from the degrees
+    groups: dict[int, list[tuple[float, float, float]]] = {}
+    for wd, kw, t in days:
+        groups.setdefault(wd, []).append((max(0.0, HEAT_BELOW_C - t), max(0.0, t - COOL_ABOVE_C), kw))
+    rows = []
+    for g in groups.values():
+        mh, mc, my = (sum(x[i] for x in g) / len(g) for i in range(3))
+        rows += [(h - mh, c - mc, y - my) for h, c, y in g]
+    shh = sum(h * h for h, _, _ in rows)
+    scc = sum(c * c for _, c, _ in rows)
+    shc = sum(h * c for h, c, _ in rows)
+    shy = sum(h * y for h, _, y in rows)
+    scy = sum(c * y for _, c, y in rows)
+    use_h = shh >= FIT_MIN_SPREAD
+    use_c = scc >= FIT_MIN_SPREAD
+    a = b = 0.0
+    if use_h and use_c:
+        det = shh * scc - shc * shc
+        if abs(det) > 1e-9:
+            a, b = (shy * scc - scy * shc) / det, (scy * shh - shy * shc) / det
+        else:
+            a = shy / shh
+    elif use_h:
+        a = shy / shh
+    elif use_c:
+        b = scy / scc
+    a, b = max(0.0, a), max(0.0, b)
+    ss_tot = sum(y * y for _, _, y in rows)
+    ss_res = sum((y - a * h - b * c) ** 2 for h, c, y in rows)
+    info.update({"heat": round(a, 4), "cool": round(b, 4), "r2": round(1 - ss_res / ss_tot, 3) if ss_tot > 0 else 0.0})
+    return WeatherCurve(round(a, 4), round(b, 4)), info
 
 
 def slot_of(when: datetime) -> int:
@@ -33,21 +100,32 @@ def floor_quarter(when: datetime) -> datetime:
 
 
 class LoadModel:
-    def __init__(self, slots: dict[int, list[float]] | None = None) -> None:
+    def __init__(self, slots: dict[int, list[float]] | None = None,
+                 temps: dict[int, list[float | None]] | None = None) -> None:
         self.slots: dict[int, list[float]] = slots or {}
+        # outdoor temperature at each sample, same order and length as `slots` (None = not known);
+        # only used by the weather correction
+        self.temps: dict[int, list[float | None]] = dict(temps or {})
+        for k, v in self.slots.items():
+            t = self.temps.get(k, [])
+            self.temps[k] = ([None] * (len(v) - len(t)) + list(t))[-len(v):] if v else []
 
     # ---------- learning ----------
 
-    def add(self, when: datetime, kw: float) -> None:
+    def add(self, when: datetime, kw: float, temp: float | None = None) -> None:
         if kw is None or kw < 0 or kw > MAX_PLAUSIBLE_KW:
             return  # counter jumps after an outage are not real load
-        lst = self.slots.setdefault(slot_of(when), [])
+        k = slot_of(when)
+        lst = self.slots.setdefault(k, [])
+        tl = self.temps.setdefault(k, [None] * len(lst))
         lst.append(round(float(kw), 3))
+        tl.append(round(float(temp), 1) if temp is not None else None)
         del lst[:-MAX_SAMPLES]
+        del tl[:-MAX_SAMPLES]
 
-    def add_hourly(self, hour_start: datetime, kw: float) -> None:
+    def add_hourly(self, hour_start: datetime, kw: float, temp: float | None = None) -> None:
         for q in range(4):
-            self.add(hour_start + timedelta(minutes=15 * q), kw)
+            self.add(hour_start + timedelta(minutes=15 * q), kw, temp)
 
     @property
     def samples(self) -> int:
@@ -59,27 +137,41 @@ class LoadModel:
 
     # ---------- predicting ----------
 
-    def predict(self, when: datetime) -> tuple[float, float, int] | None:
-        """(typical, high, number of samples) for the quarter hour containing `when`, or None without data."""
-        values = self.slots.get(slot_of(when))
+    def predict(self, when: datetime, temp: float | None = None,
+                curve: WeatherCurve | None = None) -> tuple[float, float, int] | None:
+        """(typical, high, number of samples) for the quarter hour containing `when`, or None without data.
+
+        With a weather curve and the expected outdoor temperature every sample is moved to that temperature first
+        (`kw + extra(expected) - extra(temperature at the sample)`); samples without a temperature stay as they are."""
+        k = slot_of(when)
+        values = self.slots.get(k)
         if not values:
             return None
+        if curve is not None and curve.active and temp is not None:
+            ts = self.temps.get(k) or [None] * len(values)
+            now_extra = curve.extra(temp)
+            values = [max(0.0, v + now_extra - curve.extra(t)) if t is not None else v for v, t in zip(values, ts)]
         s = sorted(values)
-        return round(median(s), 3), s[-2] if len(s) >= 4 else s[-1], len(s)
+        return round(median(s), 3), round(s[-2] if len(s) >= 4 else s[-1], 3), len(s)
 
-    def horizon(self, now: datetime, hours: int = 24) -> list[dict[str, Any]]:
+    def horizon(self, now: datetime, hours: int = 24, temp_at: Callable[[datetime], float | None] | None = None,
+                curve: WeatherCurve | None = None) -> list[dict[str, Any]]:
         start = floor_quarter(now)
         out = []
         for i in range(hours * 4):
             t = start + timedelta(minutes=15 * i)
-            p = self.predict(t)
+            p = self.predict(t, temp_at(t) if temp_at else None, curve)
             out.append({"t": t, "typical": p[0] if p else None, "high": p[1] if p else None, "n": p[2] if p else 0})
         return out
 
     # ---------- persistence ----------
 
     def to_dict(self) -> dict[str, Any]:
-        return {"slots": {str(k): v for k, v in self.slots.items() if v}}
+        d: dict[str, Any] = {"slots": {str(k): v for k, v in self.slots.items() if v}}
+        temps = {str(k): v for k, v in self.temps.items() if v and any(x is not None for x in v)}
+        if temps:
+            d["temps"] = temps
+        return d
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> LoadModel:
@@ -89,7 +181,13 @@ class LoadModel:
                 slots[int(k)] = [float(x) for x in v][-MAX_SAMPLES:]
             except (TypeError, ValueError):
                 continue
-        return cls(slots)
+        temps: dict[int, list[float | None]] = {}
+        for k, v in (d.get("temps") or {}).items():
+            try:
+                temps[int(k)] = [None if x is None else float(x) for x in v][-MAX_SAMPLES:]
+            except (TypeError, ValueError):
+                continue
+        return cls(slots, temps)
 
 
 RESERVE_CAP_KW = 3.0
@@ -97,10 +195,11 @@ RESERVE_MIN_KW = 0.5
 RESERVE_MIN_SAMPLES = 3
 
 
-def reserve_kw(model: LoadModel, when: datetime, target_kw: float, cap: float = RESERVE_CAP_KW) -> tuple[float, dict[str, Any] | None]:
+def reserve_kw(model: LoadModel, when: datetime, target_kw: float, cap: float = RESERVE_CAP_KW,
+               temp: float | None = None, curve: WeatherCurve | None = None) -> tuple[float, dict[str, Any] | None]:
     """Headroom the guard keeps free in a risk quarter hour (the forecast `high` exceeds the target): the usual
     spike on top of the typical value (`high - typical`, at most `cap`). 0 for a normal quarter hour or too little data."""
-    p = model.predict(when)
+    p = model.predict(when, temp, curve)
     if p is None or p[2] < RESERVE_MIN_SAMPLES or p[1] <= target_kw:
         return 0.0, None
     spike = min(cap, max(0.0, p[1] - p[0]))
@@ -113,6 +212,7 @@ def combine(house: LoadModel, wallbox: LoadModel) -> LoadModel:
     """House plus wallbox, sample by sample. Both learn the same quarter hours, so the lists are aligned at their end;
     older house samples without a wallbox part (history import, data from before the split) are totals already."""
     slots: dict[int, list[float]] = {}
+    temps: dict[int, list[float | None]] = {}
     for slot in set(house.slots) | set(wallbox.slots):
         h = house.slots.get(slot, [])
         w = wallbox.slots.get(slot, [])
@@ -120,7 +220,9 @@ def combine(house: LoadModel, wallbox: LoadModel) -> LoadModel:
         h = [0.0] * (n - len(h)) + h
         w = [0.0] * (n - len(w)) + w
         slots[slot] = [round(a + b, 3) for a, b in zip(h, w)][-MAX_SAMPLES:]
-    return LoadModel(slots)
+        ht = house.temps.get(slot, [])
+        temps[slot] = ([None] * (n - len(ht)) + list(ht))[-MAX_SAMPLES:]  # the correction is additive: the house part carries it
+    return LoadModel(slots, temps)
 
 
 def reserve_window(windows: list[dict[str, Any]], now: datetime, lead_min: float) -> dict[str, Any] | None:

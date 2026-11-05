@@ -4,6 +4,12 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Weather correction of the load forecast** (switch, default on; needs a weather entity or an outdoor temperature sensor in
+  the general settings, otherwise nothing changes): samples remember the outdoor temperature, two slopes (heating below
+  15 C, cooling above 22 C, never negative, at least 14 days) are fitted from whole days, and the forecast moves each
+  sample to the expected temperature. Temperature history of the sensor is read once. Attribute `weather` on the forecast
+  sensor. Also used by *Throttle ahead* and the charge plan. *Deutsch:* Wetterkorrektur der Lastprognose (Heizen im Winter,
+  Klimaanlage im Sommer), Schalter standardmäßig an, wirkt nur mit Wetter-Entität oder Außentemperatur-Sensor.
 - Roadmap (documentation only): a smarter house forecast (weather, temperature, solar forecast) is noted as planned.
 - Documentation only: README status and installation text updated (now in the HACS default list), new section *Support and
   feedback*, issue template *Bug report*, outdated dashboard-URL notes removed from README and guide.

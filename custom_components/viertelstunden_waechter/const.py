@@ -17,6 +17,8 @@ CONF_NOTIFY = "notify_services"         # optional: comma-separated notify servi
 CONF_STARTUP_MODE = "startup_mode"
 CONF_VOLTAGE = "mains_voltage"          # voltage of one phase, default 230 V
 CONF_AI_TASK = "ai_task_entity"         # optional: AI task entity for the explainer
+CONF_WEATHER = "weather_entity"         # optional: weather entity (forecast of the outdoor temperature)
+CONF_OUTDOOR_TEMP = "outdoor_temp_entity"  # optional: outdoor temperature sensor (more exact for learning, history)
 CONF_DEVICES = "devices"
 
 # device settings

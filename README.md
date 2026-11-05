@@ -420,6 +420,27 @@ Sensors:
 The forecast is displayed and feeds the charge plan. It changes what the guard does only if you switch on
 **Throttle ahead using the forecast** (below).
 
+#### Weather correction (0.14, switch *Weather correction of the forecast*, default on)
+
+Heating in winter and air conditioning in summer change the load, so the plain weekday pattern is too low on a
+cold or hot day. In the general settings choose a **weather entity** (forecast of the outdoor temperature) and
+optionally an **outdoor temperature sensor**. Without them nothing changes.
+
+- Every learned sample also remembers the outdoor temperature at that time.
+- From whole days (house load against mean temperature, after removing the weekday habit) the guard fits two slopes:
+  extra kW per kelvin **below 15 °C** (heating) and **above 22 °C** (cooling). A slope is only fitted if the days
+  really show cold or hot weather, is never negative, and needs at least 14 days. Until then the forecast is the old one.
+- For a forecast quarter hour every sample is moved to the expected temperature (hourly forecast of the weather
+  entity, or the daily mean if it has none). Samples without a temperature stay as they are.
+- With an outdoor temperature sensor with long-term statistics the temperatures of the last 12 weeks are read once,
+  so the correction can start at once; without it the guard learns the temperature from now on (about two weeks).
+- The attribute `weather` of *Typical import now (forecast)* shows what is learned: slopes, days used, fit quality (`r2`).
+
+Limits: the model describes the **grid import**. On a sunny day a solar plant lowers the import, so a hot and sunny
+day can show less cooling load than a hot and cloudy one; the solar forecast as a further input is planned. The
+correction is a mean over the day, not a daily curve of the heating. With a wallbox the car is excluded from the fit
+(house without wallbox) once the guard measures it live; the first import from the statistics still contains the car.
+
 #### Throttling ahead by the forecast (switch, default off)
 
 Normally the guard reacts when the running quarter hour heads above the target. With the switch **Throttle ahead using

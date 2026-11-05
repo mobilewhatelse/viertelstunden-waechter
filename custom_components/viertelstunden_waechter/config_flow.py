@@ -20,7 +20,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_NOTIFY,
-    CONF_STARTUP_MODE, CONF_VOLTAGE, CONF_AI_TASK, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
+    CONF_STARTUP_MODE, CONF_VOLTAGE, CONF_AI_TASK, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
     D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
@@ -67,6 +67,8 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
         s[_opt(CONF_NOTIFY, d)] = TextSelector()
         s[vol.Required(CONF_VOLTAGE, default=d.get(CONF_VOLTAGE, 230))] = _num(100, 260, 1, "V")
         s[_opt(CONF_AI_TASK, d)] = _ent("ai_task")
+        s[_opt(CONF_WEATHER, d)] = _ent("weather")
+        s[_opt(CONF_OUTDOOR_TEMP, d)] = _ent("sensor", "temperature")
         s[vol.Required(CONF_STARTUP_MODE, default=d.get(CONF_STARTUP_MODE, STARTUP_RESTORE))] = SelectSelector(
             SelectSelectorConfig(options=STARTUP_MODES, translation_key=CONF_STARTUP_MODE)
         )

@@ -273,6 +273,27 @@ Sensoren:
 Die Prognose wird angezeigt und speist den Ladeplan (3c). Das Verhalten des Wächters ändert sie nur, wenn Sie den Schalter
 **Vorausschauend drosseln nach Prognose** einschalten (siehe unten).
 
+### Wetterkorrektur (seit 0.14, Schalter **Wetterkorrektur der Prognose**, standardmäßig an)
+
+Heizen im Winter und die Klimaanlage im Sommer verändern die Last; das reine Wochenmuster ist an einem kalten oder heißen Tag zu
+niedrig. In den allgemeinen Einstellungen wählen Sie eine **Wetter-Entität** (Vorhersage der Außentemperatur) und optional einen
+**Außentemperatur-Sensor**. Ohne beides ändert sich nichts.
+
+- Jeder gelernte Wert merkt sich die Außentemperatur dieser Zeit.
+- Aus ganzen Tagen (Hauslast gegen mittlere Temperatur, nachdem die Wochentagsgewohnheit abgezogen ist) bestimmt der Wächter zwei
+  Steigungen: zusätzliche kW je Kelvin **unter 15 °C** (Heizen) und **über 22 °C** (Kühlen). Eine Steigung wird nur bestimmt, wenn die
+  Tage wirklich kaltes oder heißes Wetter zeigen, sie ist nie negativ und braucht mindestens 14 Tage. Bis dahin gilt die bisherige Prognose.
+- Für eine Viertelstunde der Prognose wird jeder Wert auf die erwartete Temperatur umgerechnet (Stundenvorhersage der Wetter-Entität,
+  sonst der Tagesmittelwert). Werte ohne Temperatur bleiben unverändert.
+- Mit einem Außentemperatur-Sensor mit Langzeitstatistik werden die Temperaturen der letzten 12 Wochen einmal gelesen, die Korrektur
+  kann sofort beginnen; ohne ihn lernt der Wächter die Temperatur ab jetzt (etwa zwei Wochen).
+- Das Attribut `weather` von **Typischer Bezug jetzt (Prognose)** zeigt, was gelernt ist: Steigungen, verwendete Tage, Güte (`r2`).
+
+Grenzen: Das Modell beschreibt den **Netzbezug**. An einem sonnigen Tag senkt die Solaranlage den Bezug; ein heißer, sonniger Tag kann
+daher weniger Kühllast zeigen als ein heißer, bewölkter. Die Solarprognose als weiterer Eingang ist geplant. Die Korrektur ist ein
+Tagesmittel, kein Tagesverlauf der Heizung. Mit Wallbox bleibt das Auto aus der Berechnung (Haus ohne Wallbox), sobald der Wächter
+es live misst; der erste Import aus der Statistik enthält das Auto noch.
+
 ---
 
 ## 3. Geräte – Anhang: Was gehört zur Integration, was stellen Sie selbst bereit?

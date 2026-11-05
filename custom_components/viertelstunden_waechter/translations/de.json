@@ -36,7 +36,9 @@
           "notify_services": "Benachrichtigungsdienste",
           "startup_mode": "Betriebsart nach Neustart",
           "mains_voltage": "Netzspannung",
-          "ai_task_entity": "KI-Aufgabe für den Erklärer"
+          "ai_task_entity": "KI-Aufgabe für den Erklärer",
+          "weather_entity": "Wetter-Entität für die Prognose",
+          "outdoor_temp_entity": "Außentemperatur-Sensor"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
@@ -44,7 +46,9 @@
           "notify_services": "Optional, mit Komma getrennt, z. B. notify.mobile_app_handy. Für den Fall, dass die Grenze nicht zu halten ist.",
           "startup_mode": "Wiederherstellen = die Betriebsart von vor dem Neustart.",
           "mains_voltage": "Spannung einer Phase (230 V in Europa). Damit werden Ampere in Kilowatt umgerechnet.",
-          "ai_task_entity": "Optional: die KI-Aufgabe (Einstellungen > Geräte > KI-Aufgaben), die der Erklärer benutzt. Sie wählen das Modell; der Wächter hat keinen eigenen Schlüssel."
+          "ai_task_entity": "Optional: die KI-Aufgabe (Einstellungen > Geräte > KI-Aufgaben), die der Erklärer benutzt. Sie wählen das Modell; der Wächter hat keinen eigenen Schlüssel.",
+          "weather_entity": "Optional: eine Wetter-Entität. Damit folgt die Lastprognose der erwarteten Außentemperatur (Heizen im Winter, Klimaanlage im Sommer). Ohne sie ändert sich nichts.",
+          "outdoor_temp_entity": "Optional: ein Außentemperatur-Sensor. Genauer als die Wetter-Entität zum Lernen; mit seinem Verlauf kann die Korrektur sofort statt erst nach einigen Wochen beginnen."
         }
       }
     }
@@ -205,6 +209,9 @@
       },
       "ai_explainer": {
         "name": "KI-Erklärer"
+      },
+      "weather_enabled": {
+        "name": "Wetterkorrektur der Prognose"
       }
     }
   },

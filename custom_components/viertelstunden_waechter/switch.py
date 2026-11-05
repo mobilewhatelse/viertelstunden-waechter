@@ -18,6 +18,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         FeatureSwitch(w, "notify_intervention", "notify_intervention", "mdi:bell-ring"),
         FeatureSwitch(w, "costs_enabled", "costs_enabled", "mdi:currency-eur"),
         FeatureSwitch(w, "forecast_enabled", "forecast_enabled", "mdi:chart-timeline-variant"),
+        FeatureSwitch(w, "weather_enabled", "weather_enabled", "mdi:weather-partly-cloudy"),
         OffByDefaultSwitch(w, "predictive", "predictive", "mdi:crystal-ball"),
         OffByDefaultSwitch(w, "battery_reserve", "battery_reserve", "mdi:battery-lock"),
         ExecuteSwitch(w, "ai_explainer", "ai_explainer", "mdi:robot-outline"),

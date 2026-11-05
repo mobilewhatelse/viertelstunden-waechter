@@ -22,12 +22,14 @@ from .const import (
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
-    CONF_AI_TASK, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
+    CONF_AI_TASK, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
 from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
 from .export import days_csv, quarters_csv
-from .forecast import LoadModel, combine, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile
+from .forecast import (
+    MAX_PLAUSIBLE_KW, LoadModel, WeatherCurve, combine, fit_curve, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
+)
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
 from .report import week_label, week_report
@@ -113,6 +115,17 @@ class Waechter:
         self.model = LoadModel()         # house without the wallbox (all of it without a wallbox entry)
         self.wb_model = LoadModel()      # the wallbox alone
         self.forecast: dict[str, Any] = {}
+        # weather correction of the house forecast (needs a temperature; the switch is on by default)
+        self.weather_enabled = True
+        self.curve = WeatherCurve()
+        self.curve_info: dict[str, Any] = {"days": 0}
+        self.days: dict[str, list[float]] = {}   # "YYYY-MM-DD" -> [sum kW, quarters, sum temperature, quarters with temperature]
+        self._wx_hourly: dict[datetime, float] = {}  # expected outdoor temperature (deg C) per local hour
+        self._wx_daily: dict[str, float] = {}        # ... per local day, when the entity has no hourly forecast
+        self._wx_at: datetime | None = None
+        self._wx_fetching = False
+        self._curve_at: datetime | None = None
+        self._days_bootstrapped = False
         self._wbq: dict[str, Any] = {"q": None, "kwh": 0.0, "t": None}  # wallbox energy of the running quarter hour
         self._wb_last: tuple[datetime, float] | None = None              # (start, kW) of the last finished quarter
         self._wb_kw_now = 0.0
@@ -159,6 +172,8 @@ class Waechter:
         model_data = await self._model_store.async_load() or {}
         self.model = LoadModel.from_dict(model_data)
         self.wb_model = LoadModel.from_dict(model_data.get("wallbox") or {})
+        self.days = {k: [float(x) for x in v] for k, v in (model_data.get("days") or {}).items() if isinstance(v, list) and len(v) == 4}
+        self._days_bootstrapped = bool(model_data.get("days_bootstrapped"))
         self.quarters = (await self._quarters_store.async_load() or {}).get("rows", [])
         self.explanation = data.get("explanation", {})
         self._ai_calls = data.get("ai_calls", {})
@@ -287,7 +302,8 @@ class Waechter:
             self.guard.real_effect = execute
             reserve, info = 0.0, None
             if self.predictive and self.forecast_enabled and self.mode != MODE_OFF:
-                reserve, info = reserve_kw(self._view_now(), now, self.effective_limit(now) - self.margin_kw)
+                reserve, info = reserve_kw(self._view_now(), now, self.effective_limit(now) - self.margin_kw,
+                                           temp=self._temp_at(now), curve=self.curve if self.weather_enabled else None)
             acts = self.guard.step(
                 now,
                 max(0.0, grid) if grid is not None else None,
@@ -439,12 +455,15 @@ class Waechter:
         total = unguarded_kw if unguarded_kw is not None else kw
         wb_kw = self._wb_last[1] if self._wb_last is not None and self._wb_last[0] == start else None
         if self.forecast_enabled:  # learn what the load would be without the guard
+            temp = self._temp_now() if self.weather_enabled else None
             if self._has_wallbox() and wb_kw is not None:
                 house = max(0.0, kw - wb_kw)          # measured import minus measured wallbox
-                self.model.add(start, house)
+                self.model.add(start, house, temp)
                 self.wb_model.add(start, max(0.0, total - house))  # the wallbox, including what the guard held back
+                self._day_add(start, house, temp)
             else:
-                self.model.add(start, total)
+                self.model.add(start, total, temp)
+                self._day_add(start, total, temp)
             self._model_store.async_delay_save(self._model_data, 120)
         self.quarters.append([start.isoformat(timespec="minutes"), round(kw, 3),
                               round(total, 3), round(wb_kw, 3) if wb_kw is not None else None])
@@ -461,7 +480,116 @@ class Waechter:
     # ---------- load forecast ----------
 
     def _model_data(self) -> dict[str, Any]:
-        return {**self.model.to_dict(), "wallbox": self.wb_model.to_dict(), "bootstrapped": self._bootstrapped}
+        return {**self.model.to_dict(), "wallbox": self.wb_model.to_dict(), "bootstrapped": self._bootstrapped,
+                "days": {k: [round(x, 3) for x in v] for k, v in self.days.items()}, "days_bootstrapped": self._days_bootstrapped}
+
+    # ---------- weather correction ----------
+
+    @staticmethod
+    def _to_celsius(value: float | None, unit: str | None) -> float | None:
+        if value is None:
+            return None
+        u = (unit or "").replace("\u00b0", "").strip().upper()
+        c = (value - 32.0) * 5.0 / 9.0 if u == "F" else value - 273.15 if u == "K" else value
+        return round(c, 1) if -60.0 <= c <= 60.0 else None
+
+    def _temp_of(self, eid: str | None) -> float | None:
+        st = self._state(eid)
+        if st is None:
+            return None
+        try:
+            if eid and eid.startswith("weather."):
+                return self._to_celsius(float(st.attributes.get("temperature")), st.attributes.get("temperature_unit"))
+            return self._to_celsius(float(st.state), st.attributes.get("unit_of_measurement"))
+        except (TypeError, ValueError):
+            return None
+
+    def _temp_now(self) -> float | None:
+        """Outdoor temperature now: the sensor if there is one, else the weather entity."""
+        t = self._temp_of(self.cfg.get(CONF_OUTDOOR_TEMP))
+        return t if t is not None else self._temp_of(self.cfg.get(CONF_WEATHER))
+
+    def _temp_at(self, when: datetime) -> float | None:
+        """Expected outdoor temperature (deg C) in the quarter hour `when`, None if the forecast does not reach it."""
+        if not self.weather_enabled:
+            return None
+        v = self._wx_hourly.get(when.replace(minute=0, second=0, microsecond=0))
+        return v if v is not None else self._wx_daily.get(when.strftime("%Y-%m-%d"))
+
+    def _wx_args(self) -> dict[str, Any]:
+        """Keyword arguments for `LoadModel.horizon` / `reserve_kw`: empty = no correction (no switch, no curve)."""
+        if not self.weather_enabled or not self.curve.active:
+            return {}
+        return {"temp_at": self._temp_at, "curve": self.curve}
+
+    def _day_add(self, start: datetime, kw: float, temp: float | None) -> None:
+        d = self.days.setdefault(start.strftime("%Y-%m-%d"), [0.0, 0, 0.0, 0])
+        d[0] += kw
+        d[1] += 1
+        if temp is not None:
+            d[2] += temp
+            d[3] += 1
+        for k in sorted(self.days)[:-150]:
+            del self.days[k]
+
+    def _refit_curve(self, now: datetime) -> None:
+        if self._curve_at is not None and (now - self._curve_at) < timedelta(hours=1):
+            return
+        self._curve_at = now
+        today = now.strftime("%Y-%m-%d")
+        rows = []
+        for k, v in self.days.items():
+            if k != today and v[1] >= 80 and v[3] >= 80:  # whole days with load and temperature
+                rows.append((datetime.strptime(k, "%Y-%m-%d").weekday(), v[0] / v[1], v[2] / v[3]))
+        self.curve, self.curve_info = fit_curve(rows)
+
+    def _maybe_fetch_weather(self, now: datetime) -> None:
+        eid = self.cfg.get(CONF_WEATHER)
+        if not eid or not self.weather_enabled or self._wx_fetching:
+            return
+        if self._wx_at is not None and (now - self._wx_at) < timedelta(minutes=30):
+            return
+        self._wx_fetching = True
+        self.entry.async_create_background_task(self.hass, self._fetch_weather(eid), f"{DOMAIN} weather")
+
+    async def _fetch_weather(self, eid: str) -> None:
+        try:
+            st = self.hass.states.get(eid)
+            unit = st.attributes.get("temperature_unit") if st else None
+            for kind in ("hourly", "daily"):
+                try:
+                    resp = await self.hass.services.async_call(
+                        "weather", "get_forecasts", {"entity_id": eid, "type": kind}, blocking=True, return_response=True)
+                except Exception:  # noqa: BLE001 - this weather entity may not offer this kind
+                    continue
+                rows = ((resp or {}).get(eid) or {}).get("forecast") or []
+                hours: dict[datetime, float] = {}
+                days: dict[str, float] = {}
+                for row in rows:
+                    when = dt_util.parse_datetime(str(row.get("datetime")))
+                    temp = row.get("temperature")
+                    if when is None or temp is None:
+                        continue
+                    when = dt_util.as_local(when)
+                    if kind == "hourly":
+                        t = self._to_celsius(float(temp), unit)
+                        if t is not None:
+                            hours[when.replace(minute=0, second=0, microsecond=0)] = t
+                    else:
+                        low = row.get("templow")
+                        mean = (float(temp) + float(low)) / 2.0 if low is not None else float(temp)
+                        t = self._to_celsius(mean, unit)
+                        if t is not None:
+                            days[when.strftime("%Y-%m-%d")] = t
+                if hours or days:
+                    self._wx_hourly, self._wx_daily = hours, days
+                    break
+        except Exception as err:  # noqa: BLE001 - the weather is optional, the guard must not depend on it
+            _LOGGER.debug("Weather forecast not available: %s", err)
+        finally:
+            self._wx_at = dt_util.now()
+            self._wx_fetching = False
+            self._forecast_at = None
 
     def _update_forecast(self, now: datetime) -> None:
         if not self.forecast_enabled:
@@ -473,7 +601,9 @@ class Waechter:
         target = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
         car = self._car_may_charge()
         view = self._view_all() if car else self.model
-        series = view.horizon(now, 24)
+        self._refit_curve(now)
+        self._maybe_fetch_weather(now)
+        series = view.horizon(now, 24, **self._wx_args())
         highs = [q["high"] for q in series if q["high"] is not None]
         self.forecast = {
             "target": target,
@@ -483,19 +613,38 @@ class Waechter:
             "hours": hourly(series),
             "profile": weekly_profile(self._view_all()),
             "vehicle_included": car,
+            "weather": {
+                "enabled": self.weather_enabled,
+                "configured": bool(self.cfg.get(CONF_WEATHER) or self.cfg.get(CONF_OUTDOOR_TEMP)),
+                "active": bool(self._wx_args()) and any(self._temp_at(q["t"]) is not None for q in series),
+                "temperature_now": self._temp_now(),
+                "heat_kw_per_k": self.curve.heat_kw_per_k,
+                "cool_kw_per_k": self.curve.cool_kw_per_k,
+                "days": self.curve_info.get("days", 0),
+                "days_recorded": len(self.days),
+                "days_from_history": self._days_bootstrapped,
+                "r2": self.curve_info.get("r2", 0.0),
+                "forecast_hours": len(self._wx_hourly) or len(self._wx_daily) * 24,
+            },
             "samples": self.model.samples,
             "slots": self.model.slots_with_data,
         }
 
     def _maybe_bootstrap(self) -> None:
-        """Once: fill the model from the hourly statistics of the grid import counter (lower bounds)."""
-        if (not self.forecast_enabled or self._bootstrapped or self._bootstrapping or self._bootstrap_failed
+        """Once: fill the model from the hourly statistics of the grid import counter (lower bounds). With an outdoor
+        temperature sensor the temperatures of that time and the daily records for the weather curve come along; an
+        installation that was filled before gets only the daily records."""
+        if (not self.forecast_enabled or self._bootstrapping or self._bootstrap_failed
                 or not self.cfg.get(CONF_GRID_ENERGY)):
             return
+        need_days = not self._days_bootstrapped and self.weather_enabled and bool(self.cfg.get(CONF_OUTDOOR_TEMP))
+        if self._bootstrapped and not need_days:
+            return
         self._bootstrapping = True
-        self.entry.async_create_background_task(self.hass, self._bootstrap(), f"{DOMAIN} history")
+        self.entry.async_create_background_task(self.hass, self._bootstrap(not self._bootstrapped, need_days),
+                                                f"{DOMAIN} history")
 
-    async def _bootstrap(self) -> None:
+    async def _bootstrap(self, need_model: bool = True, need_days: bool = False) -> None:
         try:
             from homeassistant.components.recorder import get_instance
             from homeassistant.components.recorder.statistics import statistics_during_period
@@ -505,22 +654,55 @@ class Waechter:
             unit = ((st.attributes.get("unit_of_measurement") if st else None) or "kWh").strip()
             factor = {"Wh": 0.001, "kWh": 1.0, "MWh": 1000.0}.get(unit, 1.0)
             end = dt_util.now()
-            stats = await get_instance(self.hass).async_add_executor_job(
-                statistics_during_period, self.hass, end - timedelta(days=84), end, {eid}, "hour", None, {"change"}
+            start = end - timedelta(days=84)
+            recorder = get_instance(self.hass)
+            stats = await recorder.async_add_executor_job(
+                statistics_during_period, self.hass, start, end, {eid}, "hour", None, {"change"}
             )
+            temps: dict[float, float | None] = {}
+            outdoor = self.cfg.get(CONF_OUTDOOR_TEMP)
+            if outdoor and self.weather_enabled:
+                tst = self.hass.states.get(outdoor)
+                tunit = tst.attributes.get("unit_of_measurement") if tst else None
+                tstats = await recorder.async_add_executor_job(
+                    statistics_during_period, self.hass, start, end, {outdoor}, "hour", None, {"mean"}
+                )
+                for row in tstats.get(outdoor, []):
+                    temps[row["start"]] = self._to_celsius(row.get("mean"), tunit)
             fresh = LoadModel()
+            boot_days: dict[str, list[float]] = {}
             for row in stats.get(eid, []):
                 if row.get("change") is None:
                     continue
-                fresh.add_hourly(dt_util.as_local(dt_util.utc_from_timestamp(row["start"])), float(row["change"]) * factor)
-            for slot, values in self.model.slots.items():  # samples measured meanwhile are newer: keep them last
-                fresh.slots.setdefault(slot, []).extend(values)
-                del fresh.slots[slot][:-8]
-            self.model = fresh
-            self._bootstrapped = True
+                kw = float(row["change"]) * factor
+                t = temps.get(row["start"])
+                local = dt_util.as_local(dt_util.utc_from_timestamp(row["start"]))
+                if need_model:
+                    fresh.add_hourly(local, kw, t)
+                if 0.0 <= kw <= MAX_PLAUSIBLE_KW:
+                    d = boot_days.setdefault(local.strftime("%Y-%m-%d"), [0.0, 0, 0.0, 0])
+                    d[0] += kw * 4
+                    d[1] += 4
+                    if t is not None:
+                        d[2] += t * 4
+                        d[3] += 4
+            if need_model:
+                for slot, values in self.model.slots.items():  # samples measured meanwhile are newer: keep them last
+                    fresh.slots.setdefault(slot, []).extend(values)
+                    fresh.temps.setdefault(slot, []).extend(self.model.temps.get(slot) or [None] * len(values))
+                    del fresh.slots[slot][:-8]
+                    del fresh.temps[slot][:-8]
+                self.model = fresh
+                self._bootstrapped = True
+            if outdoor and self.weather_enabled:
+                boot_days.update(self.days)  # days measured here are exact: they win
+                self.days = boot_days
+                self._days_bootstrapped = True
+                self._curve_at = None
             self._forecast_at = None  # recompute with the filled model right away
             await self._model_store.async_save(self._model_data())
-            _LOGGER.info("Load forecast: %s samples from the statistics", self.model.samples)
+            _LOGGER.info("Load forecast: %s samples from the statistics, %s days for the weather curve",
+                         self.model.samples, len(self.days))
         except Exception as err:  # noqa: BLE001 - the forecast is optional, the guard must not depend on it
             self._bootstrap_failed = True
             _LOGGER.warning("Load forecast: history could not be read: %s", err)
@@ -787,7 +969,7 @@ class Waechter:
         target = self._float(v.get(D_TARGET_ENTITY))
         target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
         hours = max(2, min(48, int((departure - now).total_seconds() // 3600) + 2))
-        series = self.model.horizon(now, hours)  # the house without the wallbox: the plan adds the car itself
+        series = self.model.horizon(now, hours, **self._wx_args())  # the house without the wallbox: the plan adds the car itself
         solar = await self._solar_kw(now)
         target_kw = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
         plan = make_plan(
