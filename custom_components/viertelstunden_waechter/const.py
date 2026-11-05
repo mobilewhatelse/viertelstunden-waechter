@@ -15,10 +15,13 @@ CONF_CONDITION = "condition_entity"     # optional: guard only works while this 
 CONF_LOCK = "lock_entity"               # optional: "active" is refused while this is on (e.g. an older guard)
 CONF_NOTIFY = "notify_services"         # optional: comma-separated notify services
 CONF_STARTUP_MODE = "startup_mode"
+CONF_MAX_AGE = "max_reading_age_s"      # a grid reading older than this counts as missing (0 = never)
+DEFAULT_MAX_AGE_S = 120
 CONF_VOLTAGE = "mains_voltage"          # voltage of one phase, default 230 V
 CONF_AI_TASK = "ai_task_entity"         # optional: AI task entity for the explainer
 CONF_WEATHER = "weather_entity"         # optional: weather entity (forecast of the outdoor temperature)
 CONF_OUTDOOR_TEMP = "outdoor_temp_entity"  # optional: outdoor temperature sensor (more exact for learning, history)
+CONF_PLANNER = "planner_entry"                # optional: the car planner (a config entry), its charge plan sensors are found automatically
 CONF_CHARGE_PLAN = "charge_plan_entities"  # optional: charge plan sensors of a car planner (attributes windows, departure)
 CONF_DEVICES = "devices"
 

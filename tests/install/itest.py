@@ -223,6 +223,26 @@ def main():
     cp1 = wait_for(car_plan_used, 120)
     log(bool(cp1) and cp1.get("windows") == 1 and cp1.get("configured") == 1, "Mit Ladeplan-Verbindung wird der Plan gelesen (1 Fenster)", str(cp1))
 
+    # ---------- Alterskontrolle des Messwerts ----------
+    st_id = "sensor.viertelstunden_wachter_status"
+
+    def set_grid(sensor, max_age):
+        s1, d1 = api("POST", "/api/config/config_entries/options/flow", {"handler": entry_id})
+        s2, d2 = api("POST", f"/api/config/config_entries/options/flow/{d1['flow_id']}",
+                     {"grid_power": sensor, "mains_voltage": 230, "startup_mode": "restore", "max_reading_age_s": max_age})
+        return d2.get("type") == "create_entry"
+
+    a0 = (state(st_id) or {}).get("attributes", {})
+    log(a0.get("grid_stale") is False and isinstance(a0.get("grid_age_s"), (int, float)), "Messwert frisch: grid_stale false und Alter wird gemeldet", f"{a0.get('grid_stale')} / {a0.get('grid_age_s')}")
+    log(set_grid("sensor.netzbezug_still", 30), "Alterskontrolle: Sensor, der nie neu schreibt, und Höchstalter 30 s eingestellt")
+    ok = wait_for(lambda: (state(st_id) or {}).get("attributes", {}).get("grid_stale") is True, 120)
+    log(bool(ok), "Messwert aelter als 30 s: gilt als fehlend (grid_stale)", str((state(st_id) or {}).get("attributes", {}).get("grid_age_s")))
+    ok = wait_for(lambda: (state(st_id) or {}).get("state") == "no_data", 240)
+    log(bool(ok), "nach 90 s ohne frischen Messwert: Status keine Daten, es wird nichts geschaltet", str((state(st_id) or {}).get("state")))
+    log(set_grid("sensor.netzbezug", 120), "wieder der Sensor, der jede Minute schreibt, Höchstalter 120 s")
+    ok = wait_for(lambda: (state(st_id) or {}).get("attributes", {}).get("grid_stale") is False and (state(st_id) or {}).get("state") != "no_data", 240)
+    log(bool(ok), "frischer Messwert: normal weiter", str((state(st_id) or {}).get("state")))
+
     log(val("select.viertelstunden_wachter_betriebsart") == "observe", "Neue Installation startet im Beobachtungsmodus", str(val("select.viertelstunden_wachter_betriebsart")))
     defaults = {
         "switch.viertelstunden_wachter_vorausschauend_drosseln_nach_prognose": "off",

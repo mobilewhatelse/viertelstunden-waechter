@@ -54,6 +54,13 @@ Safety:
 
 ## Grid measurement: what the guard needs
 
+**How fresh must the reading be?** The guard keeps the *running* quarter hour below the limit, so it needs a new value every few
+seconds (every 10 to 30 s is fine). A sensor that only updates every 15 minutes or once an hour cannot be used for control: the guard
+would see the quarter hour only when it is over. Therefore a reading that was not written for longer than the **maximum age**
+(setting, default 2 minutes, 0 = off) counts as missing: no interventions, everything is given back after 90 seconds, status *no data*.
+The attributes `grid_age_s` and `grid_stale` of the status sensor show it. Without a fast meter the guard still shows peaks, costs
+and the forecast afterwards (observe mode); then use the car planner for the control of the charging.
+
 Two sensors, from any integration (no HACS needed for them):
 
 | Sensor | Unit | Required | Note |
@@ -444,8 +451,9 @@ correction is a mean over the day, not a daily curve of the heating. With a wall
 
 #### Charge plan of a car planner (optional)
 
-In the general settings you can choose one or more **charge plan sensors** of a car planner (for example *Plugwhen*, which is
-suggested automatically if it is installed). They need the attributes `windows` (start, end, `energy_kwh`, `peak_kw`) and
+In the general settings you simply **choose the car planner** (for example *Plugwhen*; it is suggested if exactly one is installed):
+the guard then finds the charge plans of all its vehicles by itself, also vehicles added later. Another planner can be connected
+with the field *Other charge plan sensors*. A plan sensor needs the attributes `windows` (start, end, `energy_kwh`, `peak_kw`) and
 `departure`, and a state of `planned`, `not_needed` or `infeasible`.
 
 - Until the departure the forecast is the house alone **plus what the plan says the car takes** in each quarter hour (average

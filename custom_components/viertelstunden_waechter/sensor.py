@@ -64,6 +64,8 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "room_kw": w.guard.values.get("room_kw"),
             "forecast_reserve_kw": w.guard.values.get("reserve_kw"),
             "target_kw": w.guard.values.get("target_kw"),
+            "grid_age_s": w.grid_age,
+            "grid_stale": w.grid_stale,
             "configuration": w.configuration(),
         }
 

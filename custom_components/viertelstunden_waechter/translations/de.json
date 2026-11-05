@@ -39,7 +39,9 @@
           "ai_task_entity": "KI-Aufgabe für den Erklärer",
           "weather_entity": "Wetter-Entität für die Prognose",
           "outdoor_temp_entity": "Außentemperatur-Sensor",
-          "charge_plan_entities": "Ladeplan des Auto-Planers"
+          "charge_plan_entities": "Andere Ladeplan-Sensoren",
+          "planner_entry": "Auto-Planer",
+          "max_reading_age_s": "Höchstalter des Netzbezug-Messwerts"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
@@ -50,7 +52,9 @@
           "ai_task_entity": "Optional: die KI-Aufgabe (Einstellungen > Geräte > KI-Aufgaben), die der Erklärer benutzt. Sie wählen das Modell; der Wächter hat keinen eigenen Schlüssel.",
           "weather_entity": "Optional: eine Wetter-Entität. Damit folgt die Lastprognose der erwarteten Außentemperatur (Heizen im Winter, Klimaanlage im Sommer). Ohne sie ändert sich nichts.",
           "outdoor_temp_entity": "Optional: ein Außentemperatur-Sensor. Genauer als die Wetter-Entität zum Lernen; mit seinem Verlauf kann die Korrektur sofort statt erst nach einigen Wochen beginnen.",
-          "charge_plan_entities": "Optional: der Ladeplan-Sensor (oder mehrere) eines Auto-Planers (Attribute windows und departure), zum Beispiel Plugwhen. Damit weiß die Prognose bis zur Abfahrt, wann das Auto wirklich lädt, statt das gelernte Wallbox-Muster zu nehmen. Ohne ihn ändert sich nichts. Wird automatisch vorgeschlagen, wenn Plugwhen installiert ist."
+          "charge_plan_entities": "Nur für eine andere Quelle: Ladeplan-Sensoren von Hand (Attribute windows und departure). Nicht nötig, wenn Sie den Auto-Planer gewählt haben.",
+          "planner_entry": "Wählen Sie den Auto-Planer (zum Beispiel Plugwhen), dann findet der Wächter die Ladepläne aller seiner Fahrzeuge selbst, auch später hinzugefügte. Bis zur Abfahrt weiß die Prognose dann, wann jedes Auto wirklich lädt, statt das gelernte Wallbox-Muster zu nehmen. Ohne ihn ändert sich nichts. Wird automatisch vorgeschlagen, wenn genau einer installiert ist.",
+          "max_reading_age_s": "Ein Messwert, der länger als das nicht geschrieben wurde, gilt als fehlend: Der Wächter greift nicht ein und gibt nach 90 Sekunden alles zurück. Schützt vor veralteten Werten (ein Sensor, der nur alle paar Minuten aktualisiert, taugt nicht zum Regeln). 0 = nie."
         }
       }
     }

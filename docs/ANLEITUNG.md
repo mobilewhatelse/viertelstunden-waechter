@@ -11,6 +11,13 @@ Monats. Ein Abend mit Auto (11 kW) und Backrohr kann den Preis für den ganzen M
 
 ## 1. Was der Wächter braucht: die Messung
 
+**Wie frisch muss der Messwert sein?** Der Wächter hält die *laufende* Viertelstunde unter der Grenze, braucht also alle paar Sekunden einen
+neuen Wert (alle 10 bis 30 s ist gut). Ein Sensor, der nur alle 15 Minuten oder stündlich aktualisiert, taugt nicht zum Regeln: Der Wächter
+sähe die Viertelstunde erst, wenn sie vorbei ist. Deshalb gilt ein Messwert, der länger als das **Höchstalter** (Einstellung, Standard
+2 Minuten, 0 = aus) nicht geschrieben wurde, als fehlend: kein Eingriff, nach 90 Sekunden wird alles zurückgegeben, Status *keine Daten*.
+Die Attribute `grid_age_s` und `grid_stale` des Status-Sensors zeigen es an. Ohne schnellen Zähler zeigt der Wächter Spitzen, Kosten und
+Prognose im Nachhinein (Beobachtungsmodus); für das Steuern des Ladens nehmen Sie dann den Auto-Planer.
+
 Zwei Sensoren in Home Assistant, egal aus welcher Integration (dafür ist **kein HACS** nötig):
 
 | Sensor | Einheit | Pflicht | Hinweis |
@@ -297,9 +304,10 @@ es live misst; der erste Import aus der Statistik enthält das Auto noch.
 
 ### Ladeplan eines Auto-Planers (optional)
 
-In den allgemeinen Einstellungen können Sie einen oder mehrere **Ladeplan-Sensoren** eines Auto-Planers wählen (zum Beispiel *Plugwhen*,
-das automatisch vorgeschlagen wird, wenn es installiert ist). Sie brauchen die Attribute `windows` (Beginn, Ende, `energy_kwh`, `peak_kw`)
-und `departure` sowie den Zustand `planned`, `not_needed` oder `infeasible`.
+In den allgemeinen Einstellungen wählen Sie einfach **den Auto-Planer** aus (zum Beispiel *Plugwhen*; er wird vorgeschlagen, wenn genau einer
+installiert ist): Der Wächter findet dann die Ladepläne aller seiner Fahrzeuge selbst, auch später hinzugefügte. Einen anderen Planer
+binden Sie über das Feld *Andere Ladeplan-Sensoren* an. Ein Ladeplan-Sensor braucht die Attribute `windows` (Beginn, Ende, `energy_kwh`,
+`peak_kw`) und `departure` sowie den Zustand `planned`, `not_needed` oder `infeasible`.
 
 - Bis zur Abfahrt ist die Prognose das Haus allein **plus das, was der Plan für das Auto in dieser Viertelstunde vorsieht** (Durchschnitt für
   *typisch*, Spitze für *hoch*). Das gelernte Wallbox-Muster zählt dort nicht: Der Plan weiß besser, wann das Auto wirklich lädt.

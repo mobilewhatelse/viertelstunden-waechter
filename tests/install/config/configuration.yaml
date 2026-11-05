@@ -73,7 +73,13 @@ template:
         unit_of_measurement: W
         device_class: power
         state_class: measurement
-        state: "{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) }}"
+        state: "{% set _ = now() %}{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) }}"
+      - name: Netzbezug still
+        unique_id: netzbezug_still
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "500"
       - name: Akku Ladestand
         unique_id: akku_soc
         unit_of_measurement: "%"

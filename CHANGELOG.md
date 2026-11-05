@@ -10,9 +10,13 @@ Format: newest first. German version below each English block is a short summary
   sample to the expected temperature. Temperature history of the sensor is read once. Attribute `weather` on the forecast
   sensor. Also used by *Throttle ahead* and the charge plan. *Deutsch:* Wetterkorrektur der Lastprognose (Heizen im Winter,
   Klimaanlage im Sommer), Schalter standardmäßig an, wirkt nur mit Wetter-Entität oder Außentemperatur-Sensor.
-- **Charge plan of a car planner as an optional input** (general settings, suggested automatically for Plugwhen): until the
-  departure the forecast is the house plus the planned car load instead of the learned wallbox pattern. Without a plan sensor
-  nothing changes. Attribute `car_plan` on the forecast sensor.
+- **Charge plan of a car planner as an optional input** (general settings): you choose the car planner (for example Plugwhen) and the
+  guard finds the charge plans of all its vehicles by itself; other sensors can be named by hand. Until the departure the forecast is
+  the house plus the planned car load instead of the learned wallbox pattern. Without a plan nothing changes. Attribute `car_plan`
+  on the forecast sensor. Tested with both integrations in one Home Assistant.
+- **Maximum age of the grid reading** (setting, default 120 s, 0 = off): a reading that was not written for longer counts as
+  missing (no interventions, everything given back after 90 s, status *no data*). Protects against sensors that only update every
+  few minutes. Attributes `grid_age_s` and `grid_stale` on the status sensor. *Deutsch:* Höchstalter des Netzbezug-Messwerts.
 - Dashboard (view *Statistics and forecast*): new card *Weather correction* with the switch and what is learned (temperature, hours of forecast, days, slopes, fit).
 - Roadmap (documentation only): a smarter house forecast (weather, temperature, solar forecast) is noted as planned.
 - Documentation only: README status and installation text updated (now in the HACS default list), new section *Support and

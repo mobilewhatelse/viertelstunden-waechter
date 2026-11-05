@@ -22,7 +22,7 @@ from .const import (
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
-    CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
+    CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
 from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
@@ -115,6 +115,8 @@ class Waechter:
         self.model = LoadModel()         # house without the wallbox (all of it without a wallbox entry)
         self.wb_model = LoadModel()      # the wallbox alone
         self.forecast: dict[str, Any] = {}
+        self.grid_age: float | None = None   # seconds since the grid reading was written
+        self.grid_stale = False              # True: the reading is older than allowed and counts as missing
         # weather correction of the house forecast (needs a temperature; the switch is on by default)
         self.weather_enabled = True
         self.curve = WeatherCurve()
@@ -240,6 +242,24 @@ class Waechter:
         unit = (self.hass.states.get(eid).attributes.get("unit_of_measurement") or "kWh").strip()
         return v * {"Wh": 0.001, "kWh": 1.0, "MWh": 1000.0}.get(unit, 1.0)
 
+    def _grid_reading(self, now: datetime) -> float | None:
+        """The grid import in kW, or None if it is missing or too old. A value that was not written for longer than the
+        allowed age (default 2 minutes) is not a measurement any more: the guard then acts as without data (it gives
+        everything back after 90 seconds) instead of steering by a stale number."""
+        eid = self.cfg.get(CONF_GRID_POWER)
+        grid = self._power_kw(eid)
+        st = self._state(eid)
+        self.grid_age, self.grid_stale = None, False
+        if grid is None or st is None:
+            return grid
+        stamp = max(st.last_updated, getattr(st, "last_reported", st.last_updated))
+        self.grid_age = round(max(0.0, (now - stamp).total_seconds()), 1)
+        max_age = float(self.cfg.get(CONF_MAX_AGE, DEFAULT_MAX_AGE_S))
+        if max_age > 0 and self.grid_age > max_age:
+            self.grid_stale = True
+            return None
+        return grid
+
     def _is_on(self, eid: str | None, unknown: bool) -> bool:
         if not eid:
             return unknown
@@ -298,7 +318,7 @@ class Waechter:
                 self.executing = execute
             self._wb_accumulate(now, readings)
             needed = self._is_on(self.cfg.get(CONF_CONDITION), True)
-            grid = self._power_kw(self.cfg.get(CONF_GRID_POWER))
+            grid = self._grid_reading(now)
             self.guard.real_effect = execute
             reserve, info = 0.0, None
             if self.predictive and self.forecast_enabled and self.mode != MODE_OFF:
@@ -640,8 +660,16 @@ class Waechter:
         }
 
     def _plan_entities(self) -> list[str]:
+        """Charge plan sensors: those of the chosen car planner (all vehicles, found by their unique id) plus entities named by hand."""
         v = self.cfg.get(CONF_CHARGE_PLAN) or []
-        return [x for x in ([v] if isinstance(v, str) else list(v)) if x]
+        found = [x for x in ([v] if isinstance(v, str) else list(v)) if x]
+        entry_id = self.cfg.get(CONF_PLANNER)
+        if entry_id:
+            from homeassistant.helpers import entity_registry as er
+
+            found += sorted(e.entity_id for e in er.async_entries_for_config_entry(er.async_get(self.hass), entry_id)
+                            if e.domain == "sensor" and str(e.unique_id).endswith("_charge_plan"))
+        return list(dict.fromkeys(found))
 
     def _car_plan(self, now: datetime) -> tuple[list[dict[str, Any]], datetime] | None:
         """Planned car load from the charge plan sensors (optional): `(windows, last departure)` or None if no plan is
