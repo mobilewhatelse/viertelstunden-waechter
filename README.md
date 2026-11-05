@@ -441,6 +441,18 @@ day can show less cooling load than a hot and cloudy one; the solar forecast as 
 correction is a mean over the day, not a daily curve of the heating. With a wallbox the car is excluded from the fit
 (house without wallbox) once the guard measures it live; the first import from the statistics still contains the car.
 
+#### Charge plan of a car planner (optional)
+
+In the general settings you can choose one or more **charge plan sensors** of a car planner (for example *Plugwhen*, which is
+suggested automatically if it is installed). They need the attributes `windows` (start, end, `energy_kwh`, `peak_kw`) and
+`departure`, and a state of `planned`, `not_needed` or `infeasible`.
+
+- Until the departure the forecast is the house alone **plus what the plan says the car takes** in each quarter hour (average
+  for *typical*, peak for *high*). The learned wallbox pattern does not count there: the plan knows better when the car really charges.
+- A plan with no windows (*not needed*) means no car load until the departure. After the departure the usual view applies.
+- Several cars add up. The attribute `car_plan` of *Typical import now (forecast)* shows whether a plan is used.
+- **Without a plan sensor, or when it is unavailable or its state is something else, nothing changes.**
+
 #### Throttling ahead by the forecast (switch, default off)
 
 Normally the guard reacts when the running quarter hour heads above the target. With the switch **Throttle ahead using

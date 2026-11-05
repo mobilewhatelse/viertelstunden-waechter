@@ -82,3 +82,11 @@ template:
         unique_id: auto_soc
         unit_of_measurement: "%"
         state: "40"
+      - name: Test Ladeplan
+        unique_id: test_ladeplan
+        state: "planned"
+        attributes:
+          departure: "{{ (now() + timedelta(hours=10)).isoformat() }}"
+          windows: >
+            {% set s = now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=2) %}
+            {{ [{'start': s.isoformat(), 'end': (s + timedelta(hours=1)).isoformat(), 'energy_kwh': 8.0, 'peak_kw': 11.0}] }}

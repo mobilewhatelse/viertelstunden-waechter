@@ -20,7 +20,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_NOTIFY,
-    CONF_STARTUP_MODE, CONF_VOLTAGE, CONF_AI_TASK, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
+    CONF_STARTUP_MODE, CONF_VOLTAGE, CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
     D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
@@ -48,6 +48,14 @@ def _ent(domain: str | list[str], device_class: str | None = None) -> EntitySele
     return EntitySelector(EntitySelectorConfig(domain=domain))
 
 
+def find_charge_plans(hass) -> list[str]:
+    """Charge plan sensors of the car planner Plugwhen, if it is installed (found in the entity registry, nothing is imported)."""
+    from homeassistant.helpers import entity_registry as er
+
+    return sorted(e.entity_id for e in er.async_get(hass).entities.values()
+                  if e.platform == "plugwhen" and e.domain == "sensor" and str(e.unique_id).endswith("_charge_plan"))
+
+
 def _opt(key: str, d: dict[str, Any]) -> vol.Optional:
     return vol.Optional(key, description={"suggested_value": d.get(key)})
 
@@ -69,6 +77,7 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
         s[_opt(CONF_AI_TASK, d)] = _ent("ai_task")
         s[_opt(CONF_WEATHER, d)] = _ent("weather")
         s[_opt(CONF_OUTDOOR_TEMP, d)] = _ent("sensor", "temperature")
+        s[_opt(CONF_CHARGE_PLAN, d)] = EntitySelector(EntitySelectorConfig(domain="sensor", multiple=True))
         s[vol.Required(CONF_STARTUP_MODE, default=d.get(CONF_STARTUP_MODE, STARTUP_RESTORE))] = SelectSelector(
             SelectSelectorConfig(options=STARTUP_MODES, translation_key=CONF_STARTUP_MODE)
         )
@@ -208,6 +217,10 @@ class WaechterOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         current = {**self.config_entry.data, **self.config_entry.options}
+        if not current.get(CONF_CHARGE_PLAN):
+            found = find_charge_plans(self.hass)  # offered, not forced
+            if found:
+                current[CONF_CHARGE_PLAN] = found
         if user_input is not None:
             keep = {k: v for k, v in self.config_entry.options.items() if k in (CONF_LIMIT, CONF_MARGIN)}
             keep.update({k: v for k, v in user_input.items() if v not in (None, "")})

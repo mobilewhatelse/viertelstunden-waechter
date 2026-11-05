@@ -225,6 +225,51 @@ def combine(house: LoadModel, wallbox: LoadModel) -> LoadModel:
     return LoadModel(slots, temps)
 
 
+def parse_plan_windows(windows: Any, tz) -> list[dict[str, Any]]:
+    """Windows `{start, end, energy_kwh, peak_kw}` of a charge plan with real times; broken entries are skipped."""
+    out: list[dict[str, Any]] = []
+    if not isinstance(windows, list):
+        return out
+    for w in windows:
+        if not isinstance(w, dict):
+            continue
+        try:
+            start, end = datetime.fromisoformat(str(w["start"])), datetime.fromisoformat(str(w["end"]))
+            energy, peak = float(w.get("energy_kwh") or 0.0), float(w.get("peak_kw") or 0.0)
+        except (KeyError, TypeError, ValueError):
+            continue
+        start = start if start.tzinfo else start.replace(tzinfo=tz)
+        end = end if end.tzinfo else end.replace(tzinfo=tz)
+        if end <= start or (energy <= 0 and peak <= 0):
+            continue
+        hours = (end - start).total_seconds() / 3600.0
+        out.append({"start": start, "end": end, "avg_kw": energy / hours if energy > 0 else peak, "peak_kw": peak or energy / hours})
+    return out
+
+
+def apply_car_plan(house: list[dict[str, Any]], view: list[dict[str, Any]], windows: list[dict[str, Any]],
+                   until: datetime) -> list[dict[str, Any]]:
+    """Forecast series with the planned car load. Up to `until` (the departure) the forecast is the house alone plus what
+    the plan says the car takes in that quarter hour (average for `typical`, peak for `high`); the learned pattern of the
+    wallbox does not count there. After `until` the usual view stays. Quarter hours without house data stay unknown."""
+    out: list[dict[str, Any]] = []
+    for h, v in zip(house, view):
+        t = h["t"]
+        if t >= until:
+            out.append(v)
+            continue
+        if h["typical"] is None or h["high"] is None:
+            out.append(h)
+            continue
+        avg = peak = 0.0
+        for w in windows:
+            if w["start"] <= t < w["end"]:
+                avg += w["avg_kw"]
+                peak += w["peak_kw"]
+        out.append({**h, "typical": round(h["typical"] + avg, 3), "high": round(h["high"] + peak, 3)})
+    return out
+
+
 def reserve_window(windows: list[dict[str, Any]], now: datetime, lead_min: float) -> dict[str, Any] | None:
     """The risk window that is running or starts within `lead_min` minutes, else None."""
     for w in windows:

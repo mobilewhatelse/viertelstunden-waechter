@@ -207,6 +207,22 @@ def main():
         st = state(eid)
         return st["state"] if st else None
 
+    # ---------- Ladeplan eines Auto-Planers (optional) ----------
+    fc = "sensor.viertelstunden_wachter_typischer_bezug_jetzt_prognose"
+    cp0 = wait_for(lambda: ((state(fc) or {}).get("attributes", {}).get("car_plan") or None), 180) or {}  # the first forecast takes a moment
+    log(cp0.get("used") is False and cp0.get("configured") == 0, "Ohne Ladeplan-Verbindung aendert sich nichts (car_plan used = false)", str(cp0))
+    s_o, d_o = api("POST", "/api/config/config_entries/options/flow", {"handler": entry_id})
+    s_o2, d_o2 = api("POST", f"/api/config/config_entries/options/flow/{d_o['flow_id']}",
+                     {"grid_power": "sensor.netzbezug", "mains_voltage": 230, "startup_mode": "restore", "charge_plan_entities": ["sensor.test_ladeplan"]})
+    log(s_o == 200 and d_o2.get("type") == "create_entry", "Ladeplan-Sensor kann in den Einstellungen gewaehlt werden", f"{d_o.get('type')} / {d_o2.get('type')}")
+
+    def car_plan_used():
+        a = (state(fc) or {}).get("attributes", {}).get("car_plan", {})
+        return a if a.get("used") is True else None
+
+    cp1 = wait_for(car_plan_used, 120)
+    log(bool(cp1) and cp1.get("windows") == 1 and cp1.get("configured") == 1, "Mit Ladeplan-Verbindung wird der Plan gelesen (1 Fenster)", str(cp1))
+
     log(val("select.viertelstunden_wachter_betriebsart") == "observe", "Neue Installation startet im Beobachtungsmodus", str(val("select.viertelstunden_wachter_betriebsart")))
     defaults = {
         "switch.viertelstunden_wachter_vorausschauend_drosseln_nach_prognose": "off",

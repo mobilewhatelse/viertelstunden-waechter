@@ -10,6 +10,9 @@ Format: newest first. German version below each English block is a short summary
   sample to the expected temperature. Temperature history of the sensor is read once. Attribute `weather` on the forecast
   sensor. Also used by *Throttle ahead* and the charge plan. *Deutsch:* Wetterkorrektur der Lastprognose (Heizen im Winter,
   Klimaanlage im Sommer), Schalter standardmäßig an, wirkt nur mit Wetter-Entität oder Außentemperatur-Sensor.
+- **Charge plan of a car planner as an optional input** (general settings, suggested automatically for Plugwhen): until the
+  departure the forecast is the house plus the planned car load instead of the learned wallbox pattern. Without a plan sensor
+  nothing changes. Attribute `car_plan` on the forecast sensor.
 - Dashboard (view *Statistics and forecast*): new card *Weather correction* with the switch and what is learned (temperature, hours of forecast, days, slopes, fit).
 - Roadmap (documentation only): a smarter house forecast (weather, temperature, solar forecast) is noted as planned.
 - Documentation only: README status and installation text updated (now in the HACS default list), new section *Support and

@@ -294,6 +294,19 @@ daher weniger Kühllast zeigen als ein heißer, bewölkter. Die Solarprognose al
 Tagesmittel, kein Tagesverlauf der Heizung. Mit Wallbox bleibt das Auto aus der Berechnung (Haus ohne Wallbox), sobald der Wächter
 es live misst; der erste Import aus der Statistik enthält das Auto noch.
 
+### Ladeplan eines Auto-Planers (optional)
+
+In den allgemeinen Einstellungen können Sie einen oder mehrere **Ladeplan-Sensoren** eines Auto-Planers wählen (zum Beispiel *Plugwhen*,
+das automatisch vorgeschlagen wird, wenn es installiert ist). Sie brauchen die Attribute `windows` (Beginn, Ende, `energy_kwh`, `peak_kw`)
+und `departure` sowie den Zustand `planned`, `not_needed` oder `infeasible`.
+
+- Bis zur Abfahrt ist die Prognose das Haus allein **plus das, was der Plan für das Auto in dieser Viertelstunde vorsieht** (Durchschnitt für
+  *typisch*, Spitze für *hoch*). Das gelernte Wallbox-Muster zählt dort nicht: Der Plan weiß besser, wann das Auto wirklich lädt.
+- Ein Plan ohne Fenster (*nicht nötig*) heißt: keine Auto-Last bis zur Abfahrt. Nach der Abfahrt gilt wieder die übliche Sicht.
+- Mehrere Autos addieren sich. Das Attribut `car_plan` von **Typischer Bezug jetzt (Prognose)** zeigt, ob ein Plan benutzt wird.
+- **Ohne Ladeplan-Sensor, oder wenn er nicht verfügbar ist oder einen anderen Zustand hat, ändert sich nichts.**
+
+
 ---
 
 ## 3. Geräte – Anhang: Was gehört zur Integration, was stellen Sie selbst bereit?

@@ -38,7 +38,8 @@
           "mains_voltage": "Netzspannung",
           "ai_task_entity": "KI-Aufgabe für den Erklärer",
           "weather_entity": "Wetter-Entität für die Prognose",
-          "outdoor_temp_entity": "Außentemperatur-Sensor"
+          "outdoor_temp_entity": "Außentemperatur-Sensor",
+          "charge_plan_entities": "Ladeplan des Auto-Planers"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
@@ -48,7 +49,8 @@
           "mains_voltage": "Spannung einer Phase (230 V in Europa). Damit werden Ampere in Kilowatt umgerechnet.",
           "ai_task_entity": "Optional: die KI-Aufgabe (Einstellungen > Geräte > KI-Aufgaben), die der Erklärer benutzt. Sie wählen das Modell; der Wächter hat keinen eigenen Schlüssel.",
           "weather_entity": "Optional: eine Wetter-Entität. Damit folgt die Lastprognose der erwarteten Außentemperatur (Heizen im Winter, Klimaanlage im Sommer). Ohne sie ändert sich nichts.",
-          "outdoor_temp_entity": "Optional: ein Außentemperatur-Sensor. Genauer als die Wetter-Entität zum Lernen; mit seinem Verlauf kann die Korrektur sofort statt erst nach einigen Wochen beginnen."
+          "outdoor_temp_entity": "Optional: ein Außentemperatur-Sensor. Genauer als die Wetter-Entität zum Lernen; mit seinem Verlauf kann die Korrektur sofort statt erst nach einigen Wochen beginnen.",
+          "charge_plan_entities": "Optional: der Ladeplan-Sensor (oder mehrere) eines Auto-Planers (Attribute windows und departure), zum Beispiel Plugwhen. Damit weiß die Prognose bis zur Abfahrt, wann das Auto wirklich lädt, statt das gelernte Wallbox-Muster zu nehmen. Ohne ihn ändert sich nichts. Wird automatisch vorgeschlagen, wenn Plugwhen installiert ist."
         }
       }
     }

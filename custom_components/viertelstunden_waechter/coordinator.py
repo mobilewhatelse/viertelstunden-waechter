@@ -22,13 +22,13 @@ from .const import (
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
-    CONF_AI_TASK, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
+    CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_OUTDOOR_TEMP, CONF_WEATHER, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
 from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
 from .export import days_csv, quarters_csv
 from .forecast import (
-    MAX_PLAUSIBLE_KW, LoadModel, WeatherCurve, combine, fit_curve, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
+    MAX_PLAUSIBLE_KW, LoadModel, WeatherCurve, apply_car_plan, combine, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
 )
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
@@ -604,6 +604,9 @@ class Waechter:
         self._refit_curve(now)
         self._maybe_fetch_weather(now)
         series = view.horizon(now, 24, **self._wx_args())
+        plan = self._car_plan(now)
+        if plan is not None:  # a charge plan says when the car really charges: that replaces the learned wallbox pattern until departure
+            series = apply_car_plan(self.model.horizon(now, 24, **self._wx_args()), series, plan[0], plan[1])
         highs = [q["high"] for q in series if q["high"] is not None]
         self.forecast = {
             "target": target,
@@ -613,6 +616,12 @@ class Waechter:
             "hours": hourly(series),
             "profile": weekly_profile(self._view_all()),
             "vehicle_included": car,
+            "car_plan": {
+                "configured": len(self._plan_entities()),
+                "used": plan is not None,
+                "windows": len(plan[0]) if plan else 0,
+                "until": plan[1].isoformat() if plan else None,
+            },
             "weather": {
                 "enabled": self.weather_enabled,
                 "configured": bool(self.cfg.get(CONF_WEATHER) or self.cfg.get(CONF_OUTDOOR_TEMP)),
@@ -629,6 +638,27 @@ class Waechter:
             "samples": self.model.samples,
             "slots": self.model.slots_with_data,
         }
+
+    def _plan_entities(self) -> list[str]:
+        v = self.cfg.get(CONF_CHARGE_PLAN) or []
+        return [x for x in ([v] if isinstance(v, str) else list(v)) if x]
+
+    def _car_plan(self, now: datetime) -> tuple[list[dict[str, Any]], datetime] | None:
+        """Planned car load from the charge plan sensors (optional): `(windows, last departure)` or None if no plan is
+        configured or usable (then the forecast works as before). A plan counts while its state is planned, not_needed
+        or infeasible and its departure is ahead; several cars add up."""
+        windows: list[dict[str, Any]] = []
+        until: datetime | None = None
+        for eid in self._plan_entities():
+            st = self.hass.states.get(eid)
+            if st is None or st.state not in ("planned", "not_needed", "infeasible"):
+                continue
+            dep = dt_util.parse_datetime(str(st.attributes.get("departure") or ""))
+            if dep is None or dep <= now:
+                continue
+            windows += parse_plan_windows(st.attributes.get("windows"), now.tzinfo)
+            until = dep if until is None or dep > until else until
+        return (windows, until) if until is not None else None
 
     def _maybe_bootstrap(self) -> None:
         """Once: fill the model from the hourly statistics of the grid import counter (lower bounds). With an outdoor

@@ -38,7 +38,8 @@
           "mains_voltage": "Mains voltage",
           "ai_task_entity": "AI task for the explainer",
           "weather_entity": "Weather entity for the forecast",
-          "outdoor_temp_entity": "Outdoor temperature sensor"
+          "outdoor_temp_entity": "Outdoor temperature sensor",
+          "charge_plan_entities": "Charge plan of the car planner"
         },
         "data_description": {
           "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
@@ -48,7 +49,8 @@
           "mains_voltage": "Voltage of one phase (230 V in Europe). Used to convert amps into kilowatts.",
           "ai_task_entity": "Optional: the AI task entity (Settings > Devices > AI tasks) the explainer uses. You choose the model; the guard has no key of its own.",
           "weather_entity": "Optional: a weather entity. With it the load forecast follows the expected outdoor temperature (heating in winter, air conditioning in summer). Without it nothing changes.",
-          "outdoor_temp_entity": "Optional: an outdoor temperature sensor. More exact than the weather entity for learning, and its history lets the correction start at once instead of after some weeks."
+          "outdoor_temp_entity": "Optional: an outdoor temperature sensor. More exact than the weather entity for learning, and its history lets the correction start at once instead of after some weeks.",
+          "charge_plan_entities": "Optional: the charge plan sensor(s) of a car planner (attributes windows and departure), for example Plugwhen. With it the forecast knows when the car really charges until its departure instead of using the learned wallbox pattern. Without it nothing changes. Suggested automatically if Plugwhen is installed."
         }
       }
     }
