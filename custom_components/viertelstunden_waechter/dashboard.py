@@ -19,6 +19,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "view_main": "Wächter", "view_stats": "Statistik und Prognose",
         "intro": "**Nur beobachten** = der Wächter entscheidet und schreibt mit, schaltet aber nichts. „Aktiv“ ist gesperrt, solange die Sperre aus den allgemeinen Einstellungen an ist.",
         "settings": "Einstellungen", "features": "Zusatzfunktionen und Preise",
+        "weather": "Wetterkorrektur", "weather_on": "Wetterkorrektur der Prognose",
+        "weather_none": "Keine Wetter-Entität und kein Außentemperatur-Sensor in den Einstellungen gewählt: die Prognose bleibt ohne Wetter.",
+        "weather_off": "Die Wetterkorrektur ist ausgeschaltet: es werden keine Temperaturen gelernt und nichts korrigiert.",
+        "weather_outdoor": "Außentemperatur", "weather_hours": "Stunden Vorhersage", "weather_learned": "Gelernt aus",
+        "weather_days": "von mindestens 14 vollen Tagen", "weather_heat": "Heizen", "weather_cool": "Kühlen", "weather_fit": "Güte",
+        "weather_active": "Die Korrektur wirkt jetzt auf die Prognose.", "weather_waiting": "Die Korrektur wirkt, sobald genug volle Tage mit Temperatur vorliegen (und die Steigung nicht null ist).",
         "now": "Jetzt", "costs": "Kosten und Ersparnis", "forecast": "Prognose 24 Stunden",
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
         "mode": "Betriebsart", "strategy": "Strategie", "limit": "Grenze (kW)", "margin": "Sicherheitsabstand (kW)",
@@ -67,6 +73,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "view_main": "Guard", "view_stats": "Statistics and forecast",
         "intro": "**Observe only** = the guard decides and logs but switches nothing. \"Active\" is refused while the lock from the general settings is on.",
         "settings": "Settings", "features": "Features and prices",
+        "weather": "Weather correction", "weather_on": "Weather correction of the forecast",
+        "weather_none": "No weather entity and no outdoor temperature sensor chosen in the settings: the forecast stays without weather.",
+        "weather_off": "The weather correction is switched off: no temperatures are learned and nothing is corrected.",
+        "weather_outdoor": "Outdoor temperature", "weather_hours": "hours of forecast", "weather_learned": "Learned from",
+        "weather_days": "of at least 14 whole days", "weather_heat": "Heating", "weather_cool": "Cooling", "weather_fit": "Fit",
+        "weather_active": "The correction is changing the forecast now.", "weather_waiting": "The correction starts once enough whole days with temperature exist (and a slope is not zero).",
         "now": "Now", "costs": "Cost and savings", "forecast": "24-hour forecast",
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
         "mode": "Mode", "strategy": "Strategy", "limit": "Limit (kW)", "margin": "Safety margin (kW)",
@@ -190,6 +202,23 @@ def _forecast_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% for a in w %}{{ a.get('start')[11:16] }}–{{ a.get('end')[11:16] }} ({{ '%.1f' | format(a.get('high_kw')) }} kW){{ ', ' if not loop.last }}"
         "{% else %}" + x["none"] + "{% endfor %}"
         "{% else %}" + x["no_forecast"] + "{% endif %}"
+    )
+
+
+def _weather_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    s = ids["forecast_now"]
+    return (
+        "{% set w = state_attr('" + s + "', 'weather') or {} %}"
+        "{% if not w.get('configured') %}" + x["weather_none"] + ""
+        "{% elif not w.get('enabled') %}" + x["weather_off"] + ""
+        "{% else %}**" + x["weather_outdoor"] + ":** {{ w.get('temperature_now') if w.get('temperature_now') is not none else '–' }} °C"
+        " · {{ w.get('forecast_hours', 0) }} " + x["weather_hours"] + "\n\n"
+        "**" + x["weather_learned"] + ":** {{ w.get('days', 0) }} " + x["weather_days"] + "\n\n"
+        "**" + x["weather_heat"] + ":** {{ '%.2f' | format(w.get('heat_kw_per_k', 0)) }} kW/K · "
+        "**" + x["weather_cool"] + ":** {{ '%.2f' | format(w.get('cool_kw_per_k', 0)) }} kW/K · "
+        "**" + x["weather_fit"] + ":** {{ '%.2f' | format(w.get('r2', 0)) }}\n\n"
+        "{% if w.get('active') %}" + x["weather_active"] + "{% else %}" + x["weather_waiting"] + "{% endif %}"
+        "{% endif %}"
     )
 
 
@@ -362,6 +391,9 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "markdown", "content": _next_risk_markdown(ids, x)},
                 {"type": "markdown", "content": _forecast_markdown(ids, x)},
                 {"type": "markdown", "content": charts.forecast(ids, x["target_label"], x["legend_forecast"], x["no_forecast"])},
+                {"type": "heading", "heading": x["weather"], "icon": "mdi:weather-partly-cloudy"},
+                {"type": "entities", "entities": [{"entity": ids["weather_enabled"], "name": x["weather_on"]}]},
+                {"type": "markdown", "content": _weather_markdown(ids, x)},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
@@ -402,7 +434,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
 ENTITY_KEYS: dict[str, str] = {
     "mode": "select", "strategy": "select",
     "limit": "number", "margin": "number", "price_low": "number", "price_high": "number", "price_threshold": "number",
-    "paid_peak": "switch", "notify_intervention": "switch", "prewarn": "switch", "predictive": "switch", "battery_reserve": "switch", "ai_explainer": "switch", "ai_explanation": "sensor", "weekly_report_enabled": "switch", "weekly_report": "sensor", "costs_enabled": "switch", "forecast_enabled": "switch",
+    "paid_peak": "switch", "notify_intervention": "switch", "prewarn": "switch", "predictive": "switch", "battery_reserve": "switch", "ai_explainer": "switch", "ai_explanation": "sensor", "weekly_report_enabled": "switch", "weekly_report": "sensor", "costs_enabled": "switch", "forecast_enabled": "switch", "weather_enabled": "switch",
     "status": "sensor", "forecast": "sensor", "allowed": "sensor", "quarter_energy": "sensor", "last_quarter": "sensor",
     "today_peak": "sensor", "month_peak": "sensor", "interventions_today": "sensor", "cost_month": "sensor",
     "cost_without": "sensor", "savings_month": "sensor", "savings_year": "sensor", "saved_now": "sensor",
