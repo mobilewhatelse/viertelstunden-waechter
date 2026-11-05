@@ -236,7 +236,8 @@ Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installa
 | Blue Current (Home Assistant) | nein (nur Start/Stopp) | ja | nein |
 | myenergi (HACS) | nein (Mindest-Grünanteil, Prioritäten) | ja | nein |
 | evcc (HACS) | kein Strom als Zahl gefunden | ja | nein – in evcc selbst regeln |
-| go-e, openWB, Tesla Wall Connector, andere | nicht geprüft | | unbekannt |
+| go-e Charger (HACS, `marq24/ha-goecharger-api2`) | ja, Zahl in A (6-32 A); Phasenmodus `psm` als Auswahl | ja | **ja** (im Quellcode geprüft, nicht an Hardware getestet; Gemini flex ist ausdrücklich genannt) |
+| openWB, Tesla Wall Connector, andere | nicht geprüft | | unbekannt |
 
 **Über Hilfsgröße** (die Wallbox kennt den Strom nur über einen Dienst): einen `input_number`-Helfer anlegen
 (A, Schritt 1, Ihr Minimum/Maximum) und eine Automation, die bei Änderung des Helfers den Dienst mit dem Wert

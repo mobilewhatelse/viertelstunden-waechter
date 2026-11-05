@@ -34,7 +34,8 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 | Tesla Fleet (core), car charging current | `number` "charge current request" (the car, not a wallbox) | 🔍 |
 | KEBA (core), Easee (HACS) | only a service, no number | 🔍 via helper (`input_number` + automation) |
 | Ohme, Blue Current (core), myenergi, evcc (HACS) | no current number | ❌ |
-| go-e, openWB, Tesla Wall Connector, others | | ❔ |
+| go-e Charger (HACS, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, step 1); phase mode as `select` `psm`. Checked in the source 2026-11-05, not tried on hardware | 🔍 |
+| openWB, Tesla Wall Connector, others | | ❔ |
 
 ## Home batteries and inverters (device type *Battery*, or *Change settings*)
 

@@ -234,7 +234,8 @@ hardware. Entity names change between versions - look for them in your own insta
 | Blue Current (core) | no (only start/stop switch) | yes | no |
 | myenergi (HACS) | no (minimum green level, priorities) | yes | no |
 | evcc (HACS) | no current number found | yes | no - regulate in evcc itself |
-| go-e, openWB, Tesla Wall Connector, others | not checked | | unknown |
+| go-e Charger (HACS, `marq24/ha-goecharger-api2`) | yes, number in A (6-32 A); phase mode `psm` as select | yes | **yes** (checked in the source, not tried on hardware; Gemini flex is named as supported) |
+| openWB, Tesla Wall Connector, others | not checked | | unknown |
 
 **Via helper** (charger sets the current only through a service): create an `input_number` helper (A, step 1,
 your min/max) and an automation that calls the service with the helper's value when it changes. Enter the helper

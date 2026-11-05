@@ -34,7 +34,8 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 | Tesla Fleet (Home Assistant), Ladestrom des Autos | `number` „charge current request“ (das Auto, keine Wallbox) | 🔍 |
 | KEBA (Home Assistant), Easee (HACS) | nur ein Dienst, keine Zahl | 🔍 über Hilfsgröße (`input_number` + Automation) |
 | Ohme, Blue Current (Home Assistant), myenergi, evcc (HACS) | keine Strom-Zahl | ❌ |
-| go-e, openWB, Tesla Wall Connector, andere | | ❔ |
+| go-e Charger (HACS, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, Schritt 1); Phasenmodus als `select` `psm`. Im Quellcode geprüft am 05.11.2026, nicht an Hardware getestet | 🔍 |
+| openWB, Tesla Wall Connector, andere | | ❔ |
 
 ## Hausbatterien und Wechselrichter (Gerätetyp *Batterie* oder *Einstellung ändern*)
 
