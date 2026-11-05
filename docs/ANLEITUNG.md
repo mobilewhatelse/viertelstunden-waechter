@@ -35,6 +35,25 @@ Zähler am Netzübergabepunkt ──Kabel──► Wechselrichter ──LAN (lok
                                                                           └─ Bezugszähler (Wh)  → Wächter
 ```
 
+### Ohne PV und ohne Wechselrichter-Zähler
+
+Der Wächter braucht **keine PV-Anlage**. Er braucht nur den Netzbezug in Watt; die Sonne nutzt nur der optionale Ladeplan.
+Wer nur den Zähler des Netzbetreibers hat (in Österreich der Smart Meter des *Netzbetreibers*, nicht des Stromlieferanten,
+zum Beispiel Netz Burgenland bei Kunden von Energie Burgenland), hat zwei Wege:
+
+- **Einfachster Start: ein eigener Zähler im Verteiler.** Ein 3-Phasen-Energiezähler mit Klemmen oder für die Hutschiene (zum
+  Beispiel ein Shelly Pro 3EM oder Shelly EM mit Stromwandlern; die Integration ist in Home Assistant eingebaut) liefert den Bezug etwa
+  jede Sekunde. Dafür braucht man nichts vom Netzbetreiber.
+- **Beste Quelle: die Kundenschnittstelle des Smart Meters.** Der Netzbetreiber muss die Schnittstelle freischalten und den Schlüssel
+  herausgeben; bitte dort anfragen (Formular oder E-Mail, der Weg hängt vom Netzbetreiber ab, in Österreich ist es kostenlos). Danach liest
+  ein Lesekopf mit ESPHome oder MQTT die Werte. Ein Beispiel für das Netz Burgenland und den Landis+Gyr E450 ist
+  [smartmeter_homeassistant_burgenland](https://github.com/r00tat/smartmeter_homeassistant_burgenland), ein allgemeines Lesekopf-Projekt
+  [esp-smartmeter-reader](https://github.com/aldadic/esp-smartmeter-reader), die Adapter-Spezifikation
+  [von Österreichs Energie](https://oesterreichsenergie.at/fileadmin/user_upload/Datenblatt_Smart_Meter_Adapter_V7_20220808__2_.pdf).
+  Vom Autor nicht getestet; wie oft der Zähler einen Wert liefert, hängt vom Zählertyp ab.
+
+In beiden Fällen arbeitet der Wächter mit dem Netzbezug in W oder kW und, wenn vorhanden, dem Bezugszähler (siehe Tabelle oben).
+
 ---
 
 ## 2. Einrichten

@@ -71,6 +71,25 @@ Typical sources, all with integrations built into Home Assistant:
 **Not suitable:** the grid operator's web portal. Its 15-minute values arrive the next day – fine for
 statistics, far too late for control.
 
+### No solar plant, no inverter meter?
+
+The guard needs **no solar plant**. It only needs the grid import power; solar is used only by the optional charge
+plan. If all you have is the meter of the grid operator (in Austria the smart meter of the *Netzbetreiber*, which
+is not the electricity supplier), you have two ways:
+
+- **Easiest start: your own meter in the distribution board.** A clamp-on or DIN-rail 3-phase energy meter (for
+  example a Shelly Pro 3EM or Shelly EM with current transformers, integration built into Home Assistant) gives the
+  import every second or so. It needs nothing from the grid operator.
+- **Best source: the customer interface of the smart meter.** The grid operator has to enable the interface and
+  hand out the key; ask them (request form or e-mail, the way depends on the operator, in Austria it is free). Then
+  a reader via ESPHome or MQTT delivers the values. An example for the Burgenland grid and the Landis+Gyr E450 is
+  [smartmeter_homeassistant_burgenland](https://github.com/r00tat/smartmeter_homeassistant_burgenland), a general
+  reader project is [esp-smartmeter-reader](https://github.com/aldadic/esp-smartmeter-reader), the adapter
+  specification is [published by Österreichs Energie](https://oesterreichsenergie.at/fileadmin/user_upload/Datenblatt_Smart_Meter_Adapter_V7_20220808__2_.pdf).
+  Not tested by the author; how often the meter delivers a value differs by meter type.
+
+Either way, the guard works with import power in W or kW and, if you have it, the import counter (see the table above).
+
 ## Installation
 
 Open HACS, search for **Viertelstunden-Wächter**, download it, restart Home Assistant → Settings → Devices & services →
