@@ -25,15 +25,15 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 
 | Integration | Charging current | Status |
 |---|---|---|
-| Wattpilot (HACS, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | ✅ authors, 2026-10-25, 0.11.0: car charging with 11 kW, cooker and oven added; lowered 16 → 12 → 10 → 8 → 6 A in steps, raised again step by step, "back to 16 A" logged; charging never stopped, the quarter hour stayed below the target. Not yet seen: 1-phase switching |
+| Wattpilot (community, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | ✅ authors, 2026-10-25, 0.11.0: car charging with 11 kW, cooker and oven added; lowered 16 → 12 → 10 → 8 → 6 A in steps, raised again step by step, "back to 16 A" logged; charging never stopped, the quarter hour stayed below the target. Not yet seen: 1-phase switching |
 | Wallbox (core) | `number` "Maximum charging current" | 🔍 |
 | OpenEVSE (core) | `number` "Charge rate" (A) | 🔍 |
-| Zaptec (HACS) | `number` "charger_max_current" | 🔍 |
-| OCPP (HACS, `lbbrhzn/ocpp`) | `number` "Maximum Current" (charging profile) | 🔍 |
-| Alfen (HACS) | several "max current" numbers (device settings, frequent writes not checked) | 🔍 with care |
+| Zaptec (community) | `number` "charger_max_current" | 🔍 |
+| OCPP (community, `lbbrhzn/ocpp`) | `number` "Maximum Current" (charging profile) | 🔍 |
+| Alfen (community) | several "max current" numbers (device settings, frequent writes not checked) | 🔍 with care |
 | Tesla Fleet (core), car charging current | `number` "charge current request" (the car, not a wallbox) | 🔍 |
-| KEBA (core), Easee (HACS) | only a service, no number | 🔍 via helper (`input_number` + automation) |
-| Ohme, Blue Current (core), myenergi, evcc (HACS) | no current number | ❌ |
+| KEBA (core), Easee (community) | only a service, no number | 🔍 via helper (`input_number` + automation) |
+| Ohme, Blue Current (core), myenergi, evcc (community) | no current number | ❌ |
 | go-e, openWB, Tesla Wall Connector, others | | ❔ |
 
 ## Home batteries and inverters (device type *Battery*, or *Change settings*)
@@ -53,8 +53,8 @@ the house (maximum output / discharge power, operating mode) and puts them back.
 | SolarEdge Modbus (core) | `number` discharge limit, charge limit, backup reserve; `select` storage control / default / command mode | storage command mode / discharge limit | 🔍 |
 | HomeWizard battery (core) | `select` battery group mode | the mode that discharges | 🔍 |
 | Imeon (core) | `select` manager inverter mode | the discharging mode | 🔍 |
-| Sigenergy local Modbus (HACS) | `number` ESS max discharging limit; `select` remote EMS control mode | raise the discharge limit | 🔍 |
-| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix, SolarEdge Modbus Multi (HACS) | platforms exist, entities generated from device definitions | | ❔ |
+| Sigenergy local Modbus (community) | `number` ESS max discharging limit; `select` remote EMS control mode | raise the discharge limit | 🔍 |
+| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix, SolarEdge Modbus Multi (community) | platforms exist, entities generated from device definitions | | ❔ |
 | SMA, SolarEdge (cloud), Powerwall, Victron GX, Solarman, Solax, Bluetti Modbus, KACO Modbus (core) | nothing writable that lowers power found | | ❌ |
 
 Cloud-based integrations (Growatt, Tesla, EcoFlow, ...) react with a delay of seconds to minutes; a guard working
@@ -76,7 +76,7 @@ switches, an **operating mode** as a selection.
 | Daikin (core) | `switch` zone / toggle; climate | on/off only | ❌ for power, 🔍 for on/off |
 | Modbus (core, generic) | any register you define as `number` / `switch` / `select` | if your heat pump documents a power-limit, mode or block register | 🔍 principle |
 | SG-Ready via two relays (e.g. Shelly) | two `switch` entities | *Change settings*: switch 1 `on`, switch 2 `off` = mode 1 (block) | 🔍 principle |
-| Ariston, Stiebel Eltron, Weheat, Wolf SmartSet, BSB-LAN, ATAG, Mitsubishi Comfort, Hisense, Fujitsu (core); Luxtronik, myVaillant, Daikin Altherma, NIBE (HACS) | not checked in detail | | ❔ |
+| Ariston, Stiebel Eltron, Weheat, Wolf SmartSet, BSB-LAN, ATAG, Mitsubishi Comfort, Hisense, Fujitsu (core); Luxtronik, myVaillant, Daikin Altherma, NIBE (community) | not checked in detail | | ❔ |
 
 Heat pumps need extra care: use the *comfort sensor*, *minimum duration*, *pause after taking back* and
 *maximum duration* fields, and start in observe mode.
@@ -85,7 +85,7 @@ Heat pumps need extra care: use the *comfort sensor*, *minimum duration*, *pause
 
 Open an issue titled "Device test: <integration> <model>" with:
 
-1. Integration (core or HACS, version) and device model / firmware
+1. Integration (core or community integration from the Marketplace, version) and device model / firmware
 2. Device type used (wallbox / switchable device / battery / change settings / throttle power) and the entities
 3. Mode used (observe or active), number of evenings, and what the guard did (the `today` lines of the status
    sensor, the diagnostics download without private data)

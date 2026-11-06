@@ -3,7 +3,7 @@
 Home Assistant integration that keeps the **average grid import of every quarter hour** below a limit, by
 throttling the wallbox and switching flexible loads only as far as needed.
 
-> Status: **0.13.2, in the HACS default list, in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
+> Status: **0.13.2, in the Marketplace (HACS default list), in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
 > Start in observe mode. Use at your own risk.
 
 ## What is this for?
@@ -54,7 +54,7 @@ Safety:
 
 ## Grid measurement: what the guard needs
 
-Two sensors, from any integration (no HACS needed for them):
+Two sensors, from any integration (nothing from the Marketplace needed for them):
 
 | Sensor | Unit | Required | Note |
 |---|---|---|---|
@@ -92,11 +92,11 @@ Either way, the guard works with import power in W or kW and, if you have it, th
 
 ## Installation
 
-Open HACS, search for **Viertelstunden-Wächter**, download it, restart Home Assistant → Settings → Devices & services →
+Open **Settings → Marketplace** (called HACS before Home Assistant 2026.11), search for **Viertelstunden-Wächter**, download it, restart Home Assistant → Settings → Devices & services →
 Add integration → *Viertelstunden-Wächter*.
 
-If the search does not find it (a new entry can take some hours to reach HACS), add it once as a custom repository:
-HACS → ⋮ → Custom repositories → this repository, category *Integration*.
+If the search does not find it (a new entry can take some hours to reach the Marketplace), add it once as a custom repository:
+Marketplace → ⋮ → Custom repositories → this repository, category *Integration*.
 
 Then add the devices **on the integration page**: the buttons *Add wallbox / switchable device / emergency
 action* create one entry per device; each entry has ⋮ → *Reconfigure* / *Delete*. The gear icon opens the
@@ -222,18 +222,18 @@ hardware. Entity names change between versions - look for them in your own insta
 
 | Integration | Charging current as `number` | Power sensor | Usable |
 |---|---|---|---|
-| Wattpilot (HACS, `wattpilot-HA`) | yes, "Max Charging Current" | yes | **yes** (tested; phase selection available) |
+| Wattpilot (community, `wattpilot-HA`) | yes, "Max Charging Current" | yes | **yes** (tested; phase selection available) |
 | Wallbox (Home Assistant core) | yes, "Maximum charging current" | yes (kW) | **yes** (no phase switching) |
 | OpenEVSE (core) | yes, "Charge rate" (A) | yes | **yes** |
-| Zaptec (HACS) | yes, "charger_max_current" | yes (W) | **yes** |
-| OCPP (HACS, `lbbrhzn/ocpp`) | yes, "Maximum Current" | yes | **yes** (sets a charging profile; check how your charger reacts) |
-| Alfen (HACS) | yes, several "max current" numbers | yes | **with care** - these are device settings; frequent writing was not checked |
+| Zaptec (community) | yes, "charger_max_current" | yes (W) | **yes** |
+| OCPP (community, `lbbrhzn/ocpp`) | yes, "Maximum Current" | yes | **yes** (sets a charging profile; check how your charger reacts) |
+| Alfen (community) | yes, several "max current" numbers | yes | **with care** - these are device settings; frequent writing was not checked |
 | KEBA (core) | no, only the service `keba.set_current` | yes | **via helper** (below) |
-| Easee (HACS) | no, only services (e.g. dynamic limit) | yes | **via helper** (below) |
+| Easee (community) | no, only services (e.g. dynamic limit) | yes | **via helper** (below) |
 | Ohme (core) | no (numbers are target percentage etc.) | yes | no |
 | Blue Current (core) | no (only start/stop switch) | yes | no |
-| myenergi (HACS) | no (minimum green level, priorities) | yes | no |
-| evcc (HACS) | no current number found | yes | no - regulate in evcc itself |
+| myenergi (community) | no (minimum green level, priorities) | yes | no |
+| evcc (community) | no current number found | yes | no - regulate in evcc itself |
 | go-e, openWB, Tesla Wall Connector, others | not checked | | unknown |
 
 **Via helper** (charger sets the current only through a service): create an `input_number` helper (A, step 1,
@@ -247,7 +247,7 @@ The order is a proposal, not a promise.
 
 **Planned**
 
-1. **Feedback from other installations:** the integration is public and in the HACS default list (0.13.2). The
+1. **Feedback from other installations:** the integration is public and in the Marketplace (HACS default list, 0.13.2). The
    installation test on a fresh Home Assistant 2026.10.3 (Docker, `tests/install`) passed - config flow from scratch,
    devices, observe and active mode, release, services, restart - and hassfest and the HACS validation pass. What is
    still missing are real-world reports from other installations (see *Support and feedback*).

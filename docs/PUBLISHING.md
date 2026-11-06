@@ -1,5 +1,8 @@
 # Publishing checklist (maintainer)
 
+Note: since Home Assistant 2026.11 HACS is built in as the **Marketplace**; the catalog (`hacs/default`),
+`hacs.json` and the HACS validation action keep their names, so nothing below changes for publishing.
+
 State: 2026-11-03. The repository is **public**, release `v0.13.2` is published and the integration is in the HACS
 default list (`hacs/default`). The sections below are the first-publication checklist (done) and now serve as the
 checklist for every further release: tests, private-data check, CHANGELOG, `manifest.json` version, release text.

@@ -11,7 +11,7 @@ Monats. Ein Abend mit Auto (11 kW) und Backrohr kann den Preis für den ganzen M
 
 ## 1. Was der Wächter braucht: die Messung
 
-Zwei Sensoren in Home Assistant, egal aus welcher Integration (dafür ist **kein HACS** nötig):
+Zwei Sensoren in Home Assistant, egal aus welcher Integration (dafür ist **nichts aus dem Marketplace** nötig):
 
 | Sensor | Einheit | Pflicht | Hinweis |
 |---|---|---|---|
@@ -58,9 +58,9 @@ In beiden Fällen arbeitet der Wächter mit dem Netzbezug in W oder kW und, wenn
 
 ## 2. Einrichten
 
-1. HACS öffnen, nach **Viertelstunden-Wächter** suchen, herunterladen →
-   Home Assistant neu starten. (Wird es in HACS noch nicht gefunden, weil der Antrag für die Standardliste noch läuft,
-   einmalig als Benutzerdefiniertes Repository hinzufügen: HACS → ⋮ → Benutzerdefinierte Repositories → dieses
+1. **Einstellungen → Marketplace** öffnen (bis Home Assistant 2026.10 hieß das HACS), nach **Viertelstunden-Wächter** suchen, herunterladen →
+   Home Assistant neu starten. (Wird es im Marketplace noch nicht gefunden, weil der Antrag für die Standardliste noch läuft,
+   einmalig als Benutzerdefiniertes Repository hinzufügen: Marketplace → ⋮ → Benutzerdefinierte Repositories → dieses
    Repository, Kategorie *Integration*.)
 2. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Viertelstunden-Wächter**:
    Netzbezug, Bezugszähler, Grenze (z. B. 10 kW), Sicherheitsabstand (z. B. 0,5 kW).
@@ -224,18 +224,18 @@ Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installa
 
 | Integration | Ladestrom als `number` | Leistungssensor | Geht? |
 |---|---|---|---|
-| Wattpilot (HACS, `wattpilot-HA`) | ja, „Max Charging Current“ | ja | **ja** (getestet, Phasenwahl vorhanden) |
+| Wattpilot (Community, `wattpilot-HA`) | ja, „Max Charging Current“ | ja | **ja** (getestet, Phasenwahl vorhanden) |
 | Wallbox (Home Assistant) | ja, „Maximum charging current“ | ja (kW) | **ja** (ohne Phasenumschaltung) |
 | OpenEVSE (Home Assistant) | ja, „Charge rate“ (A) | ja | **ja** |
-| Zaptec (HACS) | ja, „charger_max_current“ | ja (W) | **ja** |
-| OCPP (HACS, `lbbrhzn/ocpp`) | ja, „Maximum Current“ | ja | **ja** (setzt ein Ladeprofil; Verhalten der Wallbox prüfen) |
-| Alfen (HACS) | ja, mehrere „max current“-Zahlen | ja | **mit Vorsicht**: Geräteeinstellungen, häufiges Schreiben nicht geprüft |
+| Zaptec (Community) | ja, „charger_max_current“ | ja (W) | **ja** |
+| OCPP (Community, `lbbrhzn/ocpp`) | ja, „Maximum Current“ | ja | **ja** (setzt ein Ladeprofil; Verhalten der Wallbox prüfen) |
+| Alfen (Community) | ja, mehrere „max current“-Zahlen | ja | **mit Vorsicht**: Geräteeinstellungen, häufiges Schreiben nicht geprüft |
 | KEBA (Home Assistant) | nein, nur Dienst `keba.set_current` | ja | **über Hilfsgröße** (unten) |
-| Easee (HACS) | nein, nur Dienste (z. B. Dynamic Limit) | ja | **über Hilfsgröße** (unten) |
+| Easee (Community) | nein, nur Dienste (z. B. Dynamic Limit) | ja | **über Hilfsgröße** (unten) |
 | Ohme (Home Assistant) | nein (Zahlen sind Ziel-Prozent u. ä.) | ja | nein |
 | Blue Current (Home Assistant) | nein (nur Start/Stopp) | ja | nein |
-| myenergi (HACS) | nein (Mindest-Grünanteil, Prioritäten) | ja | nein |
-| evcc (HACS) | kein Strom als Zahl gefunden | ja | nein – in evcc selbst regeln |
+| myenergi (Community) | nein (Mindest-Grünanteil, Prioritäten) | ja | nein |
+| evcc (Community) | kein Strom als Zahl gefunden | ja | nein – in evcc selbst regeln |
 | go-e, openWB, Tesla Wall Connector, andere | nicht geprüft | | unbekannt |
 
 **Über Hilfsgröße** (die Wallbox kennt den Strom nur über einen Dienst): einen `input_number`-Helfer anlegen
