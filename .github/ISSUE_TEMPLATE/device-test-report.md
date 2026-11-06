@@ -5,7 +5,7 @@ title: "Device test: <integration> <model>"
 labels: device-test
 ---
 
-**Integration** (core or HACS, version):
+**Integration** (core or community integration from the Marketplace, version):
 
 **Device model / firmware:**
 

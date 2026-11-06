@@ -25,16 +25,16 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 
 | Integration | Ladestrom | Status |
 |---|---|---|
-| Wattpilot (HACS, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | ✅ Autoren, 25.10.2026, 0.11.0: Auto lädt mit 11 kW, Herd und Backrohr dazu; in Stufen 16 → 12 → 10 → 8 → 6 A gesenkt, schrittweise wieder angehoben, „wieder 16 A“ protokolliert; Laden nie gestoppt, Viertelstunde unter dem Ziel. Noch nicht gesehen: Umschalten auf 1 Phase |
+| Wattpilot (Community, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | ✅ Autoren, 25.10.2026, 0.11.0: Auto lädt mit 11 kW, Herd und Backrohr dazu; in Stufen 16 → 12 → 10 → 8 → 6 A gesenkt, schrittweise wieder angehoben, „wieder 16 A“ protokolliert; Laden nie gestoppt, Viertelstunde unter dem Ziel. Noch nicht gesehen: Umschalten auf 1 Phase |
 | Wallbox (Home Assistant) | `number` „Maximum charging current“ | 🔍 |
 | OpenEVSE (Home Assistant) | `number` „Charge rate“ (A) | 🔍 |
-| Zaptec (HACS) | `number` „charger_max_current“ | 🔍 |
-| OCPP (HACS, `lbbrhzn/ocpp`) | `number` „Maximum Current“ (Ladeprofil) | 🔍 |
-| Alfen (HACS) | mehrere „max current“-Zahlen (Geräteeinstellungen, häufiges Schreiben nicht geprüft) | 🔍 mit Vorsicht |
+| Zaptec (Community) | `number` „charger_max_current“ | 🔍 |
+| OCPP (Community, `lbbrhzn/ocpp`) | `number` „Maximum Current“ (Ladeprofil) | 🔍 |
+| Alfen (Community) | mehrere „max current“-Zahlen (Geräteeinstellungen, häufiges Schreiben nicht geprüft) | 🔍 mit Vorsicht |
 | Tesla Fleet (Home Assistant), Ladestrom des Autos | `number` „charge current request“ (das Auto, keine Wallbox) | 🔍 |
-| KEBA (Home Assistant), Easee (HACS) | nur ein Dienst, keine Zahl | 🔍 über Hilfsgröße (`input_number` + Automation) |
-| Ohme, Blue Current (Home Assistant), myenergi, evcc (HACS) | keine Strom-Zahl | ❌ |
-| go-e Charger (HACS, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, Schritt 1); Phasenmodus als `select` `psm`. Im Quellcode geprüft am 05.11.2026, nicht an Hardware getestet | 🔍 |
+| KEBA (Home Assistant), Easee (Community) | nur ein Dienst, keine Zahl | 🔍 über Hilfsgröße (`input_number` + Automation) |
+| Ohme, Blue Current (Home Assistant), myenergi, evcc (Community) | keine Strom-Zahl | ❌ |
+| go-e Charger (Community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, Schritt 1); Phasenmodus als `select` `psm`. Im Quellcode geprüft am 05.11.2026, nicht an Hardware getestet | 🔍 |
 | openWB, Tesla Wall Connector, andere | | ❔ |
 
 ## Hausbatterien und Wechselrichter (Gerätetyp *Batterie* oder *Einstellung ändern*)
@@ -55,8 +55,8 @@ Braucht einen Ladestand-Sensor.
 | SolarEdge Modbus (Home Assistant) | `number` Entladelimit, Ladelimit, Backup-Reserve; `select` Speicher-Steuer-/Standard-/Befehlsmodus | Befehlsmodus / Entladelimit | 🔍 |
 | HomeWizard Batterie (Home Assistant) | `select` Batterie-Gruppenmodus | der Modus, der entlädt | 🔍 |
 | Imeon (Home Assistant) | `select` Manager-Wechselrichtermodus | der entladende Modus | 🔍 |
-| Sigenergy lokal per Modbus (HACS) | `number` ESS maximale Entladegrenze; `select` Remote-EMS-Steuermodus | Entladegrenze anheben | 🔍 |
-| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix, SolarEdge Modbus Multi (HACS) | Plattformen vorhanden, Entitäten aus Gerätedefinitionen erzeugt | | ❔ |
+| Sigenergy lokal per Modbus (Community) | `number` ESS maximale Entladegrenze; `select` Remote-EMS-Steuermodus | Entladegrenze anheben | 🔍 |
+| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix, SolarEdge Modbus Multi (Community) | Plattformen vorhanden, Entitäten aus Gerätedefinitionen erzeugt | | ❔ |
 | SMA, SolarEdge (Cloud), Powerwall, Victron GX, Solarman, Solax, Bluetti Modbus, KACO Modbus (Home Assistant) | nichts Schreibbares gefunden, das die Leistung senkt | | ❌ |
 
 Cloud-Integrationen (Growatt, Tesla, EcoFlow …) reagieren mit Sekunden bis Minuten Verzögerung. Ein Wächter, der
@@ -78,7 +78,7 @@ SG-Ready** als Schalter, einen **Betriebsmodus** als Auswahl.
 | Daikin (Home Assistant) | `switch` Zone / Umschalter; Klima | nur Ein/Aus | ❌ für Leistung, 🔍 für Ein/Aus |
 | Modbus (Home Assistant, allgemein) | jedes Register, das Sie als `number` / `switch` / `select` anlegen | wenn Ihre Wärmepumpe ein Register für Leistungsgrenze, Modus oder Sperre dokumentiert | 🔍 Prinzip |
 | SG-Ready über zwei Relais (z. B. Shelly) | zwei `switch`-Entitäten | *Einstellung ändern*: Schalter 1 `on`, Schalter 2 `off` = Modus 1 (Sperre) | 🔍 Prinzip |
-| Ariston, Stiebel Eltron, Weheat, Wolf SmartSet, BSB-LAN, ATAG, Mitsubishi Comfort, Hisense, Fujitsu (Home Assistant); Luxtronik, myVaillant, Daikin Altherma, NIBE (HACS) | nicht im Detail geprüft | | ❔ |
+| Ariston, Stiebel Eltron, Weheat, Wolf SmartSet, BSB-LAN, ATAG, Mitsubishi Comfort, Hisense, Fujitsu (Home Assistant); Luxtronik, myVaillant, Daikin Altherma, NIBE (Community) | nicht im Detail geprüft | | ❔ |
 
 Wärmepumpen brauchen besondere Sorgfalt: Nutzen Sie **Komfort-Sensor**, **Mindestdauer**, **Pause nach dem
 Zurücknehmen** und **Höchste Dauer**, und starten Sie im Beobachtungsmodus.
@@ -87,7 +87,7 @@ Zurücknehmen** und **Höchste Dauer**, und starten Sie im Beobachtungsmodus.
 
 Eröffnen Sie ein Issue mit dem Titel „Gerätetest: <Integration> <Modell>“ und schreiben Sie:
 
-1. Integration (Home Assistant oder HACS, Version) und Gerätemodell / Firmware
+1. Integration (Home Assistant oder Community-Integration aus dem Marketplace, Version) und Gerätemodell / Firmware
 2. Verwendeter Gerätetyp (Wallbox / schaltbares Gerät / Batterie / Einstellung ändern / Leistung drosseln) und die Entitäten
 3. Betriebsart (Beobachten oder Aktiv), Zahl der Abende, was der Wächter getan hat (die `today`-Zeilen des
    Status-Sensors, der Diagnose-Download ohne private Daten)
