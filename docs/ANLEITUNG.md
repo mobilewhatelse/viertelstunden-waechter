@@ -315,6 +315,32 @@ binden Sie über das Feld *Andere Ladeplan-Sensoren* an. Ein Ladeplan-Sensor bra
 - Mehrere Autos addieren sich. Das Attribut `car_plan` von **Typischer Bezug jetzt (Prognose)** zeigt, ob ein Plan benutzt wird.
 - **Ohne Ladeplan-Sensor, oder wenn er nicht verfügbar ist oder einen anderen Zustand hat, ändert sich nichts.**
 
+### Wächter und Auto-Planer zusammen
+
+Beide haben verschiedene Aufgaben, und jede läuft auch allein:
+
+| | Spitzenwächter (diese Integration) | Auto-Planer (zum Beispiel Plugwhen) |
+|---|---|---|
+| Frage | Geht die laufende Viertelstunde über die Grenze? | Wann soll das Auto laden, damit es zur Abfahrt bereit ist? |
+| Zeit | alle paar Sekunden, in Echtzeit | im Voraus, für die ganze Standzeit |
+| Tut | drosselt die Wallbox, schaltet Verbraucher, gibt alles wieder frei | plant (zuerst Sonne, der Rest mit kleiner Leistung verteilt), warnt, wenn das Auto nicht bereit sein wird |
+| Braucht | den Netzbezug in W | Ladestand, Abfahrt, Wallbox-Leistung |
+
+- **Der Wächter hat immer das letzte Wort.** Ein Plan hebt die Grenze nie auf: Käme trotzdem eine Spitze (Herd, Backrohr, ein Auto,
+  das von selbst anfängt), drosselt der Wächter wie gewohnt. Er senkt nur, der kleinere Wert gilt.
+- **Der Planer merkt das Drosseln selbst.** Er vergleicht, was wirklich angekommen ist, mit seinem Plan und verteilt den Rest neu; am
+  Wächter wird dafür nichts geändert, er schickt nichts.
+- **Einen Ladeplan verwenden, nicht zwei.** Der Gerätetyp *Fahrzeug (Ladeplan)* des Wächters ist ein einfacher Planer für Anlagen ohne
+  Auto-Planer. Ist ein Auto-Planer gewählt, schalten Sie den eigenen Plan des Wächters aus (*Ladeplan berechnen*), sonst stehen zwei
+  Pläne nebeneinander, die sich widersprechen können (zum Beispiel festes Ziel 80 % gegen das Reserve-Ziel des Planers).
+- **Das Dashboard folgt der Wahl** (Dienst *Dashboard erstellen*, siehe 3d.): Ist in den allgemeinen Einstellungen ein Auto-Planer gewählt,
+  zeigt die Ladeplan-Karte **den Plan des Planers** – je Fahrzeug den Plan-Sensor, *Bereit zur Abfahrt*, wenn der Planer einen hat, die
+  Fenster mit Energie, höchster Leistung und Anteil aus der Sonne – und die Zeile *Auto-Plan in der Prognose* (verbunden, wie viele Fenster,
+  bis wann). Der eigene Plan des Wächters tritt zurück; seine zwei Schalter stehen darunter, damit man ihn ausschalten kann.
+  Ohne Auto-Planer ist die Karte wie bisher der eigene Plan des Wächters.
+- Beide Integrationen bleiben einzeln voll nutzbar: der Wächter ohne Planer, der Planer ohne Wächter (dann ohne Lastprognose, nur mit
+  seinen eigenen Daten).
+
 
 ---
 
@@ -504,7 +530,9 @@ Der Dienst **Dashboard erstellen** (`viertelstunden_waechter.create_dashboard`) 
 Entitäten **Ihrer** Installation (egal wie das Gerät heißt, auf Deutsch oder Englisch) in drei Ansichten: die Übersicht
 (Einstellungen, Zusatzfunktionen, Geräte und Prioritäten, Jetzt, Kosten und Ersparnis), **Heute** – eine kompakte, einspaltige
 Ansicht fürs Handy – und *Statistik und Prognose* (24-Stunden-Vorschau als Balken, Wochenprofil, Spitzen der letzten Tage,
-Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten benutzt.
+Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten benutzt. Ist in den allgemeinen Einstellungen ein Auto-Planer
+gewählt, zeigt die Ladeplan-Karte dessen Plan statt des eigenen (siehe *Wächter und Auto-Planer zusammen*); nach dem Wählen oder
+Entfernen eines Planers das Dashboard neu erstellen.
 
 **So nutzen Sie ihn** (nur Administratoren): Entwicklerwerkzeuge → Aktionen → *Dashboard erstellen* ausführen und das YAML aus der
 Antwort oder aus der angezeigten Benachrichtigung kopieren. Dann Einstellungen → Dashboards → Dashboard hinzufügen, öffnen, drei

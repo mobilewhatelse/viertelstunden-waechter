@@ -462,6 +462,32 @@ with the field *Other charge plan sensors*. A plan sensor needs the attributes `
 - Several cars add up. The attribute `car_plan` of *Typical import now (forecast)* shows whether a plan is used.
 - **Without a plan sensor, or when it is unavailable or its state is something else, nothing changes.**
 
+#### The guard and a car planner together
+
+The two have different jobs and each works on its own:
+
+| | Peak guard (this integration) | Car planner (for example Plugwhen) |
+|---|---|---|
+| Question | Is the running quarter hour going above the limit? | When should the car charge so that it is ready at departure? |
+| Time | every few seconds, in real time | ahead, for the whole parking time |
+| Acts | throttles the wallbox, switches loads, gives everything back | plans (sun first, the rest spread at low power), warns if the car will not be ready |
+| Needs | the grid import in W | state of charge, departure, wallbox power |
+
+- **The guard always has the last word.** A plan never lifts the limit: if a peak would come anyway (cooker, oven, a car that
+  starts by itself), the guard throttles as usual. It only lowers, the smaller value wins.
+- **The planner learns of a throttle by itself.** It compares what really arrived with its plan and spreads the rest again; the
+  guard is not changed for that and sends nothing.
+- **Use one charge plan, not two.** The device type *Vehicle (charge plan)* of the guard is a simple planner for installations
+  without a car planner. With a car planner chosen, switch the guard's own plan off (*Calculate the charge plan*), otherwise two
+  plans that may disagree are shown (for example a fixed 80 % target against the planner's reserve-based target).
+- **The dashboard follows the choice** (service *Create dashboard*, see *Dashboard*): with a car planner chosen in the general
+  settings, the charge plan card shows **the planner's plan** - per vehicle the plan sensor, *Ready for departure* if the planner
+  has one, the windows with energy, highest power and the share from the sun - plus the line *Car plan in the forecast*
+  (connected, how many windows, until when). The guard's own plan steps back; its two switches stay below, to switch it off.
+  Without a car planner the card is the guard's own plan as before.
+- Both integrations stay fully usable alone: the guard without a planner, the planner without the guard (then it has no load
+  forecast and plans on its own data).
+
 #### Throttling ahead by the forecast (switch, default off)
 
 Normally the guard reacts when the running quarter hour heads above the target. With the switch **Throttle ahead using
@@ -538,7 +564,9 @@ Service **Create dashboard** (`viertelstunden_waechter.create_dashboard`) builds
 entities of *your* installation (whatever the device is called, in German or English) in three views: the overview
 (settings, features, devices and priorities, now, cost and savings), **Today** - a compact single-column view for the
 phone - and *Statistics and forecast* (24-hour forecast as bars, weekly profile, peaks of the last days, months,
-interventions per day, charge plan). Only standard cards are used.
+interventions per day, charge plan). Only standard cards are used. With a car planner chosen in the general settings the
+charge plan card shows the planner's plan instead of the guard's own (see *The guard and a car planner together*); create the
+dashboard again after choosing or removing a planner.
 
 **How to use it** (administrators only): Developer tools → Actions → *Create dashboard*, run it, and copy the YAML from
 the response or from the notification it shows. Then Settings → Dashboards → Add dashboard, open it, three dots → Edit →

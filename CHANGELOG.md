@@ -14,6 +14,17 @@ Format: newest first. German version below each English block is a short summary
   guard finds the charge plans of all its vehicles by itself; other sensors can be named by hand. Until the departure the forecast is
   the house plus the planned car load instead of the learned wallbox pattern. Without a plan nothing changes. Attribute `car_plan`
   on the forecast sensor. Tested with both integrations in one Home Assistant.
+- **Dashboard with a car planner:** when a car planner is chosen in the general settings, *Create dashboard* shows the
+  planner's charge plan (per vehicle: plan sensor, *Ready for departure* if the planner has one, windows with energy, highest
+  power and share from the sun) instead of the guard's own plan, plus the line *Car plan in the forecast* (connected, windows,
+  until when). The own plan's switches stay below so it can be switched off; one plan instead of two that disagree. Without a
+  planner the dashboard is unchanged. Planners are found by unique id (charge plan and readiness sensors of the chosen entry) or
+  taken from *Other charge plan sensors*; nothing of the planner is imported. New documentation section *The guard and a car
+  planner together* (roles, last word stays with the guard, one plan instead of two). *Deutsch:* Mit gewähltem Auto-Planer zeigt
+  das Dashboard dessen Ladeplan statt des eigenen, mit Zeile "Auto-Plan in der Prognose"; neuer Abschnitt "Wächter und
+  Auto-Planer zusammen". Ohne Planer bleibt alles wie bisher.
+- Documentation: HACS is the built-in **Marketplace** since Home Assistant 2026.11; installation texts and tables say so
+  (catalog, `hacs.json` and the validation keep their names). *Deutsch:* HACS heißt seit 2026.11 Marketplace.
 - **Maximum age of the grid reading** (setting, default 120 s, 0 = off): a reading that was not written for longer counts as
   missing (no interventions, everything given back after 90 s, status *no data*). Protects against sensors that only update every
   few minutes. Attributes `grid_age_s` and `grid_stale` on the status sensor. *Deutsch:* Höchstalter des Netzbezug-Messwerts.

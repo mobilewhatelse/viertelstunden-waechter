@@ -79,6 +79,29 @@ class DashboardTests(unittest.TestCase):
             for key in ("status", "mode", "today_peak", "month_peak", "interventions_today", "last_quarter", "ai_explanation"):
                 self.assertIn(IDS[key], heute, key)
 
+    def test_with_a_car_planner_its_plan_is_shown_and_the_own_plan_steps_back(self):
+        planners = [{"name": "Car", "plan": "sensor.car_charge_plan", "ready": "sensor.car_ready"}]
+        for lang in ("de", "en"):
+            views = {v["path"]: v for v in build_views(IDS, lang, planners)}
+            stats = json.dumps(views["statistik"], ensure_ascii=False)
+            self.assertIn("sensor.car_charge_plan", stats)
+            self.assertIn("sensor.car_ready", stats)
+            self.assertNotIn(f'"entity": "{IDS["charge_plan"]}"', stats)       # the own plan tile is gone
+            self.assertIn(IDS["charge_plan_enabled"], stats)                    # its switches stay (to turn it off)
+            self.assertIn("car_plan", stats)                                    # the forecast says it uses the plan
+        try:
+            import jinja2
+        except ImportError:
+            return
+        env = jinja2.Environment()
+        for card in _cards(build_views(IDS, "de", planners + [{"name": "Two", "plan": "sensor.two_plan", "ready": None}])):
+            if card["type"] == "markdown":
+                env.parse(card["content"])
+
+    def test_without_a_planner_the_dashboard_is_as_before(self):
+        self.assertEqual(json.dumps(build_views(IDS, "en", [])), json.dumps(build_views(IDS, "en")))
+        self.assertIn(f'"entity": "{IDS["charge_plan"]}"', json.dumps(build_views(IDS, "en")))
+
     def test_german_text_in_german_installations(self):
         self.assertEqual(build_views(IDS, "de")[0]["title"], "Wächter")
         self.assertEqual(build_views(IDS, "en")[0]["title"], "Guard")

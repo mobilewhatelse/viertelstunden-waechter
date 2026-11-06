@@ -135,6 +135,36 @@ def _register_services(hass: HomeAssistant) -> None:
     )
 
 
+def _planners(hass: HomeAssistant, entry) -> list[dict[str, Any]]:
+    """Charge plans of a car planner chosen in the settings (by config entry: its charge plan and readiness sensors,
+    found by unique id; or charge plan entities named by hand). Empty without a planner: the dashboard then shows the
+    guard's own plan. Nothing of the planner is imported."""
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+    from .const import CONF_CHARGE_PLAN, CONF_PLANNER
+
+    cfg = {**entry.data, **entry.options}
+    out: list[dict[str, Any]] = []
+    planner_id = cfg.get(CONF_PLANNER)
+    if planner_id and hass.config_entries.async_get_entry(planner_id) is not None:
+        ents = er.async_entries_for_config_entry(er.async_get(hass), planner_id)
+        devices = dr.async_get(hass)
+        for e in sorted(ents, key=lambda z: z.entity_id):
+            uid = str(e.unique_id)
+            if e.domain != "sensor" or not uid.endswith("_charge_plan"):
+                continue
+            prefix = uid[: -len("charge_plan")]
+            ready = next((r.entity_id for r in ents if r.domain == "sensor" and str(r.unique_id) == prefix + "readiness"), None)
+            dev = devices.async_get(e.device_id) if e.device_id else None
+            out.append({"name": (dev.name_by_user or dev.name) if dev else None, "plan": e.entity_id, "ready": ready})
+    manual = cfg.get(CONF_CHARGE_PLAN) or []
+    for eid in ([manual] if isinstance(manual, str) else list(manual)):
+        if eid and all(p["plan"] != eid for p in out):
+            st = hass.states.get(eid)
+            out.append({"name": st.name if st else eid, "plan": eid, "ready": None})
+    return out
+
+
 async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
     """Build the dashboard with this installation's entity ids and return it as YAML (also shown as a persistent
     notification) to paste into the raw configuration editor of a new dashboard. It never writes into a dashboard."""
@@ -153,7 +183,7 @@ async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
         if entity_id is None:
             raise ServiceValidationError(f"Entity '{key}' not found - restart Home Assistant after the update")
         ids[key] = entity_id
-    config = {"views": build_views(ids, hass.config.language)}
+    config = {"views": build_views(ids, hass.config.language, _planners(hass, entries[0]))}
 
     text = ha_yaml.dump(config)
     await hass.services.async_call(

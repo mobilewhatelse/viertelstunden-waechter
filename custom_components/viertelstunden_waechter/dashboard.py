@@ -68,6 +68,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "plan": "Ladeplan fürs Auto", "plan_on": "Ladeplan berechnen", "plan_exec": "Ladeplan auch ausführen (Standard aus)",
         "plan_status": "Ladeplan", "ready": "Fertig ca.", "departure": "Abfahrt", "soc": "Ladestand", "missing": "Es fehlen", "vehicle_hint": "Ohne Fahrzeug-Eintrag (Konfigurieren) gibt es keinen Plan.",
         "paused_by_plan": "Der Plan hat das Laden pausiert.", "executing": "Der Plan wird ausgeführt.",
+        "planner_plan": "Ladeplan vom Auto-Planer", "readiness": "Bereit zur Abfahrt",
+        "planner_note": "Der Plan kommt vom gewählten Auto-Planer. Der Wächter rechnet ihn in die Prognose ein und begrenzt Spitzen weiter in Echtzeit; den eigenen Ladeplan des Wächters brauchen Sie dann nicht.",
+        "own_plan": "Eigener Ladeplan des Wächters (mit Auto-Planer nicht nötig)", "planned_word": "Geplant", "not_needed": "Es muss nichts geladen werden.",
+        "from_sun": "davon Sonne/verfügbar", "car_plan": "Auto-Plan in der Prognose", "car_plan_windows": "Ladefenster", "until": "bis",
+        "car_plan_off": "nicht verbunden", "car_plan_unused": "verbunden, derzeit ohne gültigen Plan",
     },
     "en": {
         "view_main": "Guard", "view_stats": "Statistics and forecast",
@@ -122,6 +127,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "plan": "Charge plan for the car", "plan_on": "Calculate the charge plan", "plan_exec": "Also carry out the plan (default off)",
         "plan_status": "Charge plan", "ready": "Ready about", "departure": "Departure", "soc": "State of charge", "missing": "Missing", "vehicle_hint": "Without a vehicle entry (Configure) there is no plan.",
         "paused_by_plan": "The plan has paused the charging.", "executing": "The plan is being carried out.",
+        "planner_plan": "Charge plan from the car planner", "readiness": "Ready for departure",
+        "planner_note": "The plan comes from the chosen car planner. The guard includes it in the forecast and keeps limiting peaks in real time; the guard's own charge plan is not needed then.",
+        "own_plan": "The guard's own charge plan (not needed with a car planner)", "planned_word": "Planned", "not_needed": "Nothing needs to be charged.",
+        "from_sun": "of it sun/available", "car_plan": "Car plan in the forecast", "car_plan_windows": "charging windows", "until": "until",
+        "car_plan_off": "not connected", "car_plan_unused": "connected, no valid plan right now",
     },
 }
 
@@ -319,12 +329,68 @@ def _plan_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     )
 
 
+def _planner_markdown(plan: str, x: dict[str, str]) -> str:
+    """A charge plan sensor of a car planner (interface: state planned/not_needed/infeasible, attributes `windows` with
+    start, end, energy_kwh, peak_kw, optional available_kwh; `departure`, `ready_at`, `needed_kwh`, `shortfall_kwh`)."""
+    return (
+        "{% set wd = '" + x["days"] + "'.split(',') %}"
+        "{% set s = '" + plan + "' %}{% set st = states(s) %}{% set w = state_attr(s, 'windows') or [] %}"
+        "{% set dp = state_attr(s, 'departure') %}{% set ra = state_attr(s, 'ready_at') %}"
+        "{% if st == 'planned' %}**" + x["planned_word"] + ":** {{ state_attr(s, 'planned_kwh') }} kWh"
+        "{% if dp %} · " + x["departure"] + " {{ wd[(dp | as_datetime | as_local).weekday()] }} {{ (dp | as_datetime | as_local).strftime('%H:%M') }}{% endif %}"
+        "{% if ra %} · " + x["ready"] + " {{ (ra | as_datetime | as_local).strftime('%H:%M') }}{% endif %}\n"
+        "{% for z in w %}\n- {{ wd[(z.start | as_datetime | as_local).weekday()] }} {{ (z.start | as_datetime | as_local).strftime('%H:%M') }}–{{ (z.end | as_datetime | as_local).strftime('%H:%M') }}"
+        " · {{ z.energy_kwh }} kWh · max {{ z.peak_kw }} kW{% if (z.available_kwh or 0) > 0 %} · " + x["from_sun"] + " {{ z.available_kwh }} kWh{% endif %}{% endfor %}"
+        "{% elif st == 'not_needed' %}" + x["not_needed"] + "{% if dp %} · " + x["departure"] + " {{ wd[(dp | as_datetime | as_local).weekday()] }} {{ (dp | as_datetime | as_local).strftime('%H:%M') }}{% endif %}"
+        "{% else %}**{{ state_translated(s) }}**{% endif %}"
+        "{% if (state_attr(s, 'shortfall_kwh') or 0) > 0.1 %}\n\n⚠ " + x["missing"] + " {{ '%.1f' | format(state_attr(s, 'shortfall_kwh')) }} kWh{% endif %}"
+    )
+
+
+def _car_plan_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """Whether the forecast includes a car plan (attribute `car_plan` of the forecast sensor)."""
+    return (
+        "{% set wd = '" + x["days"] + "'.split(',') %}"
+        "{% set c = state_attr('" + ids["forecast_now"] + "', 'car_plan') %}**" + x["car_plan"] + ":** "
+        "{% if not c or not c.configured %}" + x["car_plan_off"] + "{% elif c.used %}{{ c.windows }} " + x["car_plan_windows"] +
+        "{% if c.until %} " + x["until"] + " {{ wd[(c.until | as_datetime | as_local).weekday()] }} {{ (c.until | as_datetime | as_local).strftime('%H:%M') }}{% endif %}"
+        "{% else %}" + x["car_plan_unused"] + "{% endif %}"
+    )
+
+
+def _plan_section(ids: dict[str, str], x: dict[str, str], planners: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """The charge plan section: the plan of the car planner when one is chosen (the guard's own plan steps back),
+    otherwise the guard's own plan as before."""
+    own = [{"entity": ids["charge_plan_enabled"], "name": x["plan_on"]}, {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]
+    if not planners:
+        return {"type": "grid", "cards": [
+            {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
+            _tile(ids["charge_plan"], x["plan_status"]),
+            {"type": "entities", "entities": own},
+            {"type": "markdown", "content": _plan_markdown(ids, x)},
+            {"type": "markdown", "content": _car_plan_markdown(ids, x)},
+        ]}
+    cards: list[dict[str, Any]] = [{"type": "heading", "heading": x["planner_plan"], "icon": "mdi:ev-station"}]
+    for p in planners:
+        name = p.get("name")
+        cards.append(_tile(p["plan"], f"{x['plan_status']} · {name}" if name and len(planners) > 1 else x["plan_status"]))
+        if p.get("ready"):
+            cards.append(_tile(p["ready"], f"{x['readiness']} · {name}" if name and len(planners) > 1 else x["readiness"]))
+        cards.append({"type": "markdown", "content": _planner_markdown(p["plan"], x)})
+    cards += [
+        {"type": "markdown", "content": _car_plan_markdown(ids, x) + "\n\n*" + x["planner_note"] + "*"},
+        {"type": "entities", "title": x["own_plan"], "entities": own},
+    ]
+    return {"type": "grid", "cards": cards}
+
+
 def _tile(entity: str, name: str) -> dict[str, Any]:
     return {"type": "tile", "entity": entity, "name": name}
 
 
-def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
-    """Three views: the daily overview, the compact view for the phone ("today") and statistics with forecast."""
+def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Three views: the daily overview, the compact view for the phone ("today") and statistics with forecast.
+    `planners`: charge plans of a car planner (each {name, plan, ready}); then those are shown instead of the own plan."""
     x = _t(lang)
     main = {
         "title": x["view_main"], "path": "waechter", "type": "sections", "max_columns": 3,
@@ -395,14 +461,7 @@ def build_views(ids: dict[str, str], lang: str = "en") -> list[dict[str, Any]]:
                 {"type": "entities", "entities": [{"entity": ids["weather_enabled"], "name": x["weather_on"]}]},
                 {"type": "markdown", "content": _weather_markdown(ids, x)},
             ]},
-            {"type": "grid", "cards": [
-                {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
-                _tile(ids["charge_plan"], x["plan_status"]),
-                {"type": "entities", "entities": [
-                    {"entity": ids["charge_plan_enabled"], "name": x["plan_on"]},
-                    {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]},
-                {"type": "markdown", "content": _plan_markdown(ids, x)},
-            ]},
+            _plan_section(ids, x, planners),
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["profile"], "icon": "mdi:calendar-week"},
                 {"type": "markdown", "content": charts.profile(ids, x["days"], x["hour_label"], x["legend_profile"], x["no_forecast"])},
