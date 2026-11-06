@@ -17,8 +17,8 @@ Format: newest first. German version below each English block is a short summary
 - **Dashboard with a car planner:** when a car planner is chosen in the general settings, *Create dashboard* shows the
   planner's charge plan (per vehicle: plan sensor, *Ready for departure* if the planner has one, windows with energy, highest
   power and share from the sun) instead of the guard's own plan, plus the line *Car plan in the forecast* (connected, windows,
-  until when). The own plan's switches stay below so it can be switched off; one plan instead of two that disagree. Without a
-  planner the dashboard is unchanged. Planners are found by unique id (charge plan and readiness sensors of the chosen entry) or
+  until when). **Either the planner or the guard:** with a car planner the guard's own plan and its switches are not on the dashboard
+  at all (one plan instead of two that disagree; they stay on the device page). Without a planner the dashboard is unchanged. Planners are found by unique id (charge plan and readiness sensors of the chosen entry) or
   taken from *Other charge plan sensors*; nothing of the planner is imported. New documentation section *The guard and a car
   planner together* (roles, last word stays with the guard, one plan instead of two). *Deutsch:* Mit gewähltem Auto-Planer zeigt
   das Dashboard dessen Ladeplan statt des eigenen, mit Zeile "Auto-Plan in der Prognose"; neuer Abschnitt "Wächter und

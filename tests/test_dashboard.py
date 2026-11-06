@@ -87,7 +87,8 @@ class DashboardTests(unittest.TestCase):
             self.assertIn("sensor.car_charge_plan", stats)
             self.assertIn("sensor.car_ready", stats)
             self.assertNotIn(f'"entity": "{IDS["charge_plan"]}"', stats)       # the own plan tile is gone
-            self.assertIn(IDS["charge_plan_enabled"], stats)                    # its switches stay (to turn it off)
+            self.assertNotIn(IDS["charge_plan_enabled"], stats)                 # no own plan, no own plan switches: either the planner or the guard
+            self.assertNotIn(IDS["charge_plan_execute"], stats)
             self.assertIn("car_plan", stats)                                    # the forecast says it uses the plan
         try:
             import jinja2
@@ -102,6 +103,12 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(json.dumps(build_views(IDS, "en", [])), json.dumps(build_views(IDS, "en")))
         self.assertIn(f'"entity": "{IDS["charge_plan"]}"', json.dumps(build_views(IDS, "en")))
 
+    def test_titled_entities_cards_have_no_header_toggle(self):
+        """The header toggle of an entities card flips all its switches at once (it could switch on "carry out the plan")."""
+        for planners in (None, [{"name": "Car", "plan": "sensor.car_charge_plan", "ready": None}]):
+            for card in _cards(build_views(IDS, "en", planners)):
+                if card["type"] == "entities" and card.get("title"):
+                    self.assertIs(card.get("show_header_toggle"), False, card["title"])
     def test_german_text_in_german_installations(self):
         self.assertEqual(build_views(IDS, "de")[0]["title"], "Wächter")
         self.assertEqual(build_views(IDS, "en")[0]["title"], "Guard")

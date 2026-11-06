@@ -483,7 +483,8 @@ The two have different jobs and each works on its own:
 - **The dashboard follows the choice** (service *Create dashboard*, see *Dashboard*): with a car planner chosen in the general
   settings, the charge plan card shows **the planner's plan** - per vehicle the plan sensor, *Ready for departure* if the planner
   has one, the windows with energy, highest power and the share from the sun - plus the line *Car plan in the forecast*
-  (connected, how many windows, until when). The guard's own plan steps back; its two switches stay below, to switch it off.
+  (connected, how many windows, until when). **Either the planner or the guard:** with a car planner the guard's own plan and its
+  two switches are not on the dashboard at all (they stay on the device page; switch *Calculate the charge plan* off there).
   Without a car planner the card is the guard's own plan as before.
 - Both integrations stay fully usable alone: the guard without a planner, the planner without the guard (then it has no load
   forecast and plans on its own data).

@@ -69,8 +69,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "plan_status": "Ladeplan", "ready": "Fertig ca.", "departure": "Abfahrt", "soc": "Ladestand", "missing": "Es fehlen", "vehicle_hint": "Ohne Fahrzeug-Eintrag (Konfigurieren) gibt es keinen Plan.",
         "paused_by_plan": "Der Plan hat das Laden pausiert.", "executing": "Der Plan wird ausgeführt.",
         "planner_plan": "Ladeplan vom Auto-Planer", "readiness": "Bereit zur Abfahrt",
-        "planner_note": "Der Plan kommt vom gewählten Auto-Planer. Der Wächter rechnet ihn in die Prognose ein und begrenzt Spitzen weiter in Echtzeit; den eigenen Ladeplan des Wächters brauchen Sie dann nicht.",
-        "own_plan": "Eigener Ladeplan des Wächters (mit Auto-Planer nicht nötig)", "planned_word": "Geplant", "not_needed": "Es muss nichts geladen werden.",
+        "planner_note": "Der Plan kommt vom gewählten Auto-Planer. Der Wächter rechnet ihn in die Prognose ein und begrenzt Spitzen weiter in Echtzeit. Mit einem Auto-Planer zeigt der Wächter keinen eigenen Ladeplan: entweder der Planer oder der Wächter.",
+        "planned_word": "Geplant", "not_needed": "Es muss nichts geladen werden.",
         "from_sun": "davon Sonne/verfügbar", "car_plan": "Auto-Plan in der Prognose", "car_plan_windows": "Ladefenster", "until": "bis",
         "car_plan_off": "nicht verbunden", "car_plan_unused": "verbunden, derzeit ohne gültigen Plan",
     },
@@ -128,8 +128,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "plan_status": "Charge plan", "ready": "Ready about", "departure": "Departure", "soc": "State of charge", "missing": "Missing", "vehicle_hint": "Without a vehicle entry (Configure) there is no plan.",
         "paused_by_plan": "The plan has paused the charging.", "executing": "The plan is being carried out.",
         "planner_plan": "Charge plan from the car planner", "readiness": "Ready for departure",
-        "planner_note": "The plan comes from the chosen car planner. The guard includes it in the forecast and keeps limiting peaks in real time; the guard's own charge plan is not needed then.",
-        "own_plan": "The guard's own charge plan (not needed with a car planner)", "planned_word": "Planned", "not_needed": "Nothing needs to be charged.",
+        "planner_note": "The plan comes from the chosen car planner. The guard includes it in the forecast and keeps limiting peaks in real time. With a car planner the guard shows no charge plan of its own: either the planner or the guard.",
+        "planned_word": "Planned", "not_needed": "Nothing needs to be charged.",
         "from_sun": "of it sun/available", "car_plan": "Car plan in the forecast", "car_plan_windows": "charging windows", "until": "until",
         "car_plan_off": "not connected", "car_plan_unused": "connected, no valid plan right now",
     },
@@ -359,14 +359,13 @@ def _car_plan_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
 
 
 def _plan_section(ids: dict[str, str], x: dict[str, str], planners: list[dict[str, Any]] | None) -> dict[str, Any]:
-    """The charge plan section: the plan of the car planner when one is chosen (the guard's own plan steps back),
+    """The charge plan section: with a car planner chosen only the planner's plan (either the planner or the guard, never two plans),
     otherwise the guard's own plan as before."""
-    own = [{"entity": ids["charge_plan_enabled"], "name": x["plan_on"]}, {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]
     if not planners:
         return {"type": "grid", "cards": [
             {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
             _tile(ids["charge_plan"], x["plan_status"]),
-            {"type": "entities", "entities": own},
+            {"type": "entities", "entities": [{"entity": ids["charge_plan_enabled"], "name": x["plan_on"]}, {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]},
             {"type": "markdown", "content": _plan_markdown(ids, x)},
             {"type": "markdown", "content": _car_plan_markdown(ids, x)},
         ]}
@@ -377,10 +376,7 @@ def _plan_section(ids: dict[str, str], x: dict[str, str], planners: list[dict[st
         if p.get("ready"):
             cards.append(_tile(p["ready"], f"{x['readiness']} · {name}" if name and len(planners) > 1 else x["readiness"]))
         cards.append({"type": "markdown", "content": _planner_markdown(p["plan"], x)})
-    cards += [
-        {"type": "markdown", "content": _car_plan_markdown(ids, x) + "\n\n*" + x["planner_note"] + "*"},
-        {"type": "entities", "title": x["own_plan"], "entities": own},
-    ]
+    cards.append({"type": "markdown", "content": _car_plan_markdown(ids, x) + "\n\n*" + x["planner_note"] + "*"})
     return {"type": "grid", "cards": cards}
 
 
@@ -398,10 +394,10 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["view_main"], "icon": "mdi:shield-half-full"},
                 {"type": "markdown", "content": x["intro"]},
-                {"type": "entities", "title": x["settings"], "entities": [
+                {"type": "entities", "title": x["settings"], "show_header_toggle": False, "entities": [
                     {"entity": ids["mode"], "name": x["mode"]}, {"entity": ids["strategy"], "name": x["strategy"]},
                     {"entity": ids["limit"], "name": x["limit"]}, {"entity": ids["margin"], "name": x["margin"]}]},
-                {"type": "entities", "title": x["features"], "entities": [
+                {"type": "entities", "title": x["features"], "show_header_toggle": False, "entities": [
                     {"entity": ids["paid_peak"], "name": x["paid_peak"]}, {"entity": ids["notify_intervention"], "name": x["notify"]},
                     {"entity": ids["costs_enabled"], "name": x["costs_on"]}, {"entity": ids["forecast_enabled"], "name": x["forecast_on"]},
                     {"entity": ids["predictive"], "name": x["predictive"]}, {"entity": ids["battery_reserve"], "name": x["reserve_on"]},

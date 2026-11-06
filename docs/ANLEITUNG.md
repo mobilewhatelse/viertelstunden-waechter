@@ -336,7 +336,8 @@ Beide haben verschiedene Aufgaben, und jede läuft auch allein:
 - **Das Dashboard folgt der Wahl** (Dienst *Dashboard erstellen*, siehe 3d.): Ist in den allgemeinen Einstellungen ein Auto-Planer gewählt,
   zeigt die Ladeplan-Karte **den Plan des Planers** – je Fahrzeug den Plan-Sensor, *Bereit zur Abfahrt*, wenn der Planer einen hat, die
   Fenster mit Energie, höchster Leistung und Anteil aus der Sonne – und die Zeile *Auto-Plan in der Prognose* (verbunden, wie viele Fenster,
-  bis wann). Der eigene Plan des Wächters tritt zurück; seine zwei Schalter stehen darunter, damit man ihn ausschalten kann.
+  bis wann). **Entweder der Planer oder der Wächter:** Mit Auto-Planer steht der eigene Plan des Wächters mit seinen zwei Schaltern gar nicht
+  im Dashboard (er bleibt auf der Geräteseite; dort *Ladeplan berechnen* ausschalten).
   Ohne Auto-Planer ist die Karte wie bisher der eigene Plan des Wächters.
 - Beide Integrationen bleiben einzeln voll nutzbar: der Wächter ohne Planer, der Planer ohne Wächter (dann ohne Lastprognose, nur mit
   seinen eigenen Daten).
