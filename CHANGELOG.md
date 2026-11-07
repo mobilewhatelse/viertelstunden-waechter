@@ -23,6 +23,10 @@ Format: newest first. German version below each English block is a short summary
   planner together* (roles, last word stays with the guard, one plan instead of two). *Deutsch:* Mit gewähltem Auto-Planer zeigt
   das Dashboard dessen Ladeplan statt des eigenen, mit Zeile "Auto-Plan in der Prognose"; neuer Abschnitt "Wächter und
   Auto-Planer zusammen". Ohne Planer bleibt alles wie bisher.
+- **Dashboard cleaned up, graphics first** (user feedback): fewer cards; settings and features stay. Left out: the explanation text,
+  the table of devices and priorities, intermediate tiles (allowed now, quarter hour so far, last quarter hour, without the guard,
+  relief now), the tables of daily peaks, months and interventions (the charts show them), the 3-day statistics graph. The explanation
+  of the day only shows while the AI explainer is on. Titled cards have no header toggle (it flipped all switches at once).
 - Documentation: HACS is the built-in **Marketplace** since Home Assistant 2026.11; installation texts and tables say so
   (catalog, `hacs.json` and the validation keep their names). *Deutsch:* HACS heißt seit 2026.11 Marketplace.
 - **Maximum age of the grid reading** (setting, default 120 s, 0 = off): a reading that was not written for longer counts as

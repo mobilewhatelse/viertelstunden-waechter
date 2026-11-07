@@ -367,16 +367,12 @@ def _plan_section(ids: dict[str, str], x: dict[str, str], planners: list[dict[st
             _tile(ids["charge_plan"], x["plan_status"]),
             {"type": "entities", "entities": [{"entity": ids["charge_plan_enabled"], "name": x["plan_on"]}, {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]},
             {"type": "markdown", "content": _plan_markdown(ids, x)},
-            {"type": "markdown", "content": _car_plan_markdown(ids, x)},
         ]}
     cards: list[dict[str, Any]] = [{"type": "heading", "heading": x["planner_plan"], "icon": "mdi:ev-station"}]
     for p in planners:
         name = p.get("name")
         cards.append(_tile(p["plan"], f"{x['plan_status']} · {name}" if name and len(planners) > 1 else x["plan_status"]))
-        if p.get("ready"):
-            cards.append(_tile(p["ready"], f"{x['readiness']} · {name}" if name and len(planners) > 1 else x["readiness"]))
         cards.append({"type": "markdown", "content": _planner_markdown(p["plan"], x)})
-    cards.append({"type": "markdown", "content": _car_plan_markdown(ids, x) + "\n\n*" + x["planner_note"] + "*"})
     return {"type": "grid", "cards": cards}
 
 
@@ -393,7 +389,6 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
         "sections": [
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["view_main"], "icon": "mdi:shield-half-full"},
-                {"type": "markdown", "content": x["intro"]},
                 {"type": "entities", "title": x["settings"], "show_header_toggle": False, "entities": [
                     {"entity": ids["mode"], "name": x["mode"]}, {"entity": ids["strategy"], "name": x["strategy"]},
                     {"entity": ids["limit"], "name": x["limit"]}, {"entity": ids["margin"], "name": x["margin"]}]},
@@ -404,22 +399,17 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                     {"entity": ids["ai_explainer"], "name": x["ai_on"]}, {"entity": ids["prewarn"], "name": x["prewarn"]}, {"entity": ids["weekly_report_enabled"], "name": x["weekly_on"]},
                     {"entity": ids["price_low"], "name": x["price_low"]}, {"entity": ids["price_high"], "name": x["price_high"]},
                     {"entity": ids["price_threshold"], "name": x["threshold"]}]},
-                {"type": "markdown", "title": x["devices"], "content": _config_markdown(ids, x)},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["now"], "icon": "mdi:timer-outline"},
-                _tile(ids["status"], x["status"]), _tile(ids["forecast"], x["prognosis"]), _tile(ids["allowed"], x["allowed"]),
-                _tile(ids["quarter_energy"], x["so_far"]), _tile(ids["last_quarter"], x["last"]),
+                _tile(ids["status"], x["status"]), _tile(ids["forecast"], x["prognosis"]),
                 _tile(ids["today_peak"], x["peak_today"]), _tile(ids["month_peak"], x["peak_month"]),
                 _tile(ids["interventions_today"], x["iv_today"]),
-                {"type": "markdown", "content": _today_markdown(ids, x)},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["costs"], "icon": "mdi:currency-eur"},
-                _tile(ids["cost_month"], x["cost_month"]), _tile(ids["cost_without"], x["cost_without"]),
+                _tile(ids["cost_month"], x["cost_month"]),
                 _tile(ids["savings_month"], x["saving_month"]), _tile(ids["savings_year"], x["saving_year"]),
-                _tile(ids["saved_now"], x["saved_now"]),
-                {"type": "markdown", "content": x["estimate"]},
             ]},
         ],
     }
@@ -439,8 +429,8 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 {"type": "markdown", "content": charts.today_quarters(ids, x["limit_label"], x["legend_quarters"], x["enough_data"])},
                 {"type": "heading", "heading": x["last_iv"], "icon": "mdi:counter"},
                 {"type": "markdown", "content": _recent_markdown(ids, x)},
-                {"type": "heading", "heading": x["ai_title"], "icon": "mdi:robot-outline"},
-                {"type": "markdown", "content": _explanation_markdown(ids, x)},
+                {"type": "conditional", "conditions": [{"condition": "state", "entity": ids["ai_explainer"], "state": "on"}],
+                 "card": {"type": "markdown", "title": x["ai_title"], "content": _explanation_markdown(ids, x)}},
             ]},
         ],
     }
@@ -449,9 +439,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
         "sections": [
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["forecast"], "icon": "mdi:chart-timeline-variant"},
-                _tile(ids["forecast_now"], x["typical_now"]), _tile(ids["forecast_peak"], x["expected_peak"]),
                 {"type": "markdown", "content": _next_risk_markdown(ids, x)},
-                {"type": "markdown", "content": _forecast_markdown(ids, x)},
                 {"type": "markdown", "content": charts.forecast(ids, x["target_label"], x["legend_forecast"], x["no_forecast"])},
                 {"type": "heading", "heading": x["weather"], "icon": "mdi:weather-partly-cloudy"},
                 {"type": "entities", "entities": [{"entity": ids["weather_enabled"], "name": x["weather_on"]}]},
@@ -463,21 +451,12 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 {"type": "markdown", "content": charts.profile(ids, x["days"], x["hour_label"], x["legend_profile"], x["no_forecast"])},
             ]},
             {"type": "grid", "cards": [
-                {"type": "heading", "heading": x["peaks"], "icon": "mdi:calendar-month"},
-                {"type": "markdown", "content": _peaks_markdown(ids, x)},
                 {"type": "heading", "heading": x["daily"], "icon": "mdi:chart-bar"},
                 {"type": "markdown", "content": charts.daily(ids, x["limit_label"], x["legend_daily"], x["enough_data"])},
-                {"type": "statistics-graph", "title": x["chart_peaks"], "entities": [ids["last_quarter"]],
-                 "stat_types": ["max"], "period": "hour", "days_to_show": 3, "chart_type": "bar"},
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["months"], "icon": "mdi:calendar-range"},
                 {"type": "markdown", "content": charts.months(ids, x["limit_label"], x["legend_months"], x["enough_data"])},
-                {"type": "markdown", "content": _months_markdown(ids, x)},
-                {"type": "heading", "heading": x["interventions"], "icon": "mdi:counter"},
-                {"type": "markdown", "content": _interventions_markdown(ids, x)},
-                {"type": "heading", "heading": x["ai_title"], "icon": "mdi:robot-outline"},
-                {"type": "markdown", "content": _explanation_markdown(ids, x)},
                 {"type": "heading", "heading": x["weekly"], "icon": "mdi:calendar-week"},
                 {"type": "markdown", "content": "{% set r = state_attr('" + ids["weekly_report"] + "', 'text') %}{{ (r | replace('\n', '  \n')) if r else '" + x["no_report"] + "' }}"},
             ]},

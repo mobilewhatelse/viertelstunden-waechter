@@ -334,6 +334,8 @@ def main():
         views = cfg.get("views", [])
         log([v.get("path") for v in views] == ["waechter", "heute", "statistik"], "Dashboard hat die Ansichten Waechter, Heute (Handy), Statistik", str([v.get("path") for v in views]))
         cards = [c for v in views for sec in v.get("sections", []) for c in sec.get("cards", []) if c.get("type") == "markdown"]
+        cards += [c["card"] for v in views for sec in v.get("sections", []) for c in sec.get("cards", [])
+                  if c.get("type") == "conditional" and (c.get("card") or {}).get("type") == "markdown"]   # the explanation of the day
         bad = []
         for c in cards:
             m = call({"type": "render_template", "template": c["content"], "timeout": 20, "strict": True}, want_event=True)
@@ -342,7 +344,7 @@ def main():
                 bad.append(f"{c['content'][:60]!r}: {res.get('error')}")
             elif res.get("type") == "event" and not str(res["event"].get("result", "x")).strip():
                 bad.append(f"{c['content'][:60]!r}: leer")
-        log(len(cards) >= 15 and not bad, f"Alle {len(cards)} Markdown-Karten des Dashboards rendern ohne Fehler (strenger Modus)", "; ".join(bad)[:300])
+        log(len(cards) >= 8 and not bad, f"Alle {len(cards)} Markdown-Karten des Dashboards rendern ohne Fehler (strenger Modus)", "; ".join(bad)[:300])
         ws.close()
     except Exception as err:  # noqa: BLE001
         log(False, "Dashboard-Pruefung", f"{type(err).__name__}: {err}")

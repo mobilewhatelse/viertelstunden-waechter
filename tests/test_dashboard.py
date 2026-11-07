@@ -25,10 +25,15 @@ class DashboardTests(unittest.TestCase):
             json.dumps(views)  # must be serialisable for the storage
 
     def test_every_entity_is_used_and_nothing_else_is_referenced(self):
+        """Every entity except the intermediate values left out on purpose (fewer cards, graphics first)."""
+        hidden = {"allowed", "quarter_energy", "cost_without", "saved_now"}
         views = build_views(IDS, "en")
         text = json.dumps(views)
         for key, entity_id in IDS.items():
-            self.assertIn(entity_id, text, key)
+            if key in hidden:
+                self.assertNotIn(entity_id, text, key)
+            else:
+                self.assertIn(entity_id, text, key)
         import re
 
         used = set(re.findall(r"\b(?:sensor|number|select|switch)\.[a-z0-9_]+", text))
@@ -85,11 +90,10 @@ class DashboardTests(unittest.TestCase):
             views = {v["path"]: v for v in build_views(IDS, lang, planners)}
             stats = json.dumps(views["statistik"], ensure_ascii=False)
             self.assertIn("sensor.car_charge_plan", stats)
-            self.assertIn("sensor.car_ready", stats)
+            self.assertNotIn("sensor.car_ready", stats)                         # readiness is on the planner's own dashboard
             self.assertNotIn(f'"entity": "{IDS["charge_plan"]}"', stats)       # the own plan tile is gone
             self.assertNotIn(IDS["charge_plan_enabled"], stats)                 # no own plan, no own plan switches: either the planner or the guard
             self.assertNotIn(IDS["charge_plan_execute"], stats)
-            self.assertIn("car_plan", stats)                                    # the forecast says it uses the plan
         try:
             import jinja2
         except ImportError:
