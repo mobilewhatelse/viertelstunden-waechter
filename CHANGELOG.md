@@ -23,6 +23,9 @@ Format: newest first. German version below each English block is a short summary
   planner together* (roles, last word stays with the guard, one plan instead of two). *Deutsch:* Mit gewähltem Auto-Planer zeigt
   das Dashboard dessen Ladeplan statt des eigenen, mit Zeile "Auto-Plan in der Prognose"; neuer Abschnitt "Wächter und
   Auto-Planer zusammen". Ohne Planer bleibt alles wie bisher.
+- **Weather card says only what it knows:** until the correction can say something (fewer than 14 whole days with temperature, or a
+  slope of zero) the card is one line, *Weather correction: still learning, 3 of 14 days with temperature*; the numbers (heating,
+  cooling, fit in kW per kelvin) appear once it is active. *Deutsch:* Wetterkarte zeigt nur "lernt noch", bis sie etwas aussagen kann.
 - **Dashboard cleaned up, graphics first** (user feedback): fewer cards; settings and features stay. Left out: the explanation text,
   the table of devices and priorities, intermediate tiles (allowed now, quarter hour so far, last quarter hour, without the guard,
   relief now), the tables of daily peaks, months and interventions (the charts show them), the 3-day statistics graph. The explanation

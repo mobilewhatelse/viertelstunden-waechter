@@ -24,6 +24,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "weather_off": "Die Wetterkorrektur ist ausgeschaltet: es werden keine Temperaturen gelernt und nichts korrigiert.",
         "weather_outdoor": "Außentemperatur", "weather_hours": "Stunden Vorhersage", "weather_learned": "Gelernt aus",
         "weather_days": "von mindestens 14 vollen Tagen", "weather_heat": "Heizen", "weather_cool": "Kühlen", "weather_fit": "Güte",
+        "weather_learning": "Wetterkorrektur: lernt noch", "weather_of14": "von 14 Tagen mit Temperatur",
         "weather_active": "Die Korrektur wirkt jetzt auf die Prognose.", "weather_waiting": "Die Korrektur wirkt, sobald genug volle Tage mit Temperatur vorliegen (und die Steigung nicht null ist).",
         "now": "Jetzt", "costs": "Kosten und Ersparnis", "forecast": "Prognose 24 Stunden",
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
@@ -83,6 +84,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "weather_off": "The weather correction is switched off: no temperatures are learned and nothing is corrected.",
         "weather_outdoor": "Outdoor temperature", "weather_hours": "hours of forecast", "weather_learned": "Learned from",
         "weather_days": "of at least 14 whole days", "weather_heat": "Heating", "weather_cool": "Cooling", "weather_fit": "Fit",
+        "weather_learning": "Weather correction: still learning", "weather_of14": "of 14 days with temperature",
         "weather_active": "The correction is changing the forecast now.", "weather_waiting": "The correction starts once enough whole days with temperature exist (and a slope is not zero).",
         "now": "Now", "costs": "Cost and savings", "forecast": "24-hour forecast",
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
@@ -221,13 +223,14 @@ def _weather_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% set w = state_attr('" + s + "', 'weather') or {} %}"
         "{% if not w.get('configured') %}" + x["weather_none"] + ""
         "{% elif not w.get('enabled') %}" + x["weather_off"] + ""
+        "{% elif not w.get('active') %}**" + x["weather_learning"] + "** · {{ w.get('days', 0) }} " + x["weather_of14"] + ""
         "{% else %}**" + x["weather_outdoor"] + ":** {{ w.get('temperature_now') if w.get('temperature_now') is not none else '–' }} °C"
         " · {{ w.get('forecast_hours', 0) }} " + x["weather_hours"] + "\n\n"
         "**" + x["weather_learned"] + ":** {{ w.get('days', 0) }} " + x["weather_days"] + "\n\n"
         "**" + x["weather_heat"] + ":** {{ '%.2f' | format(w.get('heat_kw_per_k', 0)) }} kW/K · "
         "**" + x["weather_cool"] + ":** {{ '%.2f' | format(w.get('cool_kw_per_k', 0)) }} kW/K · "
         "**" + x["weather_fit"] + ":** {{ '%.2f' | format(w.get('r2', 0)) }}\n\n"
-        "{% if w.get('active') %}" + x["weather_active"] + "{% else %}" + x["weather_waiting"] + "{% endif %}"
+        "" + x["weather_active"] + ""
         "{% endif %}"
     )
 
