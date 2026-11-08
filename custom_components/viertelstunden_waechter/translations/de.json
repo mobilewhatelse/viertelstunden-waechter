@@ -21,6 +21,10 @@
     },
     "abort": {
       "single_instance_allowed": "Es kann nur ein Wächter eingerichtet werden."
+    },
+    "error": {
+      "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
+      "not_energy": "Dieser Sensor hat keine Energieeinheit (Wh, kWh oder MWh). Ergänzen Sie beim Template-Sensor unit_of_measurement: kWh oder wählen Sie einen anderen Sensor."
     }
   },
   "options": {
@@ -47,6 +51,10 @@
           "ai_task_entity": "Optional: die KI-Aufgabe (Einstellungen > Geräte > KI-Aufgaben), die der Erklärer benutzt. Sie wählen das Modell; der Wächter hat keinen eigenen Schlüssel."
         }
       }
+    },
+    "error": {
+      "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
+      "not_energy": "Dieser Sensor hat keine Energieeinheit (Wh, kWh oder MWh). Ergänzen Sie beim Template-Sensor unit_of_measurement: kWh oder wählen Sie einen anderen Sensor."
     }
   },
   "selector": {
@@ -266,7 +274,8 @@
       "error": {
         "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
         "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
-        "unknown_option": "Diese Option hat die Phasenwahl nicht."
+        "unknown_option": "Diese Option hat die Phasenwahl nicht.",
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
       }
     },
     "switch": {
@@ -320,6 +329,9 @@
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz)."
           }
         }
+      },
+      "error": {
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
       }
     },
     "script": {
@@ -451,7 +463,8 @@
         "pair": "Einstellung und Wert gehören zusammen.",
         "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
         "value_onoff": "Ein Schalter braucht den Wert on oder off.",
-        "unknown_option": "Die Auswahl hat diese Option nicht."
+        "unknown_option": "Die Auswahl hat diese Option nicht.",
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
       }
     },
     "setting": {

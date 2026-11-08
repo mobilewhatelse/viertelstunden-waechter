@@ -29,6 +29,7 @@ from .const import (
     D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_STEP, D_VALUE,
 )
 from .engine import KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
+from .inputs import unit_errors
 
 ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
 RELEASE_DOMAINS = ["number", "input_number", "select", "input_select", "switch", "input_boolean"]
@@ -56,8 +57,9 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
     s: dict[Any, Any] = {}
     if first:
         s[vol.Required("name", default="Viertelstunden-Wächter")] = TextSelector()
-    s[vol.Required(CONF_GRID_POWER, default=d.get(CONF_GRID_POWER, vol.UNDEFINED))] = _ent("sensor", "power")
-    s[_opt(CONF_GRID_ENERGY, d)] = _ent("sensor", "energy")
+    # any sensor: a template sensor with the unit W but without a device class is just as good (the unit is checked on saving)
+    s[vol.Required(CONF_GRID_POWER, default=d.get(CONF_GRID_POWER, vol.UNDEFINED))] = _ent("sensor")
+    s[_opt(CONF_GRID_ENERGY, d)] = _ent("sensor")
     if first:
         s[vol.Required(CONF_LIMIT, default=10.0)] = _num(1, 50, 0.1, "kW")
         s[vol.Required(CONF_MARGIN, default=0.5)] = _num(0, 5, 0.1, "kW")
@@ -93,7 +95,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_STOP, d)] = _ent(COMMAND_DOMAINS)
         s[_opt(D_STOP_VALUE, d)] = TextSelector()
     elif kind == KIND_WALLBOX:
-        s[vol.Required(D_POWER, default=d.get(D_POWER, vol.UNDEFINED))] = _ent("sensor", "power")
+        s[vol.Required(D_POWER, default=d.get(D_POWER, vol.UNDEFINED))] = _ent("sensor")
         s[vol.Required(D_CURRENT, default=d.get(D_CURRENT, vol.UNDEFINED))] = _ent(["number", "input_number"])
         s[vol.Required(D_MIN_CURRENT, default=d.get(D_MIN_CURRENT, 6))] = _num(1, 32, 1, "A")
         s[vol.Required(D_MAX_CURRENT, default=d.get(D_MAX_CURRENT, 16))] = _num(1, 63, 1, "A")
@@ -102,7 +104,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_PHASES, d)] = _ent("sensor")
     elif kind == KIND_SWITCH:
         s[vol.Required(D_SWITCH, default=d.get(D_SWITCH, vol.UNDEFINED))] = _ent(["switch", "input_boolean", "light", "fan"])
-        s[_opt(D_POWER, d)] = _ent("sensor", "power")
+        s[_opt(D_POWER, d)] = _ent("sensor")
         s[vol.Required(D_MIN_POWER, default=d.get(D_MIN_POWER, 100))] = _num(0, 20000, 10, "W")
         s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 0))] = _num(0, 20000, 10, "W")
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
@@ -126,7 +128,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_MAX_VALUE, default=d.get(D_MAX_VALUE, 100))] = _num(0, 100000, 0.1)
         s[vol.Required(D_MIN_VALUE, default=d.get(D_MIN_VALUE, 30))] = _num(0, 100000, 0.1)
         s[vol.Required(D_STEP, default=d.get(D_STEP, 10))] = _num(0.1, 100000, 0.1)
-        s[_opt(D_POWER, d)] = _ent("sensor", "power")
+        s[_opt(D_POWER, d)] = _ent("sensor")
         s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 0))] = _num(0, 50000, 10, "W")
         s[_opt(D_COMFORT, d)] = _ent("sensor")
         s[vol.Required(D_COMFORT_MIN, default=d.get(D_COMFORT_MIN, 20))] = _num(-50, 1000, 0.5)
@@ -182,6 +184,9 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
+            errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,))
+            if errors:
+                return self.async_show_form(step_id="user", data_schema=_general_schema(user_input, True), errors=errors)
             data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY) if user_input.get(k)}
             options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN]}
             return self.async_create_entry(title=user_input["name"], data=data, options=options)
@@ -207,6 +212,9 @@ class WaechterOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         current = {**self.config_entry.data, **self.config_entry.options}
         if user_input is not None:
+            errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,))
+            if errors:
+                return self.async_show_form(step_id="init", data_schema=_general_schema({**current, **user_input}, False), errors=errors)
             keep = {k: v for k, v in self.config_entry.options.items() if k in (CONF_LIMIT, CONF_MARGIN)}
             keep.update({k: v for k, v in user_input.items() if v not in (None, "")})
             if not user_input.get(CONF_GRID_ENERGY):
@@ -227,7 +235,7 @@ class _DeviceFlow(ConfigSubentryFlow):
     async def _form(self, user_input: dict[str, Any] | None, current: dict[str, Any]) -> SubentryFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            errors = self._validate(user_input)
+            errors = unit_errors(self.hass.states.get, user_input, (D_POWER,)) or self._validate(user_input)
             if not errors:
                 data = {k: v for k, v in user_input.items() if v not in (None, "")}
                 for k in (D_PRIORITY, D_MIN_CURRENT, D_MAX_CURRENT):

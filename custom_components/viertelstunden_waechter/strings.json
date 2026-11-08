@@ -21,6 +21,10 @@
     },
     "abort": {
       "single_instance_allowed": "Only one guard can be set up."
+    },
+    "error": {
+      "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
+      "not_energy": "This sensor has no energy unit (Wh, kWh or MWh). Add unit_of_measurement: kWh to the template sensor or choose another sensor."
     }
   },
   "options": {
@@ -47,6 +51,10 @@
           "ai_task_entity": "Optional: the AI task entity (Settings > Devices > AI tasks) the explainer uses. You choose the model; the guard has no key of its own."
         }
       }
+    },
+    "error": {
+      "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
+      "not_energy": "This sensor has no energy unit (Wh, kWh or MWh). Add unit_of_measurement: kWh to the template sensor or choose another sensor."
     }
   },
   "selector": {
@@ -266,7 +274,8 @@
       "error": {
         "min_above_max": "Minimum current is above maximum current.",
         "phase_pair": "Phase selection and option for 1 phase belong together.",
-        "unknown_option": "The phase selection has no such option."
+        "unknown_option": "The phase selection has no such option.",
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
       }
     },
     "switch": {
@@ -320,6 +329,9 @@
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection)."
           }
         }
+      },
+      "error": {
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
       }
     },
     "script": {
@@ -451,7 +463,8 @@
         "pair": "Setting and value belong together.",
         "value_number": "This setting is a number: enter a number.",
         "value_onoff": "A switch needs the value on or off.",
-        "unknown_option": "The selection has no such option."
+        "unknown_option": "The selection has no such option.",
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
       }
     },
     "setting": {

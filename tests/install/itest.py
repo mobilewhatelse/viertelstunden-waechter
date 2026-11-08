@@ -164,6 +164,12 @@ def main():
     log(s == 200, "Version der Testinstanz", d.get("version") if isinstance(d, dict) else str(d))
     s, d = api("POST", "/api/config/config_entries/flow", {"handler": "viertelstunden_waechter", "show_advanced_options": False})
     log(s == 200 and d.get("type") == "form" and d.get("step_id") == "user", "Integration wird im Dialog angeboten (Config Flow)", f"{s} {d.get('type')} {d.get('step_id')}")
+    fields = {f.get("name"): f for f in (d.get("data_schema") or [])}
+    sel = ((fields.get("grid_power") or {}).get("selector") or {}).get("entity") or {}
+    log(bool(sel) and not sel.get("device_class") and "device_class" not in str(sel), "Netzbezug-Feld filtert nicht nach Geraeteklasse (Issue 1)", str(sel))
+    s2, d2 = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {"name": "Viertelstunden-Wächter", "grid_power": "sensor.netz_ohne_einheit", "limit_kw": 10.0, "margin_kw": 0.5})
+    log(s2 == 200 and d2.get("type") == "form" and (d2.get("errors") or {}).get("grid_power") == "not_power", "Sensor ohne Einheit wird mit klarem Fehler abgelehnt", str(d2.get("errors")))
+    api("DELETE", f"/api/config/config_entries/flow/{d['flow_id']}")
     entry, err = flow_finish("/api/config/config_entries/flow", {"handler": "viertelstunden_waechter", "show_advanced_options": False},
                              {"name": "Viertelstunden-Wächter", "grid_power": "sensor.netzbezug", "limit_kw": 10.0, "margin_kw": 0.5})
     log(entry is not None, "Integration von Grund auf eingerichtet", err)
