@@ -40,6 +40,17 @@ Format: newest first. German version below each English block is a short summary
 - Documentation only: README status and installation text updated (now in the HACS default list), new section *Support and
   feedback*, issue template *Bug report*, outdated dashboard-URL notes removed from README and guide.
 
+## 0.13.3 - 2026-11-08
+
+- **Fix (issue 1):** grid power, grid energy and the power sensor of a device can be **any sensor**, also a template sensor with the unit
+  `W` but without `device_class: power` (for example one built from the three phases of a Shelly 3EM Pro). Before, such sensors were missing
+  from the list. Instead of the device class the dialog now checks the **unit** when saving (W, kW, MW for power; Wh, kWh, MWh for energy)
+  and says what to add if it is missing. Covered by the installation test with an equivalent simulated sensor; not tested with a real Shelly
+  device here.
+
+Deutsch: Netzbezug, Bezugszähler und die Leistungssensoren der Geräte können **jeder Sensor** sein, auch ein Template-Sensor mit der Einheit W
+ohne Geräteklasse (z. B. aus den drei Phasen eines Shelly 3EM Pro). Statt der Geräteklasse prüft der Dialog beim Speichern die Einheit.
+
 ## 0.13.2 - 2026-11-03
 
 - **Security (review by the HACS team):** the service `create_dashboard` no longer writes into dashboards. It only builds the

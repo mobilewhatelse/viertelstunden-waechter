@@ -71,7 +71,6 @@ template:
       - name: Netzbezug
         unique_id: netzbezug
         unit_of_measurement: W
-        device_class: power
         state_class: measurement
         state: "{% set _ = now() %}{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) }}"
       - name: Netzbezug still
@@ -80,6 +79,9 @@ template:
         device_class: power
         state_class: measurement
         state: "500"
+      - name: Netz ohne Einheit
+        unique_id: netz_ohne_einheit
+        state: "100"
       - name: Akku Ladestand
         unique_id: akku_soc
         unit_of_measurement: "%"

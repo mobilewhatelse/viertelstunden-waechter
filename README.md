@@ -74,6 +74,10 @@ Typical sources, all with integrations built into Home Assistant:
 2. **The utility smart meter's customer interface** (in Austria: optical/M-Bus interface, key from the grid
    operator) with a reader via **ESPHome** or **MQTT**. About one value per second – the best source.
 3. **A meter in the distribution board**, e.g. a 3-phase energy meter via its integration or **Modbus**.
+4. **A template sensor you build yourself**, for example from the three phase values of a **Shelly 3EM Pro** (the sum of the phases, its
+   positive part as import). Any sensor with the unit W or kW works, **a device class is not needed**: the dialog checks the unit, not the
+   class (see [issue 1](https://github.com/mobilewhatelse/viertelstunden-waechter/issues/1)). This setup is covered by the installation test
+   with an equivalent simulated sensor; it has not been tested with a real Shelly device here.
 
 **Not suitable:** the grid operator's web portal. Its 15-minute values arrive the next day – fine for
 statistics, far too late for control.
