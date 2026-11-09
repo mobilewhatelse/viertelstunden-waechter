@@ -90,8 +90,8 @@ Assistant and port 7070, not the sidebar address). The connection and evcc's gri
 
 **Rule for two sources:** the sensor you entered **always wins**. evcc is used when no sensor is entered, or as a **reserve**
 (switch *evcc as a reserve for the grid import*, default on) while your sensor has no usable value (missing or older than the
-maximum age). The guard changes back by itself. The two values are **never averaged**. If both are fresh and differ clearly
-(more than 0.3 kW and more than 15 %) for two minutes, a note is written once to the log; the guard keeps working with your
+maximum age). The guard changes back by itself. The two values are **never averaged**. If both are fresh and the grid import differs clearly
+(more than 0.3 kW and more than 15 %; export counts as 0 on both sides) for two minutes, a note is written once to the log; the guard keeps working with your
 sensor. The status sensor shows `grid_source` (`sensor` or `evcc`), `grid_evcc_kw` and `sources_differ`.
 Without a grid meter in evcc (evcc only needs one for solar charging) the address is refused.
 

@@ -222,6 +222,12 @@ class GridSourceTest(unittest.TestCase):
         self.assertFalse(sources_differ(10.0, 10.9))     # 0.9 kW but only 8 %
         self.assertFalse(sources_differ(None, 5.0))
 
+    def test_export_counts_as_zero_on_both_sides(self):
+        # an import-only sensor shows 0 while exporting, evcc shows the export as a negative value: that is no difference
+        self.assertFalse(sources_differ(0.0, -2.5))
+        self.assertFalse(sources_differ(-1.0, -3.0))
+        self.assertTrue(sources_differ(0.0, 1.5), "an import that only one source sees is a difference")
+
     def test_clear_differences_are_found(self):
         self.assertTrue(sources_differ(5.0, 6.5))        # 1.5 kW and 23 %
         self.assertTrue(sources_differ(0.2, 1.0))

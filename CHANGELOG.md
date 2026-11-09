@@ -11,8 +11,8 @@ Format: newest first. German version below each English block is a short summary
   *Deutsch:* neuer Gerätetyp evcc-Ladepunkt (experimentell): der Wächter setzt die Obergrenze des Ladestroms in evcc und gibt die
   ursprüngliche zurück.
 - **Grid import from evcc** (optional, general settings): the entered sensor always wins; evcc is used without a sensor, or as a
-  reserve (switch, default on) while the sensor has no usable value. Never averaged; a clear difference (over 0.3 kW and 15 % for
-  two minutes) is noted once in the log. Attributes `grid_source`, `grid_evcc_kw`, `sources_differ` on the status sensor.
+  reserve (switch, default on) while the sensor has no usable value. Never averaged; a clear difference of the grid import (over 0.3 kW and 15 % for
+  two minutes; export counts as 0 on both sides) is noted once in the log. Attributes `grid_source`, `grid_evcc_kw`, `sources_differ` on the status sensor.
   The grid import sensor is now optional when evcc is entered. *Deutsch:* Netzbezug aus evcc, der eigene Sensor gilt zuerst,
   evcc als Reserve, nie gemittelt, Abweichungen werden gemeldet.
 - **Observe only per device** (switch in every device): the guard writes what it would do with the device, sends nothing and does not

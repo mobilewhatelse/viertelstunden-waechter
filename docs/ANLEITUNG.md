@@ -51,8 +51,8 @@ nicht die Adresse aus der Seitenleiste). Beim Speichern werden die Verbindung un
 
 **Regel für zwei Quellen:** Der Sensor, den Sie eingetragen haben, **gilt immer zuerst**. evcc zählt, wenn kein Sensor eingetragen ist, oder als
 **Reserve** (Schalter *evcc als Reserve für den Netzbezug*, standardmäßig an), solange Ihr Sensor nichts Brauchbares liefert (fehlt oder älter als
-das Höchstalter). Der Wächter wechselt von selbst zurück. Die beiden Werte werden **nie gemittelt**. Sind beide frisch und weichen zwei Minuten lang
-deutlich ab (mehr als 0,3 kW und mehr als 15 %), steht einmal ein Hinweis im Protokoll; der Wächter regelt weiter mit Ihrem Sensor. Der
+das Höchstalter). Der Wächter wechselt von selbst zurück. Die beiden Werte werden **nie gemittelt**. Sind beide frisch und weicht der Bezug zwei Minuten lang
+deutlich ab (mehr als 0,3 kW und mehr als 15 %; Einspeisung zählt auf beiden Seiten als 0), steht einmal ein Hinweis im Protokoll; der Wächter regelt weiter mit Ihrem Sensor. Der
 Status-Sensor zeigt `grid_source` (`sensor` oder `evcc`), `grid_evcc_kw` und `sources_differ`.
 Hat evcc keinen Netzzähler (evcc braucht ihn nur für das Laden mit Sonne), wird die Adresse abgelehnt.
 

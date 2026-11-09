@@ -173,8 +173,11 @@ def choose_grid(sensor_kw: float | None, evcc_kw: float | None, sensor_configure
 
 
 def sources_differ(a_kw: float | None, b_kw: float | None) -> bool:
-    """True if two readings of the same thing differ clearly (absolute and relative); a missing reading is no difference."""
+    """True if two readings of the grid IMPORT differ clearly (absolute and relative); a missing reading is no difference.
+    Export counts as 0 on both sides, as it does for the guard: an import-only sensor (0 while exporting) and a signed one
+    (negative while exporting) agree then."""
     if a_kw is None or b_kw is None:
         return False
+    a_kw, b_kw = max(0.0, a_kw), max(0.0, b_kw)
     diff = abs(a_kw - b_kw)
     return diff > SOURCES_DIFFER_ABS_KW and diff > SOURCES_DIFFER_REL * max(abs(a_kw), abs(b_kw))
