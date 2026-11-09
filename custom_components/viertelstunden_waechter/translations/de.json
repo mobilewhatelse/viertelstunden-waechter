@@ -19,7 +19,7 @@
           "grid_energy": "Optional, aber empfohlen: Bezugszähler des Stromzählers. Damit stimmt die Viertelstunde auch nach einem Neustart genau.",
           "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
           "margin_kw": "Der Wächter zielt auf Grenze minus Abstand.",
-          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst.",
+          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst. Läuft evcc auf demselben Rechner wie Home Assistant (Add-on), wird die Adresse vorgeschlagen; zum Abwählen das Feld leeren.",
           "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
           "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück."
         }
@@ -72,7 +72,7 @@
           "charge_plan_entities": "Nur für eine andere Quelle: Ladeplan-Sensoren von Hand (Attribute windows und departure). Nicht nötig, wenn Sie den Auto-Planer gewählt haben.",
           "planner_entry": "Wählen Sie den Auto-Planer (zum Beispiel Plugwhen), dann findet der Wächter die Ladepläne aller seiner Fahrzeuge selbst, auch später hinzugefügte. Bis zur Abfahrt weiß die Prognose dann, wann jedes Auto wirklich lädt, statt das gelernte Wallbox-Muster zu nehmen. Ohne ihn ändert sich nichts. Wird automatisch vorgeschlagen, wenn genau einer installiert ist.",
           "max_reading_age_s": "Ein Messwert, der länger als das nicht geschrieben wurde, gilt als fehlend: Der Wächter greift nicht ein und gibt nach 90 Sekunden alles zurück. Schützt vor veralteten Werten (ein Sensor, der nur alle paar Minuten aktualisiert, taugt nicht zum Regeln). 0 = nie.",
-          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst.",
+          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst. Läuft evcc auf demselben Rechner wie Home Assistant (Add-on), wird die Adresse vorgeschlagen; zum Abwählen das Feld leeren.",
           "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
           "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück.",
           "grid_power": "Sensor mit der Leistung, die aus dem Netz bezogen wird (W oder kW). Negative Werte (Einspeisung) zählen als 0. Optional, wenn Sie evcc eintragen."

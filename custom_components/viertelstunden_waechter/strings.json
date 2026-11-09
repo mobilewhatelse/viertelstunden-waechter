@@ -19,7 +19,7 @@
           "grid_energy": "Optional but recommended: the meter's import counter. Makes the quarter-hour energy exact after restarts.",
           "limit_kw": "The quarter-hour average that must not be exceeded.",
           "margin_kw": "The guard aims at limit minus margin.",
-          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins.",
+          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins. If evcc runs on the same machine as Home Assistant (add-on), the address is suggested; clear the field if you do not want it.",
           "evcc_site_password": "Only if evcc asks for a password.",
           "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself."
         }
@@ -72,7 +72,7 @@
           "charge_plan_entities": "Only for another source: charge plan sensors by hand (attributes windows and departure). Not needed when you chose the car planner.",
           "planner_entry": "Choose the car planner (for example Plugwhen) and the guard finds the charge plans of all its vehicles by itself, also vehicles added later. Until the departure the forecast then knows when each car really charges instead of using the learned wallbox pattern. Without it nothing changes. Suggested automatically if exactly one is installed.",
           "max_reading_age_s": "A grid reading that was not written for longer than this counts as missing: no interventions, everything is given back after 90 seconds. Protects against stale values (a sensor that only updates every few minutes cannot be used for control). 0 = never.",
-          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins.",
+          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins. If evcc runs on the same machine as Home Assistant (add-on), the address is suggested; clear the field if you do not want it.",
           "evcc_site_password": "Only if evcc asks for a password.",
           "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself.",
           "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0. Optional if you enter evcc."

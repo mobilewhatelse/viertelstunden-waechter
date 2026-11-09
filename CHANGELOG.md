@@ -4,6 +4,11 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Little to set with evcc:** an evcc on the same machine as Home Assistant (add-on) is found and its address suggested at set-up
+  (only if it reports a grid meter) and for a new evcc loadpoint; a loadpoint takes address and password from the general settings.
+  Suggested only, nothing is saved unless the form is saved with it; an evcc elsewhere on the network is entered as before.
+  *Deutsch:* Ein evcc auf demselben Rechner wird bei der Einrichtung vorgeschlagen; ein evcc-Ladepunkt übernimmt Adresse und
+  Passwort aus den allgemeinen Einstellungen.
 - **A charge plan that nobody executes no longer lowers the forecast.** With a car planner chosen, the plan replaced the learned
   wallbox pattern until departure, also when the planner only recommends (Plugwhen in learn mode): "not needed" took the car out of
   the forecast although it charged when plugged in (expected peak 2.5 kW, real 9.1 kW). Now the plan says so (attribute

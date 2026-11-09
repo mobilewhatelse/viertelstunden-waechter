@@ -87,6 +87,26 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
     return vol.Schema(s)
 
 
+LOCAL_EVCC_URLS = ("http://localhost:7070",)   # evcc on the same machine as Home Assistant (add-on, or Docker with host network)
+PROBE_TIMEOUT_S = 2.0
+
+
+async def find_local_evcc(hass: Any, need_grid: bool = False) -> str | None:
+    """The address of an evcc on the same machine, if one answers there within two seconds. Offered in the dialogs, never
+    forced: nothing is saved unless the form is saved with it. `need_grid`: only an evcc that reports a grid meter (the
+    general settings use evcc for the grid import and would refuse one without). An evcc that wants a password counts."""
+    for url in LOCAL_EVCC_URLS:
+        try:
+            state = await EvccClient(async_get_clientsession(hass), url, None, timeout=PROBE_TIMEOUT_S).state()
+        except EvccAuthError:
+            return url
+        except EvccError:
+            continue
+        if not need_grid or parse_grid_kw(state) is not None:
+            return url
+    return None
+
+
 async def _grid_source_errors(hass: Any, u: dict[str, Any]) -> dict[str, str]:
     """At least one source of the grid import is needed; an evcc address is tried right away (and must have a grid meter)."""
     url = str(u.get(CONF_EVCC_URL) or "").strip()
@@ -236,7 +256,8 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
             data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY, CONF_EVCC_URL, CONF_EVCC_PASSWORD) if user_input.get(k)}
             options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN]}
             return self.async_create_entry(title=user_input["name"], data=data, options=options)
-        return self.async_show_form(step_id="user", data_schema=_general_schema({}, True))
+        local = await find_local_evcc(self.hass, need_grid=True)
+        return self.async_show_form(step_id="user", data_schema=_general_schema({CONF_EVCC_URL: local} if local else {}, True))
 
     @staticmethod
     @callback
@@ -271,6 +292,10 @@ class WaechterOptionsFlow(OptionsFlow):
                 if not user_input.get(cleared):
                     keep[cleared] = ""  # cleared on purpose; overrides the value from set-up
             return self.async_create_entry(data=keep)
+        if CONF_EVCC_URL not in current:   # never set (an address cleared on purpose is stored as "" and stays empty)
+            local = await find_local_evcc(self.hass, need_grid=True)
+            if local:
+                current[CONF_EVCC_URL] = local
         return self.async_show_form(step_id="init", data_schema=_general_schema(current, False))
 
 
@@ -316,6 +341,23 @@ class EvccFlow(_DeviceFlow):
     """A loadpoint of evcc: the guard sets evcc's ceiling for the charging current (see evcc.py). Checks the connection when saving."""
 
     kind = KIND_EVCC
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        if user_input is not None:
+            return await self._form(user_input, {})
+        # little to set: the address (and password) of the general settings, else an evcc on this machine
+        entry = self._get_entry()
+        cfg = {**entry.data, **entry.options}
+        current: dict[str, Any] = {}
+        if cfg.get(CONF_EVCC_URL):
+            current[D_EVCC_URL] = cfg[CONF_EVCC_URL]
+            if cfg.get(CONF_EVCC_PASSWORD):
+                current[D_EVCC_PASSWORD] = cfg[CONF_EVCC_PASSWORD]
+        else:
+            local = await find_local_evcc(self.hass)
+            if local:
+                current[D_EVCC_URL] = local
+        return await self._form(None, current)
 
     def _validate(self, u: dict[str, Any]) -> dict[str, str]:
         if int(u.get(D_MIN_CURRENT, 6)) > int(u.get(D_MAX_CURRENT, 16)):
