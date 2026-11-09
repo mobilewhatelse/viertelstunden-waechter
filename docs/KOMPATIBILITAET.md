@@ -33,7 +33,8 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 | Alfen (Community) | mehrere „max current“-Zahlen (Geräteeinstellungen, häufiges Schreiben nicht geprüft) | 🔍 mit Vorsicht |
 | Tesla Fleet (Home Assistant), Ladestrom des Autos | `number` „charge current request“ (das Auto, keine Wallbox) | 🔍 |
 | KEBA (Home Assistant), Easee (Community) | nur ein Dienst, keine Zahl | 🔍 über Hilfsgröße (`input_number` + Automation) |
-| Ohme, Blue Current (Home Assistant), myenergi, evcc (Community) | keine Strom-Zahl | ❌ |
+| Ohme, Blue Current (Home Assistant), myenergi | keine Strom-Zahl | ❌ |
+| evcc (jede Wallbox, die evcc steuert) | eigener Gerätetyp *evcc-Ladepunkt*: der Wächter setzt den maximalen Ladestrom des Ladepunkts über die REST-Schnittstelle von evcc (keine Integration nötig). Getestet am 09.11.2026 gegen einen Demo-evcc 0.319.0 mit simulierter Wallbox, nicht an Hardware | 🔍 experimentell |
 | go-e Charger (Community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, Schritt 1); Phasenmodus als `select` `psm`. Im Quellcode geprüft am 05.11.2026, nicht an Hardware getestet | 🔍 |
 | openWB, Tesla Wall Connector, andere | | ❔ |
 

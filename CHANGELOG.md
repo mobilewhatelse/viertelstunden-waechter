@@ -4,6 +4,24 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **evcc loadpoint** (new device type, experimental): a wallbox that evcc controls. The guard sets the loadpoint's maximum current
+  (a ceiling, evcc keeps regulating below it), works with the current evcc offers right now and gives back the original ceiling,
+  also after a restart. Charging is never stopped, evcc's mode is not touched. Only the address of evcc is needed (password if evcc
+  asks for one); the connection and the loadpoint are checked when saving. Tested against a demo evcc 0.319.0, not on hardware.
+  *Deutsch:* neuer Gerätetyp evcc-Ladepunkt (experimentell): der Wächter setzt die Obergrenze des Ladestroms in evcc und gibt die
+  ursprüngliche zurück.
+- **Grid import from evcc** (optional, general settings): the entered sensor always wins; evcc is used without a sensor, or as a
+  reserve (switch, default on) while the sensor has no usable value. Never averaged; a clear difference (over 0.3 kW and 15 % for
+  two minutes) is noted once in the log. Attributes `grid_source`, `grid_evcc_kw`, `sources_differ` on the status sensor.
+  The grid import sensor is now optional when evcc is entered. *Deutsch:* Netzbezug aus evcc, der eigene Sensor gilt zuerst,
+  evcc als Reserve, nie gemittelt, Abweichungen werden gemeldet.
+- **Observe only per device** (switch in every device): the guard writes what it would do with the device, sends nothing and does not
+  count it as a lever. *Deutsch:* Nur beobachten je Gerät.
+- **Warning for a wallbox entered twice:** a Wallbox device and an evcc loadpoint charging with nearly the same power for two minutes are
+  noted once in the log (attribute `wallbox_twice`). *Deutsch:* Warnung, wenn eine Wallbox doppelt eingetragen scheint.
+- Installation tests: new `tests/install/itest_evcc.py` (with a demo evcc); `itest.py` no longer runs itself when imported;
+  the simulated grid sensor changes every minute so that it never counts as stale.
+
 - **Weather correction of the load forecast** (switch, default on; needs a weather entity or an outdoor temperature sensor in
   the general settings, otherwise nothing changes): samples remember the outdoor temperature, two slopes (heating below
   15 C, cooling above 22 C, never negative, at least 14 days) are fitted from whole days, and the forecast moves each

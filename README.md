@@ -82,6 +82,19 @@ Typical sources, all with integrations built into Home Assistant:
 **Not suitable:** the grid operator's web portal. Its 15-minute values arrive the next day – fine for
 statistics, far too late for control.
 
+### Grid import from evcc (since 0.14, optional)
+
+If [evcc](https://evcc.io) runs in your house, the guard can take the grid import from it: enter the **address of evcc** in the
+general settings (for example `http://192.168.1.20:7070`; with the evcc add-on of Home Assistant the IP address of your Home
+Assistant and port 7070, not the sidebar address). The connection and evcc's grid meter are checked when saving.
+
+**Rule for two sources:** the sensor you entered **always wins**. evcc is used when no sensor is entered, or as a **reserve**
+(switch *evcc as a reserve for the grid import*, default on) while your sensor has no usable value (missing or older than the
+maximum age). The guard changes back by itself. The two values are **never averaged**. If both are fresh and differ clearly
+(more than 0.3 kW and more than 15 %) for two minutes, a note is written once to the log; the guard keeps working with your
+sensor. The status sensor shows `grid_source` (`sensor` or `evcc`), `grid_evcc_kw` and `sources_differ`.
+Without a grid meter in evcc (evcc only needs one for solar charging) the address is refused.
+
 ### No solar plant, no inverter meter?
 
 The guard needs **no solar plant**. It only needs the grid import power; solar is used only by the optional charge
@@ -223,6 +236,27 @@ So the helper entities in an installation like the author's ("kitchen may switch
 possible") are **not** part of the integration: they are conditions and scripts you create for your own devices.
 The integration only asks for them where you enter a device.
 
+### evcc loadpoint (since 0.14, experimental)
+
+A wallbox that evcc controls can be added as device type **evcc loadpoint**: address of evcc, number of the loadpoint
+(1 = first), password only if evcc asks for one. No other integration is needed. The guard sets evcc's **maximum current of the
+loadpoint**, a ceiling: evcc keeps regulating below it (sun, plans, tariffs). It works with the current evcc offers right now (a
+ceiling of 16 A does nothing while evcc offers 8 A) and gives back the **original** ceiling afterwards, also after a restart.
+Charging is never stopped and the mode of evcc is not touched. Switching to 1 phase only if allowed and the charger can.
+
+*Experimental:* tested against a demo evcc (0.319.0, simulated charger) in a fresh Home Assistant (installation test
+`tests/install/itest_evcc.py`), not yet on real hardware. Do not enter the same wallbox a second time with its own integration.
+
+**Observe only (every device, since 0.14):** a switch in each device. The guard then only writes to the log what it would do with
+that device (*Observe only: Wallbox would be lowered by 3.6 kW …*, at most once per quarter hour), sends nothing to it and does not
+count it as a lever, so it does not move on to other devices because of it. Good for trying a new device (for example an evcc
+loadpoint) next to the running guard.
+
+**A wallbox entered twice:** if a *Wallbox* device and an *evcc loadpoint* charge at the same time with nearly the same power (within
+15 %, over 1 kW) for two minutes, the guard writes once to the log that it is probably the same wallbox and shows it in the
+attribute `wallbox_twice` of the status sensor. It changes nothing; enter the wallbox only once (as evcc loadpoint if evcc
+controls it).
+
 ### Wallbox compatibility
 
 **Full list for wallboxes, batteries and heat pumps, with the test status of every integration (tested by us / entity types verified in the source / help wanted): [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).** Nothing is marked "tested" for the new device types yet - reports are welcome (see the end of that page).
@@ -244,7 +278,7 @@ hardware. Entity names change between versions - look for them in your own insta
 | Ohme (core) | no (numbers are target percentage etc.) | yes | no |
 | Blue Current (core) | no (only start/stop switch) | yes | no |
 | myenergi (community) | no (minimum green level, priorities) | yes | no |
-| evcc (community) | no current number found | yes | no - regulate in evcc itself |
+| evcc | own device type **evcc loadpoint** (REST, no integration needed): ceiling of the loadpoint | yes | **yes, experimental** (demo evcc 0.319.0, not on hardware) |
 | go-e Charger (community, `marq24/ha-goecharger-api2`) | yes, number in A (6-32 A); phase mode `psm` as select | yes | **yes** (checked in the source, not tried on hardware; Gemini flex is named as supported) |
 | openWB, Tesla Wall Connector, others | not checked | | unknown |
 

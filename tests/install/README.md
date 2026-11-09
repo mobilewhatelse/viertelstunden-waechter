@@ -39,3 +39,21 @@ docker run --rm -v "${PWD}:/github/workspace" ghcr.io/home-assistant/hassfest:la
 ```
 
 The `hacs/action` validation needs a public repository, so it can only run once the repository is published.
+
+## With evcc (demo)
+
+`itest_evcc.py` runs the guard against a demo evcc in a closed loop: the test house derives the charging power from the current evcc
+offers, so a lower ceiling really lowers the grid import. Covers the evcc loadpoint (dialog, intervention, original ceiling back, restart),
+the grid import from evcc (own sensor wins, reserve, difference noted, never averaged), observe only per device and the warning for a
+wallbox entered twice.
+
+```powershell
+docker run -d --name evcc-test -p 17070:7070 evcc/evcc:latest evcc --demo
+$cfg = "$PWD\tests\install\run_evcc"
+New-Item -ItemType Directory -Force "$cfg\custom_components" | Out-Null
+Copy-Item tests\install\config_evcc\configuration.yaml $cfg
+Copy-Item custom_components\viertelstunden_waechter "$cfg\custom_components\" -Recurse
+docker run -d --name evcc-ha-test -p 18126:8123 -v "${cfg}:/config" -e TZ=Europe/Vienna --add-host=host.docker.internal:host-gateway ghcr.io/home-assistant/home-assistant:stable
+python tests\install\itest_evcc.py          # takes about 20 to 30 minutes (real quarter hours)
+docker rm -f evcc-ha-test
+```

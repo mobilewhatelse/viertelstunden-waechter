@@ -1,0 +1,119 @@
+# Configuration of the evcc installation test (itest_evcc.py): like config/configuration.yaml, but the grid import contains the
+# charging power of a demo evcc, so a lower ceiling really lowers the grid import (closed loop).
+homeassistant:
+  name: Testhaus
+  unit_system: metric
+  time_zone: Europe/Vienna
+  currency: EUR
+  country: AT
+  language: de
+
+default_config:
+
+logger:
+  default: warning
+  logs:
+    custom_components.viertelstunden_waechter: debug
+
+# Simuliertes Haus: Wallbox, Pool, Hauslast, Netzbezug als geschlossene Schleife
+input_number:
+  hauslast_w:
+    name: Hauslast
+    min: 0
+    max: 30000
+    step: 1
+    initial: 400
+    unit_of_measurement: W
+    mode: box
+  akku_ausgang_w:
+    name: Akku Ausgangsleistung
+    min: 0
+    max: 2000
+    step: 1
+    initial: 800
+    unit_of_measurement: W
+    mode: box
+  wb_strom:
+    name: Wallbox Ladestrom
+    min: 6
+    max: 16
+    step: 1
+    initial: 16
+    unit_of_measurement: A
+    mode: box
+
+input_boolean:
+  auto_laedt:
+    name: Auto laedt
+    initial: false
+  pool_pumpe:
+    name: Poolpumpe
+    initial: true
+
+input_datetime:
+  abfahrt:
+    name: Abfahrt
+    has_date: true
+    has_time: true
+
+template:
+  - sensor:
+      - name: Wallbox Leistung
+        unique_id: wb_leistung
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ (states('input_number.wb_strom') | float(6) * 690) if is_state('input_boolean.auto_laedt', 'on') else 0 }}"
+      - name: Pool Leistung
+        unique_id: pool_leistung
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ 750 if is_state('input_boolean.pool_pumpe', 'on') else 0 }}"
+      # closed loop with the demo evcc: the charging power follows the current evcc offers (16 A at 3 phases = 11 kW)
+      - name: evcc demo Leistung
+        unique_id: evcc_demo_leistung
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ (states('sensor.evcc_demo_angeboten') | float(0) * 690) | round(0) }}"
+      - name: Netzbezug
+        unique_id: netzbezug
+        unit_of_measurement: W
+        state_class: measurement
+        state: "{{ states('input_number.hauslast_w') | float(0) + states('sensor.evcc_demo_leistung') | float(0) + states('sensor.pool_leistung') | float(0) + (now().minute % 2) }}"
+      - name: Netzbezug still
+        unique_id: netzbezug_still
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "500"
+      - name: Netz ohne Einheit
+        unique_id: netz_ohne_einheit
+        state: "100"
+      - name: Akku Ladestand
+        unique_id: akku_soc
+        unit_of_measurement: "%"
+        state: "70"
+      - name: Auto Ladestand
+        unique_id: auto_soc
+        unit_of_measurement: "%"
+        state: "40"
+      - name: Test Ladeplan
+        unique_id: test_ladeplan
+        state: "planned"
+        attributes:
+          departure: "{{ (now() + timedelta(hours=10)).isoformat() }}"
+          windows: >
+            {% set s = now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=2) %}
+            {{ [{'start': s.isoformat(), 'end': (s + timedelta(hours=1)).isoformat(), 'energy_kwh': 8.0, 'peak_kw': 11.0}] }}
+
+# the demo evcc of the installation test (docker container evcc-test, port 17070 on the host)
+rest:
+  - resource: http://host.docker.internal:17070/api/state
+    scan_interval: 5
+    sensor:
+      - name: evcc demo angeboten
+        unique_id: evcc_demo_angeboten
+        unit_of_measurement: A
+        value_template: "{{ value_json.loadpoints[0].offeredCurrent if value_json.loadpoints[0].charging else 0 }}"

@@ -43,6 +43,19 @@ Zähler am Netzübergabepunkt ──Kabel──► Wechselrichter ──LAN (lok
                                                                           └─ Bezugszähler (Wh)  → Wächter
 ```
 
+### Netzbezug aus evcc (seit 0.14, optional)
+
+Läuft [evcc](https://evcc.io) im Haus, kann der Wächter den Netzbezug von dort nehmen: in den allgemeinen Einstellungen die **Adresse von evcc**
+eintragen (zum Beispiel `http://192.168.1.20:7070`; mit dem evcc-Add-on von Home Assistant die IP-Adresse Ihres Home Assistant und Port 7070,
+nicht die Adresse aus der Seitenleiste). Beim Speichern werden die Verbindung und der Netzzähler in evcc geprüft.
+
+**Regel für zwei Quellen:** Der Sensor, den Sie eingetragen haben, **gilt immer zuerst**. evcc zählt, wenn kein Sensor eingetragen ist, oder als
+**Reserve** (Schalter *evcc als Reserve für den Netzbezug*, standardmäßig an), solange Ihr Sensor nichts Brauchbares liefert (fehlt oder älter als
+das Höchstalter). Der Wächter wechselt von selbst zurück. Die beiden Werte werden **nie gemittelt**. Sind beide frisch und weichen zwei Minuten lang
+deutlich ab (mehr als 0,3 kW und mehr als 15 %), steht einmal ein Hinweis im Protokoll; der Wächter regelt weiter mit Ihrem Sensor. Der
+Status-Sensor zeigt `grid_source` (`sensor` oder `evcc`), `grid_evcc_kw` und `sources_differ`.
+Hat evcc keinen Netzzähler (evcc braucht ihn nur für das Laden mit Sonne), wird die Adresse abgelehnt.
+
 ### Ohne PV und ohne Wechselrichter-Zähler
 
 Der Wächter braucht **keine PV-Anlage**. Er braucht nur den Netzbezug in Watt; die Sonne nutzt nur der optionale Ladeplan.
@@ -102,6 +115,35 @@ Ablauf: 3-phasig schrittweise bis zum Mindeststrom → reicht das 2 Minuten lang
 (kurze Ladepause) → zurück auf 3 Phasen erst nach 5 Minuten mit genug Luft. **Das Laden wird nie gestoppt.**
 Geht, wenn die Integration der Wallbox (oder des Autos) einen einstellbaren Ladestrom anbietet. Wallboxen, die
 sich nur starten und stoppen lassen, werden nicht unterstützt.
+
+### evcc-Ladepunkt (seit 0.14, experimentell)
+
+Eine Wallbox, die evcc steuert, lässt sich als Gerätetyp **evcc-Ladepunkt** eintragen: Adresse von evcc, Nummer des Ladepunkts (1 = erster),
+Passwort nur, wenn evcc eines verlangt. Eine andere Integration ist nicht nötig. Der Wächter setzt den **maximalen Ladestrom des Ladepunkts** in
+evcc, eine Obergrenze: darunter regelt evcc weiter (Sonne, Pläne, Tarife). Er rechnet mit dem Strom, den evcc gerade anbietet (eine Obergrenze von
+16 A bewirkt nichts, solange evcc 8 A anbietet), und gibt danach die **ursprüngliche** Obergrenze zurück, auch nach einem Neustart. Das Laden wird
+nie gestoppt, der Modus von evcc bleibt unberührt. Umschalten auf 1 Phase nur, wenn erlaubt und die Wallbox es kann.
+
+| Feld | Beispiel | Bedeutung |
+|---|---|---|
+| Adresse von evcc | `http://192.168.1.20:7070` | mit dem Add-on: IP von Home Assistant, Port 7070 |
+| Nummer des Ladepunkts | `1` | 1 = der erste Ladepunkt in evcc |
+| Passwort von evcc | | nur wenn evcc eines verlangt |
+| Mindeststrom / Höchststrom | 6 / 16 A | darunter wird nie gestellt |
+| Darf auf 1 Phase umschalten | aus | nur wenn die Wallbox die Phasen umschalten kann |
+| Ladeleistung (optional) | | ohne sie liest der Wächter die Leistung aus evcc |
+
+*Experimentell:* getestet gegen einen Demo-evcc (0.319.0, simulierte Wallbox) in einem frischen Home Assistant (Installationstest
+`tests/install/itest_evcc.py`), noch nicht an echter Hardware. Dieselbe Wallbox nicht zusätzlich über ihre eigene Integration eintragen.
+
+**Nur beobachten (jedes Gerät, seit 0.14):** ein Schalter in jedem Gerät. Der Wächter schreibt dann nur ins Protokoll, was er mit diesem Gerät
+tun würde (*Nur beobachten: Wallbox würde um 3,6 kW gesenkt …*, höchstens einmal je Viertelstunde), sendet nichts und zählt das Gerät nicht als
+Hebel, weicht also deshalb auch nicht auf andere Geräte aus. Gut, um ein neues Gerät (zum Beispiel einen evcc-Ladepunkt) neben dem laufenden
+Wächter auszuprobieren.
+
+**Eine Wallbox doppelt eingetragen:** Laden ein Gerät *Wallbox* und ein *evcc-Ladepunkt* zwei Minuten lang gleichzeitig mit fast gleicher Leistung
+(höchstens 15 % Unterschied, über 1 kW), schreibt der Wächter einmal ins Protokoll, dass es vermutlich dieselbe Wallbox ist, und zeigt es im
+Attribut `wallbox_twice` des Status-Sensors. Er ändert nichts; die Wallbox nur einmal eintragen (als evcc-Ladepunkt, wenn evcc sie steuert).
 
 ### Schaltbares Gerät (aus / wieder an)
 
@@ -243,7 +285,7 @@ Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installa
 | Ohme (Home Assistant) | nein (Zahlen sind Ziel-Prozent u. ä.) | ja | nein |
 | Blue Current (Home Assistant) | nein (nur Start/Stopp) | ja | nein |
 | myenergi (Community) | nein (Mindest-Grünanteil, Prioritäten) | ja | nein |
-| evcc (Community) | kein Strom als Zahl gefunden | ja | nein – in evcc selbst regeln |
+| evcc | eigener Gerätetyp **evcc-Ladepunkt** (REST, keine Integration nötig): Obergrenze des Ladepunkts | ja | **ja, experimentell** (Demo-evcc 0.319.0, nicht an Hardware) |
 | go-e Charger (Community, `marq24/ha-goecharger-api2`) | ja, Zahl in A (6-32 A); Phasenmodus `psm` als Auswahl | ja | **ja** (im Quellcode geprüft, nicht an Hardware getestet; Gemini flex ist ausdrücklich genannt) |
 | openWB, Tesla Wall Connector, andere | nicht geprüft | | unbekannt |
 
@@ -733,7 +775,7 @@ Geräten.
 **Was, wenn alle Hebel nicht reichen?** Gegen Ende der Viertelstunde eine Benachrichtigung (falls eingetragen).
 Die Viertelstunde liegt dann über der Grenze.
 
-**Zwei Regler an einer Wallbox** (z. B. zusätzlich evcc)? Nicht gleichzeitig – die Wallbox nur in einem der
-beiden eintragen.
+**Zwei Regler an einer Wallbox** (z. B. zusätzlich evcc)? Steuert evcc die Wallbox, tragen Sie sie im Wächter als **evcc-Ladepunkt** ein,
+nicht zusätzlich über ihre eigene Integration. Der Wächter setzt dann nur die Obergrenze in evcc, evcc regelt darunter.
 
 **Braucht der Wächter Internet oder KI?** Nein. Alles läuft lokal.

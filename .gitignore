@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 tests/install/run/
 tests/install/report.txt
+tests/install/run_evcc/
+tests/install/report_evcc.txt

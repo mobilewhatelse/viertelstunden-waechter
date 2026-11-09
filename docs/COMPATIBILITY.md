@@ -33,7 +33,8 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 | Alfen (community) | several "max current" numbers (device settings, frequent writes not checked) | 🔍 with care |
 | Tesla Fleet (core), car charging current | `number` "charge current request" (the car, not a wallbox) | 🔍 |
 | KEBA (core), Easee (community) | only a service, no number | 🔍 via helper (`input_number` + automation) |
-| Ohme, Blue Current (core), myenergi, evcc (community) | no current number | ❌ |
+| Ohme, Blue Current (core), myenergi | no current number | ❌ |
+| evcc (any wallbox evcc controls) | own device type *evcc loadpoint*: the guard sets the loadpoint's maximum current over evcc's REST API (no integration needed). Tested 2026-11-09 against a demo evcc 0.319.0 with a simulated charger, not on hardware | 🔍 experimental |
 | go-e Charger (community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, step 1); phase mode as `select` `psm`. Checked in the source 2026-11-05, not tried on hardware | 🔍 |
 | openWB, Tesla Wall Connector, others | | ❔ |
 
