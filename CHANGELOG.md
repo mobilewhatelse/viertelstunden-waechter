@@ -4,6 +4,8 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Shelly 3EM Pro confirmed:** a user set the guard up with a template sensor for the grid import of a real Shelly 3EM Pro and ran it
+  for 24 h with 0.13.3 (issue 1). README and guide say so now.
 - **Little to set with evcc:** an evcc on the same machine as Home Assistant (add-on) is found and its address suggested at set-up
   (only if it reports a grid meter) and for a new evcc loadpoint; a loadpoint takes address and password from the general settings.
   Suggested only, nothing is saved unless the form is saved with it; an evcc elsewhere on the network is entered as before.

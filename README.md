@@ -77,7 +77,8 @@ Typical sources, all with integrations built into Home Assistant:
 4. **A template sensor you build yourself**, for example from the three phase values of a **Shelly 3EM Pro** (the sum of the phases, its
    positive part as import). Any sensor with the unit W or kW works, **a device class is not needed**: the dialog checks the unit, not the
    class (see [issue 1](https://github.com/mobilewhatelse/viertelstunden-waechter/issues/1)). This setup is covered by the installation test
-   with an equivalent simulated sensor; it has not been tested with a real Shelly device here.
+   with an equivalent simulated sensor, and **confirmed by a user with a real Shelly 3EM Pro** (template sensor for the import: set-up and
+   24 h of operation, 0.13.3, November 2026, [issue 1](https://github.com/mobilewhatelse/viertelstunden-waechter/issues/1)).
 
 **Not suitable:** the grid operator's web portal. Its 15-minute values arrive the next day – fine for
 statistics, far too late for control.
