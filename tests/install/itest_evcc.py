@@ -172,6 +172,15 @@ def main():
     log(res is not None, "reserve off", err)
     nodata = it.wait_for(lambda: status_attr("grid_source") is None, 120, 10)
     log(bool(nodata), "with the reserve off a stale sensor means no data (as before)", f"source {status_attr('grid_source')}, status {val('sensor.viertelstunden_wachter_status')}")
+    # the dashboard of the integration shows the card 'Sources compared' only with evcc, and it renders in Home Assistant
+    res, err = options({"grid_power": "sensor.netzbezug", "evcc_site_url": EVCC_FROM_HA})
+    s, d = it.api("POST", "/api/services/viertelstunden_waechter/create_dashboard?return_response", {})
+    dash = ((d or {}).get("service_response") or {}).get("config") or {}
+    cards = [c for v in dash.get("views", []) for sec in v.get("sections", []) for c in sec.get("cards", []) if c.get("type") == "markdown"]
+    src = [c for c in cards if "Quellen im Vergleich" in c["content"] or "Sources compared" in c["content"]]
+    sc, body = it.api("POST", "/api/template", {"template": src[0]["content"]}) if src else (0, "")
+    log(len(src) == 1 and sc == 200 and "svg" in str(body) and "Error" not in str(body)[:80], "with evcc the dashboard has the card Sources compared, and it renders",
+        f"{len(src)} card(s), {sc}, {str(body)[:80]}")
     res, err = options({"grid_power": "sensor.netzbezug"})
     log(res is not None and it.wait_for(lambda: status_attr("grid_source") == "sensor", 90, 5), "back to the own sensor only", err)
 

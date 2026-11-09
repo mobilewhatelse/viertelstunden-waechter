@@ -114,6 +114,35 @@ def daily(ids: dict[str, str], limit_label: str, legend: str, none_text: str, da
     )
 
 
+def sources(ids: dict[str, str], title: str, own: str, evcc: str, counts: str, reserve: str, differ: str, twice: str, down: str) -> str:
+    """The grid import from your sensor and from evcc as two bars, which source counts now, and warnings. Export counts as 0."""
+    return _fill(
+        "{% set a = states['@ST@'].attributes if states['@ST@'] is defined else {} %}"
+        "{% set src = a.get('grid_source') %}{% set e = a.get('grid_evcc_kw') %}"
+        "{% set s = states('@GP@') | float(none) if '@GP@' else none %}{% set su = state_attr('@GP@', 'unit_of_measurement') if '@GP@' else none %}"
+        "{% if s is not none and su == 'W' %}{% set s = s / 1000 %}{% elif s is not none and su == 'MW' %}{% set s = s * 1000 %}{% endif %}"
+        "{% set sv = [s or 0, 0] | max %}{% set ev = [e or 0, 0] | max %}{% set vmax = [[sv, ev] | max * 1.2, 1] | max %}"
+        "{% set W = 720 %}{% set L = 150 %}{% set R = 90 %}{% set bw = W - L - R %}"
+        "{% set g = \"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 104' font-family='Roboto,Arial,sans-serif' font-size='13'>"
+        "<text x='12' y='34' fill='@GREY@'>@OWN@</text>"
+        "<rect x='\" ~ L ~ \"' y='20' width='\" ~ bw ~ \"' height='20' rx='10' fill='@GREY@' fill-opacity='0.2'/>"
+        "<rect x='\" ~ L ~ \"' y='20' width='\" ~ ([sv / vmax * bw, 4] | max if s is not none else 0) ~ \"' height='20' rx='10' fill='\" ~ ('@BLUE@' if src == 'sensor' else '@GREY@') ~ \"'/>"
+        "<text x='\" ~ (W - 12) ~ \"' y='35' text-anchor='end' fill='@GREY@'>\" ~ (('%.2f' | format(sv)) ~ ' kW' if s is not none else '–') ~ \"</text>"
+        "<text x='12' y='78' fill='@GREY@'>@EVCC@</text>"
+        "<rect x='\" ~ L ~ \"' y='64' width='\" ~ bw ~ \"' height='20' rx='10' fill='@GREY@' fill-opacity='0.2'/>"
+        "<rect x='\" ~ L ~ \"' y='64' width='\" ~ ([ev / vmax * bw, 4] | max if e is not none else 0) ~ \"' height='20' rx='10' fill='\" ~ ('@BLUE@' if src == 'evcc' else '@GREY@') ~ \"'/>"
+        "<text x='\" ~ (W - 12) ~ \"' y='79' text-anchor='end' fill='@GREY@'>\" ~ (('%.2f' | format(ev)) ~ ' kW' if e is not none else '–') ~ \"</text>"
+        "</svg>\" %}"
+        "**@TITLE@** · @COUNTS@: {{ '@OWN@' if src == 'sensor' else ('@EVCC@ (@RESERVE@)' if src == 'evcc' and '@GP@' else ('@EVCC@' if src == 'evcc' else '–')) }}\n\n"
+        "![](data:image/svg+xml;utf8,{{ g | urlencode }})"
+        "{% if e is none %}\n\n@DOWN@{% endif %}"
+        "{% if a.get('sources_differ') %}\n\n⚠️ @DIFFER@{% endif %}"
+        "{% if a.get('wallbox_twice') %}\n\n⚠️ @TWICE@ ({{ a.get('wallbox_twice') }}){% endif %}",
+        ST=ids["status"], GP=ids.get("grid_power_sensor", ""), TITLE=title, OWN=own, EVCC=evcc, COUNTS=counts, RESERVE=reserve,
+        DIFFER=differ, TWICE=twice, DOWN=down, GREY=GREY, BLUE=BLUE,
+    )
+
+
 def now_bar(ids: dict[str, str], of_label: str, legend: str) -> str:
     """One bar for the phone: the forecast of the running quarter hour against the target (mark) and the limit."""
     return _fill(

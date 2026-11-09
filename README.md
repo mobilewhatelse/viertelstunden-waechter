@@ -94,6 +94,8 @@ maximum age). The guard changes back by itself. The two values are **never avera
 (more than 0.3 kW and more than 15 %; export counts as 0 on both sides) for two minutes, a note is written once to the log; the guard keeps working with your
 sensor. The status sensor shows `grid_source` (`sensor` or `evcc`), `grid_evcc_kw` and `sources_differ`.
 Without a grid meter in evcc (evcc only needs one for solar charging) the address is refused.
+With an evcc address the generated dashboard has a small card **Sources compared**: both values as bars, which one counts now,
+and a warning line when they differ or a wallbox seems to be entered twice. Without evcc the card is not there.
 
 ### No solar plant, no inverter meter?
 

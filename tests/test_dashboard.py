@@ -120,3 +120,27 @@ class DashboardTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourcesCardTests(unittest.TestCase):
+    """User 2026-11-09: the card 'Sources compared' is shipped, but only shown when evcc is entered."""
+
+    @staticmethod
+    def _sources(views):
+        return [c for c in _cards(views) if c.get("type") == "markdown" and ("Quellen im Vergleich" in c["content"] or "Sources compared" in c["content"])]
+
+    def test_without_evcc_there_is_no_card(self):
+        for lang in ("de", "en"):
+            self.assertEqual(self._sources(build_views(IDS, lang)), [])
+
+    def test_with_evcc_there_is_exactly_one_card(self):
+        for lang, word in (("de", "Ihr Sensor"), ("en", "Your sensor")):
+            cards = self._sources(build_views({**IDS, "grid_power_sensor": "sensor.grid"}, lang, evcc=True))
+            self.assertEqual(len(cards), 1)
+            self.assertIn(word, cards[0]["content"])
+            self.assertIn("grid_evcc_kw", cards[0]["content"])
+
+    def test_with_evcc_but_without_own_sensor_the_card_still_builds(self):
+        cards = self._sources(build_views(IDS, "de", evcc=True))
+        self.assertEqual(len(cards), 1)
+        self.assertNotIn("@GP@", cards[0]["content"])

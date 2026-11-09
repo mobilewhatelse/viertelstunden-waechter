@@ -55,6 +55,8 @@ das Höchstalter). Der Wächter wechselt von selbst zurück. Die beiden Werte we
 deutlich ab (mehr als 0,3 kW und mehr als 15 %; Einspeisung zählt auf beiden Seiten als 0), steht einmal ein Hinweis im Protokoll; der Wächter regelt weiter mit Ihrem Sensor. Der
 Status-Sensor zeigt `grid_source` (`sensor` oder `evcc`), `grid_evcc_kw` und `sources_differ`.
 Hat evcc keinen Netzzähler (evcc braucht ihn nur für das Laden mit Sonne), wird die Adresse abgelehnt.
+Mit evcc-Adresse hat das erzeugte Dashboard eine kleine Karte **Quellen im Vergleich**: beide Werte als Balken, welcher gerade gilt, und
+eine Warnzeile, wenn sie abweichen oder eine Wallbox doppelt eingetragen scheint. Ohne evcc gibt es die Karte nicht.
 
 ### Ohne PV und ohne Wechselrichter-Zähler
 

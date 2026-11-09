@@ -15,6 +15,8 @@ Format: newest first. German version below each English block is a short summary
   two minutes; export counts as 0 on both sides) is noted once in the log. Attributes `grid_source`, `grid_evcc_kw`, `sources_differ` on the status sensor.
   The grid import sensor is now optional when evcc is entered. *Deutsch:* Netzbezug aus evcc, der eigene Sensor gilt zuerst,
   evcc als Reserve, nie gemittelt, Abweichungen werden gemeldet.
+- **Card Sources compared** in the generated dashboard, only with an evcc address: your sensor and evcc as bars, which one counts,
+  warnings. *Deutsch:* Karte Quellen im Vergleich, nur mit evcc.
 - **Observe only per device** (switch in every device): the guard writes what it would do with the device, sends nothing and does not
   count it as a lever. *Deutsch:* Nur beobachten je Gerät.
 - **Warning for a wallbox entered twice:** a Wallbox device and an evcc loadpoint charging with nearly the same power for two minutes are
