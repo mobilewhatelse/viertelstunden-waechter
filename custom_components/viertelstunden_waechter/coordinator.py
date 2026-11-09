@@ -222,6 +222,10 @@ class Waechter:
             self.executing = False
             self.guard.forget()
         await self._store.async_save(self._data())
+        # the quarter hours and the learned model are saved with a delay; a reload (e.g. after a change in the settings) within that
+        # delay lost the last quarter hours of the export, while the last quarter-hour value (saved above) was kept
+        await self._quarters_store.async_save({"rows": self.quarters})
+        await self._model_store.async_save(self._model_data())
 
     async def async_set_mode(self, mode: str) -> None:
         self.mode = mode
