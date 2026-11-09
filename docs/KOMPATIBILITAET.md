@@ -49,7 +49,7 @@ Braucht einen Ladestand-Sensor.
 | Jackery (Installation der Autoren) | `select` Auto-Standby-Modus, `number` maximale Ausgangsleistung (Netz), `sensor` Ladestand | Modus `on`, Leistung `800` | 🟡 |
 | Fronius (Home Assistant) | `number` Entladeleistungs-Limit (+ Aktivierungs-Schalter), Ladeleistungs-Limit, Mindest-Reserve, AC-Leistungs-Limit; `switch` Laden aus dem Netz | Entladelimit anheben oder Mindest-Reserve senken | 🔍 |
 | Kostal Plenticore (Home Assistant) | `number` Batterie-Mindest-SOC, Mindest-Hausverbrauch, Wirkleistungsbegrenzung; `select` Batterie-Laden | Mindest-SOC senken / Mindest-Hausverbrauch setzen | 🔍 |
-| GoodWe (Home Assistant) | `number` Entladetiefe, Ladestrom, Einspeisebegrenzung; `select` Betriebsmodus | Betriebsmodus / Entladetiefe | 🔍 |
+| GoodWe (Home Assistant) | `number` Entladetiefe, Ladestrom, Einspeisebegrenzung; `select` Betriebsmodus | Betriebsmodus / Entladetiefe | 🔍 Angaben eines Testers (GW10KN-ET mit Smart Meter, BYD HVS), mit dem Wächter noch nicht getestet: Betriebsmodus mit den Optionen Allgemein, Netzunabhängig, Backup, Eco, Spitzenlastreduzierung. **Achtung:** „Active Power“ ist bei Netzbezug **negativ**; als Netzbezug eine Vorlage mit umgedrehtem Vorzeichen oder evcc eintragen. |
 | Growatt (Home Assistant, Cloud) | `number` Entladeleistung(s-Limit), Ladegrenzen; `switch` AC-Laden | Entladeleistung anheben (Cloud-Verzögerung) | 🔍 |
 | Enphase Envoy (Home Assistant) | `select` Speichermodus; `number` Reserve-SOC; `switch` Laden aus dem Netz | Speichermodus / Reserve senken | 🔍 |
 | Powerwall über Tesla Fleet (Home Assistant) | `number` Backup-Reserve in Prozent | Backup-Reserve senken (Cloud-Verzögerung) | 🔍 |

@@ -48,7 +48,7 @@ the house (maximum output / discharge power, operating mode) and puts them back.
 | Jackery (the authors' installation) | `select` auto standby mode, `number` maximum output power (on-grid), `sensor` battery SOC | mode `on`, power `800` | 🟡 |
 | Fronius (core) | `number` battery discharge power limit (+ enable switch), charge power limit, minimum reserve, AC power limit; `switch` battery grid charging | raise the discharge limit, or lower the minimum reserve | 🔍 |
 | Kostal Plenticore (core) | `number` battery min SOC, battery min home consumption, active power limitation; `select` battery charge | lower min SOC / set min home consumption | 🔍 |
-| GoodWe (core) | `number` battery discharge depth, charge current, grid export limit; `select` operation mode | operation mode / discharge depth | 🔍 |
+| GoodWe (core) | `number` battery discharge depth, charge current, grid export limit; `select` operation mode | operation mode / discharge depth | 🔍 Reported by a tester (GW10KN-ET with smart meter, BYD HVS), not yet tested with the guard: operation mode with the options general, off grid, backup, eco, peak shaving. **Note:** "Active Power" is **negative** while importing from the grid; as the grid import use a template with the sign flipped, or evcc. |
 | Growatt (core, cloud) | `number` battery discharge power limit, discharge power, charge limits; `switch` AC charge | raise the discharge power (cloud delay) | 🔍 |
 | Enphase Envoy (core) | `select` storage mode; `number` reserve SOC; `switch` charge from grid | storage mode / lower reserve | 🔍 |
 | Powerwall via Tesla Fleet (core) | `number` backup reserve percent | lower the backup reserve (cloud delay) | 🔍 |
