@@ -88,6 +88,11 @@ If [evcc](https://evcc.io) runs in your house, the guard can take the grid impor
 general settings (for example `http://192.168.1.20:7070`; with the evcc add-on of Home Assistant the IP address of your Home
 Assistant and port 7070, not the sidebar address). The connection and evcc's grid meter are checked when saving.
 
+**Little to enter:** if evcc runs on the same machine as Home Assistant (add-on, or Docker on the host network), the guard finds it at
+`http://localhost:7070` at set-up and in the settings and suggests the address (only if evcc reports a grid meter). It is saved only with
+the form; clear the field if you do not want evcc. An evcc elsewhere on the network is entered with its address as before. The car planner
+Plugwhen takes address and password from here, so they are entered once.
+
 **Rule for two sources:** the sensor you entered **always wins**. evcc is used when no sensor is entered, or as a **reserve**
 (switch *evcc as a reserve for the grid import*, default on) while your sensor has no usable value (missing or older than the
 maximum age). The guard changes back by itself. The two values are **never averaged**. If both are fresh and the grid import differs clearly
@@ -241,7 +246,8 @@ The integration only asks for them where you enter a device.
 ### evcc loadpoint (since 0.14, experimental)
 
 A wallbox that evcc controls can be added as device type **evcc loadpoint**: address of evcc, number of the loadpoint
-(1 = first), password only if evcc asks for one. No other integration is needed. The guard sets evcc's **maximum current of the
+(1 = first), password only if evcc asks for one. Address and password are filled in when evcc is in the general settings (else an
+evcc on the same machine is suggested). No other integration is needed. The guard sets evcc's **maximum current of the
 loadpoint**, a ceiling: evcc keeps regulating below it (sun, plans, tariffs). It works with the current evcc offers right now (a
 ceiling of 16 A does nothing while evcc offers 8 A) and gives back the **original** ceiling afterwards, also after a restart.
 Charging is never stopped and the mode of evcc is not touched. Switching to 1 phase only if allowed and the charger can.
@@ -501,6 +507,11 @@ with the field *Other charge plan sensors*. A plan sensor needs the attributes `
 - A plan with no windows (*not needed*) means no car load until the departure. After the departure the usual view applies.
 - Several cars add up. The attribute `car_plan` of *Typical import now (forecast)* shows whether a plan is used.
 - **Without a plan sensor, or when it is unavailable or its state is something else, nothing changes.**
+
+- **Only an executed plan replaces the learned wallbox pattern.** If the planner says with the attribute `executed: false` that it only
+  recommends and nobody switches the wallbox by the plan (Plugwhen in learn mode), the **higher** of the plan and the learned pattern counts:
+  the car may charge anyway as soon as it is plugged in. (Before, a plan "not needed" took the car out of the forecast; in one house the
+  expected peak was 2.5 kW, the real one 9.1 kW.) The attribute `car_plan.executed` shows it. A plan without the attribute counts as executed.
 
 #### The guard and a car planner together
 

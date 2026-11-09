@@ -49,6 +49,11 @@ Läuft [evcc](https://evcc.io) im Haus, kann der Wächter den Netzbezug von dort
 eintragen (zum Beispiel `http://192.168.1.20:7070`; mit dem evcc-Add-on von Home Assistant die IP-Adresse Ihres Home Assistant und Port 7070,
 nicht die Adresse aus der Seitenleiste). Beim Speichern werden die Verbindung und der Netzzähler in evcc geprüft.
 
+**Wenig einzutragen:** Läuft evcc auf demselben Rechner wie Home Assistant (Add-on, oder Docker im Netz des Rechners), findet der Wächter es
+bei der Einrichtung und in den Einstellungen unter `http://localhost:7070` und schlägt die Adresse vor (nur, wenn evcc einen Netzzähler meldet).
+Gespeichert wird sie erst mit dem Formular; wer evcc nicht nutzen will, leert das Feld. Ein evcc an anderer Stelle im Netz tragen Sie wie
+bisher mit seiner Adresse ein. Der Auto-Planer Plugwhen übernimmt Adresse und Passwort von hier, sie müssen nur einmal eingetragen werden.
+
 **Regel für zwei Quellen:** Der Sensor, den Sie eingetragen haben, **gilt immer zuerst**. evcc zählt, wenn kein Sensor eingetragen ist, oder als
 **Reserve** (Schalter *evcc als Reserve für den Netzbezug*, standardmäßig an), solange Ihr Sensor nichts Brauchbares liefert (fehlt oder älter als
 das Höchstalter). Der Wächter wechselt von selbst zurück. Die beiden Werte werden **nie gemittelt**. Sind beide frisch und weicht der Bezug zwei Minuten lang
@@ -121,7 +126,8 @@ sich nur starten und stoppen lassen, werden nicht unterstützt.
 ### evcc-Ladepunkt (seit 0.14, experimentell)
 
 Eine Wallbox, die evcc steuert, lässt sich als Gerätetyp **evcc-Ladepunkt** eintragen: Adresse von evcc, Nummer des Ladepunkts (1 = erster),
-Passwort nur, wenn evcc eines verlangt. Eine andere Integration ist nicht nötig. Der Wächter setzt den **maximalen Ladestrom des Ladepunkts** in
+Passwort nur, wenn evcc eines verlangt. Adresse und Passwort sind schon ausgefüllt, wenn evcc in den allgemeinen Einstellungen steht (sonst wird
+ein evcc auf demselben Rechner vorgeschlagen). Eine andere Integration ist nicht nötig. Der Wächter setzt den **maximalen Ladestrom des Ladepunkts** in
 evcc, eine Obergrenze: darunter regelt evcc weiter (Sonne, Pläne, Tarife). Er rechnet mit dem Strom, den evcc gerade anbietet (eine Obergrenze von
 16 A bewirkt nichts, solange evcc 8 A anbietet), und gibt danach die **ursprüngliche** Obergrenze zurück, auch nach einem Neustart. Das Laden wird
 nie gestoppt, der Modus von evcc bleibt unberührt. Umschalten auf 1 Phase nur, wenn erlaubt und die Wallbox es kann.
@@ -357,6 +363,11 @@ binden Sie über das Feld *Andere Ladeplan-Sensoren* an. Ein Ladeplan-Sensor bra
 - Bis zur Abfahrt ist die Prognose das Haus allein **plus das, was der Plan für das Auto in dieser Viertelstunde vorsieht** (Durchschnitt für
   *typisch*, Spitze für *hoch*). Das gelernte Wallbox-Muster zählt dort nicht: Der Plan weiß besser, wann das Auto wirklich lädt.
 - Ein Plan ohne Fenster (*nicht nötig*) heißt: keine Auto-Last bis zur Abfahrt. Nach der Abfahrt gilt wieder die übliche Sicht.
+- **Nur ein ausgeführter Plan ersetzt das gelernte Wallbox-Muster.** Sagt der Planer mit dem Attribut `executed: false`, dass er nur empfiehlt
+  und niemand die Wallbox nach dem Plan schaltet (Plugwhen im Lernmodus), dann zählt der **höhere** Wert aus Plan und gelerntem Muster: Das Auto
+  kann ja trotzdem laden, sobald es angesteckt ist. (Vorher hat ein Plan „nicht nötig“ das Auto aus der Prognose genommen; in einem Haus lag die
+  erwartete Spitze dadurch bei 2,5 kW, die echte bei 9,1 kW.) Das Attribut `car_plan.executed` zeigt es. Ein Plan ohne das Attribut gilt wie
+  bisher als ausgeführt.
 - Mehrere Autos addieren sich. Das Attribut `car_plan` von **Typischer Bezug jetzt (Prognose)** zeigt, ob ein Plan benutzt wird.
 - **Ohne Ladeplan-Sensor, oder wenn er nicht verfügbar ist oder einen anderen Zustand hat, ändert sich nichts.**
 
