@@ -4,6 +4,8 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Fix:** a reload of the guard (for example after a change in the settings) within five minutes after a quarter hour lost the
+  last quarter hours of the CSV export and of the learned model; both are saved on unload now. Found by an installation test that failed once.
 - **Shelly 3EM Pro confirmed:** a user set the guard up with a template sensor for the grid import of a real Shelly 3EM Pro and ran it
   for 24 h with 0.13.3 (issue 1). README and guide say so now.
 - **Little to set with evcc:** an evcc on the same machine as Home Assistant (add-on) is found and its address suggested at set-up
