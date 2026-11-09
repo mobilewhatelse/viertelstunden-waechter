@@ -703,8 +703,9 @@ class Waechter:
         self._maybe_fetch_weather(now)
         series = view.horizon(now, 24, **self._wx_args())
         plan = self._car_plan(now)
-        if plan is not None:  # a charge plan says when the car really charges: that replaces the learned wallbox pattern until departure
-            series = apply_car_plan(self.model.horizon(now, 24, **self._wx_args()), series, plan[0], plan[1])
+        if plan is not None:  # a charge plan that is executed says when the car really charges: it replaces the learned wallbox
+            # pattern until departure. A plan nobody executes (learn mode) only adds to the usual view, it never lowers it.
+            series = apply_car_plan(self.model.horizon(now, 24, **self._wx_args()), series, plan[0], plan[1], plan[2])
         highs = [q["high"] for q in series if q["high"] is not None]
         self.forecast = {
             "target": target,
@@ -719,6 +720,7 @@ class Waechter:
                 "used": plan is not None,
                 "windows": len(plan[0]) if plan else 0,
                 "until": plan[1].isoformat() if plan else None,
+                "executed": plan[2] if plan else None,
             },
             "weather": {
                 "enabled": self.weather_enabled,
@@ -749,12 +751,15 @@ class Waechter:
                             if e.domain == "sensor" and str(e.unique_id).endswith("_charge_plan"))
         return list(dict.fromkeys(found))
 
-    def _car_plan(self, now: datetime) -> tuple[list[dict[str, Any]], datetime] | None:
-        """Planned car load from the charge plan sensors (optional): `(windows, last departure)` or None if no plan is
-        configured or usable (then the forecast works as before). A plan counts while its state is planned, not_needed
-        or infeasible and its departure is ahead; several cars add up."""
+    def _car_plan(self, now: datetime) -> tuple[list[dict[str, Any]], datetime, bool] | None:
+        """Planned car load from the charge plan sensors (optional): `(windows, last departure, executed)` or None if no
+        plan is configured or usable (then the forecast works as before). A plan counts while its state is planned,
+        not_needed or infeasible and its departure is ahead; several cars add up. `executed` is False as soon as one plan
+        says with its attribute `executed: false` that nobody switches the wallbox by it (a missing attribute counts as
+        executed, as before)."""
         windows: list[dict[str, Any]] = []
         until: datetime | None = None
+        executed = True
         for eid in self._plan_entities():
             st = self.hass.states.get(eid)
             if st is None or st.state not in ("planned", "not_needed", "infeasible"):
@@ -764,7 +769,9 @@ class Waechter:
                 continue
             windows += parse_plan_windows(st.attributes.get("windows"), now.tzinfo)
             until = dep if until is None or dep > until else until
-        return (windows, until) if until is not None else None
+            if st.attributes.get("executed") is False:
+                executed = False
+        return (windows, until, executed) if until is not None else None
 
     def _maybe_bootstrap(self) -> None:
         """Once: fill the model from the hourly statistics of the grid import counter (lower bounds). With an outdoor

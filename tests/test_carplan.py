@@ -79,6 +79,27 @@ class ApplyTest(unittest.TestCase):
         self.assertEqual(len(w), 1)
         self.assertEqual((w[0]["start"], w[0]["end"]), (T0 + timedelta(hours=1), T0 + timedelta(hours=2)))
 
+    def test_plan_that_is_not_executed_never_lowers_the_forecast(self):
+        # learn mode: the plan says "not needed", but the car may charge anyway -> the learned wallbox pattern stays
+        house, view = series(), series(typical=3.0, high=9.0)
+        out = apply_car_plan(house, view, [], T0 + timedelta(hours=10), executed=False)
+        self.assertTrue(all(q["high"] == 9.0 and q["typical"] == 3.0 for q in out))
+
+    def test_plan_that_is_not_executed_still_adds_its_windows(self):
+        # the planned window is higher than the learned pattern: it counts; outside it the learned pattern counts
+        house, view = series(), series(typical=3.0, high=6.0)
+        out = apply_car_plan(house, view, [window(4, 8, 8.0, 11.0)], T0 + timedelta(hours=4), executed=False)
+        self.assertEqual(out[3]["high"], 6.0)
+        self.assertEqual(out[4]["high"], 12.0)
+        self.assertEqual(out[4]["typical"], 8.5)
+        self.assertEqual(out[8]["high"], 6.0)
+
+    def test_not_executed_with_unknown_view_keeps_the_plan_value(self):
+        house, view = series(), series()
+        view[1] = {"t": view[1]["t"], "typical": None, "high": None, "n": 0}
+        out = apply_car_plan(house, view, [], T0 + timedelta(hours=10), executed=False)
+        self.assertEqual(out[1]["high"], 1.0)
+
     def test_without_a_plan_nothing_is_changed_here(self):
         # the function is only called with a plan; the original series are not modified
         house, view = series(), series(high=6.0)

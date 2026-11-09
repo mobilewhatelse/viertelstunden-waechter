@@ -4,6 +4,13 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **A charge plan that nobody executes no longer lowers the forecast.** With a car planner chosen, the plan replaced the learned
+  wallbox pattern until departure, also when the planner only recommends (Plugwhen in learn mode): "not needed" took the car out of
+  the forecast although it charged when plugged in (expected peak 2.5 kW, real 9.1 kW). Now the plan says so (attribute
+  `executed: false`), and the higher of the plan and the usual view counts; attribute `car_plan.executed`. A plan without the
+  attribute counts as executed, as before.
+  *Deutsch:* Ein Ladeplan, den niemand ausführt (Lernmodus), senkt die Prognose nicht mehr; es zählt der höhere Wert aus Plan und
+  gelerntem Wallbox-Muster.
 - **evcc loadpoint** (new device type, experimental): a wallbox that evcc controls. The guard sets the loadpoint's maximum current
   (a ceiling, evcc keeps regulating below it), works with the current evcc offers right now and gives back the original ceiling,
   also after a restart. Charging is never stopped, evcc's mode is not touched. Only the address of evcc is needed (password if evcc

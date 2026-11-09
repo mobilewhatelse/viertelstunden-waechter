@@ -248,10 +248,13 @@ def parse_plan_windows(windows: Any, tz) -> list[dict[str, Any]]:
 
 
 def apply_car_plan(house: list[dict[str, Any]], view: list[dict[str, Any]], windows: list[dict[str, Any]],
-                   until: datetime) -> list[dict[str, Any]]:
+                   until: datetime, executed: bool = True) -> list[dict[str, Any]]:
     """Forecast series with the planned car load. Up to `until` (the departure) the forecast is the house alone plus what
     the plan says the car takes in that quarter hour (average for `typical`, peak for `high`); the learned pattern of the
-    wallbox does not count there. After `until` the usual view stays. Quarter hours without house data stay unknown."""
+    wallbox does not count there. After `until` the usual view stays. Quarter hours without house data stay unknown.
+
+    `executed=False`: the planner only recommends and nobody switches the wallbox by its plan (a learn mode). The car may
+    then charge at any time, so the plan must not lower the forecast: the higher of the plan and the usual view counts."""
     out: list[dict[str, Any]] = []
     for h, v in zip(house, view):
         t = h["t"]
@@ -266,7 +269,11 @@ def apply_car_plan(house: list[dict[str, Any]], view: list[dict[str, Any]], wind
             if w["start"] <= t < w["end"]:
                 avg += w["avg_kw"]
                 peak += w["peak_kw"]
-        out.append({**h, "typical": round(h["typical"] + avg, 3), "high": round(h["high"] + peak, 3)})
+        typical, high = round(h["typical"] + avg, 3), round(h["high"] + peak, 3)
+        if not executed:
+            typical = max(typical, v["typical"]) if v["typical"] is not None else typical
+            high = max(high, v["high"]) if v["high"] is not None else high
+        out.append({**h, "typical": typical, "high": high})
     return out
 
 
