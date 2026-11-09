@@ -9,13 +9,19 @@
           "grid_power": "Grid import power",
           "grid_energy": "Grid import energy counter",
           "limit_kw": "Limit",
-          "margin_kw": "Safety margin"
+          "margin_kw": "Safety margin",
+          "evcc_site_url": "Address of evcc (optional)",
+          "evcc_site_password": "Password of evcc",
+          "evcc_backup": "evcc as a reserve for the grid import"
         },
         "data_description": {
-          "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0.",
+          "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0. Optional if you enter evcc.",
           "grid_energy": "Optional but recommended: the meter's import counter. Makes the quarter-hour energy exact after restarts.",
           "limit_kw": "The quarter-hour average that must not be exceeded.",
-          "margin_kw": "The guard aims at limit minus margin."
+          "margin_kw": "The guard aims at limit minus margin.",
+          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins.",
+          "evcc_site_password": "Only if evcc asks for a password.",
+          "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself."
         }
       }
     },
@@ -24,7 +30,11 @@
     },
     "error": {
       "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
-      "not_energy": "This sensor has no energy unit (Wh, kWh or MWh). Add unit_of_measurement: kWh to the template sensor or choose another sensor."
+      "not_energy": "This sensor has no energy unit (Wh, kWh or MWh). Add unit_of_measurement: kWh to the template sensor or choose another sensor.",
+      "grid_source_missing": "Enter a grid import sensor or the address of evcc.",
+      "evcc_unreachable": "evcc cannot be reached at this address.",
+      "evcc_auth": "evcc asks for a password, or the password is wrong.",
+      "evcc_no_grid": "evcc reports no grid meter (no grid power)."
     }
   },
   "options": {
@@ -45,7 +55,10 @@
           "outdoor_temp_entity": "Outdoor temperature sensor",
           "charge_plan_entities": "Other charge plan sensors",
           "planner_entry": "Car planner",
-          "max_reading_age_s": "Maximum age of the grid reading"
+          "max_reading_age_s": "Maximum age of the grid reading",
+          "evcc_site_url": "Address of evcc (optional)",
+          "evcc_site_password": "Password of evcc",
+          "evcc_backup": "evcc as a reserve for the grid import"
         },
         "data_description": {
           "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
@@ -58,13 +71,21 @@
           "outdoor_temp_entity": "Optional: an outdoor temperature sensor. More exact than the weather entity for learning, and its history lets the correction start at once instead of after some weeks.",
           "charge_plan_entities": "Only for another source: charge plan sensors by hand (attributes windows and departure). Not needed when you chose the car planner.",
           "planner_entry": "Choose the car planner (for example Plugwhen) and the guard finds the charge plans of all its vehicles by itself, also vehicles added later. Until the departure the forecast then knows when each car really charges instead of using the learned wallbox pattern. Without it nothing changes. Suggested automatically if exactly one is installed.",
-          "max_reading_age_s": "A grid reading that was not written for longer than this counts as missing: no interventions, everything is given back after 90 seconds. Protects against stale values (a sensor that only updates every few minutes cannot be used for control). 0 = never."
+          "max_reading_age_s": "A grid reading that was not written for longer than this counts as missing: no interventions, everything is given back after 90 seconds. Protects against stale values (a sensor that only updates every few minutes cannot be used for control). 0 = never.",
+          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins.",
+          "evcc_site_password": "Only if evcc asks for a password.",
+          "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself.",
+          "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0. Optional if you enter evcc."
         }
       }
     },
     "error": {
       "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
-      "not_energy": "This sensor has no energy unit (Wh, kWh or MWh). Add unit_of_measurement: kWh to the template sensor or choose another sensor."
+      "not_energy": "This sensor has no energy unit (Wh, kWh or MWh). Add unit_of_measurement: kWh to the template sensor or choose another sensor.",
+      "grid_source_missing": "Enter a grid import sensor or the address of evcc.",
+      "evcc_unreachable": "evcc cannot be reached at this address.",
+      "evcc_auth": "evcc asks for a password, or the password is wrong.",
+      "evcc_no_grid": "evcc reports no grid meter (no grid power)."
     }
   },
   "selector": {
@@ -250,14 +271,16 @@
             "phase_entity": "Phase selection",
             "one_phase_option": "Option for 1 phase",
             "phases_entity": "Phases in use",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "phase_entity": "Optional. Without it the wallbox is only throttled, never switched to 1 phase.",
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         },
         "reconfigure": {
@@ -273,14 +296,16 @@
             "phase_entity": "Phase selection",
             "one_phase_option": "Option for 1 phase",
             "phases_entity": "Phases in use",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "phase_entity": "Optional. Without it the wallbox is only throttled, never switched to 1 phase.",
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         }
       },
@@ -311,13 +336,15 @@
             "max_off_min": "Maximum off time",
             "restore_entity": "Switch on again only while",
             "allow_entity": "Intervention only while",
-            "pause_min": "Pause after taking back"
+            "pause_min": "Pause after taking back",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
-            "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection)."
+            "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         },
         "reconfigure": {
@@ -333,13 +360,15 @@
             "max_off_min": "Maximum off time",
             "restore_entity": "Switch on again only while",
             "allow_entity": "Intervention only while",
-            "pause_min": "Pause after taking back"
+            "pause_min": "Pause after taking back",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
-            "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection)."
+            "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         }
       },
@@ -364,10 +393,12 @@
             "off_script": "Script: undo",
             "power_w": "Expected reduction",
             "max_off_min": "Maximum duration",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
-            "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge."
+            "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         },
         "reconfigure": {
@@ -380,10 +411,12 @@
             "off_script": "Script: undo",
             "power_w": "Expected reduction",
             "max_off_min": "Maximum duration",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
-            "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge."
+            "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         }
       }
@@ -414,7 +447,8 @@
             "allow_entity": "Intervention only while",
             "reserve_entity": "Setting that keeps the charge",
             "reserve_value": "Value that keeps the charge",
-            "reserve_lead_min": "Start before a risk window"
+            "reserve_lead_min": "Start before a risk window",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
@@ -430,7 +464,8 @@
             "allow_entity": "Optional. Only while this entity is on.",
             "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
             "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
-            "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak."
+            "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         },
         "reconfigure": {
@@ -452,7 +487,8 @@
             "allow_entity": "Intervention only while",
             "reserve_entity": "Setting that keeps the charge",
             "reserve_value": "Value that keeps the charge",
-            "reserve_lead_min": "Start before a risk window"
+            "reserve_lead_min": "Start before a risk window",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
@@ -468,7 +504,8 @@
             "allow_entity": "Optional. Only while this entity is on.",
             "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
             "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
-            "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak."
+            "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         }
       },
@@ -505,7 +542,8 @@
             "max_off_min": "Maximum duration",
             "restore_original": "Put the previous values back",
             "off_script": "Script after taking back",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -519,7 +557,8 @@
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         },
         "reconfigure": {
@@ -540,7 +579,8 @@
             "max_off_min": "Maximum duration",
             "restore_original": "Put the previous values back",
             "off_script": "Script after taking back",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -554,7 +594,8 @@
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         }
       },
@@ -592,7 +633,8 @@
             "hold_min": "Minimum duration",
             "pause_min": "Pause after taking back",
             "max_off_min": "Maximum duration",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -607,7 +649,8 @@
             "hold_min": "An intervention is kept at least this long (0 = 5 minutes).",
             "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         },
         "reconfigure": {
@@ -627,7 +670,8 @@
             "hold_min": "Minimum duration",
             "pause_min": "Pause after taking back",
             "max_off_min": "Maximum duration",
-            "allow_entity": "Intervention only while"
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -642,7 +686,8 @@
             "hold_min": "An intervention is kept at least this long (0 = 5 minutes).",
             "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
-            "allow_entity": "Optional. Only while this entity is on."
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
           }
         }
       },
@@ -745,6 +790,81 @@
         "unknown_option": "The phase selection has no such option.",
         "min_above_max": "Minimum current is above maximum current.",
         "phase_pair": "Phase selection and option for 1 phase belong together."
+      }
+    },
+    "evcc": {
+      "entry_type": "evcc loadpoint (wallbox)",
+      "initiate_flow": {
+        "user": "Add evcc loadpoint",
+        "reconfigure": "Reconfigure evcc loadpoint"
+      },
+      "step": {
+        "user": {
+          "title": "evcc loadpoint",
+          "description": "The guard sets evcc's maximum charging current (a ceiling, evcc keeps regulating below it) and takes it back. Charging is never stopped. No other integration is needed, the address of evcc is enough.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "evcc_url": "Address of evcc",
+            "evcc_loadpoint": "Loadpoint number",
+            "evcc_password": "Password of evcc",
+            "min_current": "Minimum current",
+            "max_current": "Maximum current",
+            "evcc_one_phase": "May switch to 1 phase",
+            "power_entity": "Charging power (optional)",
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps.",
+            "evcc_url": "For example http://192.168.1.20:7070 (reachable from Home Assistant).",
+            "evcc_loadpoint": "1 = the first loadpoint in evcc.",
+            "evcc_password": "Only if evcc asks for a password (administrator password).",
+            "max_current": "The ceiling the guard gives back to evcc afterwards is the one evcc had before.",
+            "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
+            "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+          }
+        },
+        "reconfigure": {
+          "title": "evcc loadpoint",
+          "description": "The guard sets evcc's maximum charging current (a ceiling, evcc keeps regulating below it) and takes it back. Charging is never stopped. No other integration is needed, the address of evcc is enough.",
+          "data": {
+            "name": "Name",
+            "priority": "Priority",
+            "evcc_url": "Address of evcc",
+            "evcc_loadpoint": "Loadpoint number",
+            "evcc_password": "Password of evcc",
+            "min_current": "Minimum current",
+            "max_current": "Maximum current",
+            "evcc_one_phase": "May switch to 1 phase",
+            "power_entity": "Charging power (optional)",
+            "allow_entity": "Intervention only while",
+            "observe_only": "Observe only"
+          },
+          "data_description": {
+            "priority": "1 = restricted first, 10 = only when nothing else helps.",
+            "evcc_url": "For example http://192.168.1.20:7070 (reachable from Home Assistant).",
+            "evcc_loadpoint": "1 = the first loadpoint in evcc.",
+            "evcc_password": "Only if evcc asks for a password (administrator password).",
+            "max_current": "The ceiling the guard gives back to evcc afterwards is the one evcc had before.",
+            "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
+            "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
+            "allow_entity": "Optional. Only while this entity is on.",
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+          }
+        }
+      },
+      "error": {
+        "evcc_unreachable": "evcc cannot be reached at this address.",
+        "evcc_loadpoint": "evcc has no loadpoint with this number.",
+        "evcc_auth": "evcc asks for a password, or the password is wrong.",
+        "min_above_max": "Minimum current is above maximum current.",
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
+      },
+      "abort": {
+        "reconfigure_successful": "Done."
       }
     }
   },

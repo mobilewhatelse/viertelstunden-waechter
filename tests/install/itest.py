@@ -381,9 +381,10 @@ def main():
         print("   ", e[:240])
 
 
-main()
-fails = [l for ok, l in REPORT if not ok]
-print("\n===== ERGEBNIS: %d von %d Pruefungen bestanden =====" % (len(REPORT) - len(fails), len(REPORT)))
-for l in fails:
-    print(l)
-open(__file__.replace("itest.py", "report.txt"), "w", encoding="utf-8").write("\n".join(l for _, l in REPORT))
+if __name__ == "__main__":  # importing this file (itest_evcc.py uses its helpers) must not run the whole test
+    main()
+    fails = [l for ok, l in REPORT if not ok]
+    print("\n===== ERGEBNIS: %d von %d Pruefungen bestanden =====" % (len(REPORT) - len(fails), len(REPORT)))
+    for l in fails:
+        print(l)
+    open(__file__.replace("itest.py", "report.txt"), "w", encoding="utf-8").write("\n".join(l for _, l in REPORT))

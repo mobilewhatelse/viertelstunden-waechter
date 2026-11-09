@@ -28,6 +28,8 @@ V1 = 230.0
 V3 = 3 * 230.0
 
 KIND_WALLBOX = "wallbox"
+KIND_EVCC = "evcc"          # a wallbox behind evcc: the guard sets evcc's ceiling of the loadpoint, otherwise a wallbox
+WALLBOX_KINDS = (KIND_WALLBOX, KIND_EVCC)
 KIND_SWITCH = "switch"
 KIND_SCRIPT = "script"
 KIND_BATTERY = "battery"
@@ -78,6 +80,7 @@ class DeviceConfig:
     step: float = 5.0             # throttle: step size
     hold_min: float = 0.0         # minimum time an intervention is kept (0 = general default of 5 minutes)
     pause_min: float = 0.0        # minimum pause after taking back before the next intervention (compressor protection)
+    observe_only: bool = False    # only say what would be done with it; never a lever, nothing is sent
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -98,6 +101,7 @@ class DeviceConfig:
             step=max(0.001, float(d.get("step", 5.0))),
             hold_min=float(d.get("hold_min", 0.0)),
             pause_min=float(d.get("pause_min", 0.0)),
+            observe_only=bool(d.get("observe_only", False)),
         )
 
 
@@ -147,6 +151,7 @@ class Guard:
     def __init__(self, devices: list[DeviceConfig], strategy: str = STRATEGY_COMFORT, voltage: float = V1,
                  lang: str = "de") -> None:
         self.t = Messages(lang)           # texts of the log lines in the language of Home Assistant
+        self._watch_noted: set[tuple[str, Any]] = set()  # (device, quarter) already noted for observe-only devices
         self.v1 = float(voltage)          # voltage of one phase (230 V in Europe)
         self.v3 = 3.0 * float(voltage)    # three phases
         self.devices: dict[str, DeviceConfig] = {d.id: d for d in devices}
@@ -290,9 +295,11 @@ class Guard:
 
         checks = self._verify(now, readings)
         actions = self._forced_releases(now, readings)
-        if not actions:
+        if excess > 0.1:
+            actions = actions + self._watch_notes(now, readings, excess)
+        if not [a for a in actions if a.kind != "log"]:
             if excess > 0.1:
-                actions = self._reduce(now, excess, readings, forecast, limit_kw, rest_h)
+                actions = actions + self._reduce(now, excess, readings, forecast, limit_kw, rest_h)
             elif reserve_kw > 0 and p - (allowed - reserve_kw) > 0.1:
                 # forecast says a spike is usual in this quarter hour: take the smooth levers (wallbox, throttle) early
                 self._smooth = True
@@ -432,9 +439,13 @@ class Guard:
 
     # ---------- reducing ----------
 
-    def _options(self, now: datetime, readings: dict[str, Reading], excess: float) -> list[_Option]:
+    def _options(self, now: datetime, readings: dict[str, Reading], excess: float, watched: bool = False) -> list[_Option]:
+        """The levers that can lower the grid import now. `watched=True` returns the same for the devices set to observe only
+        (they are never real levers)."""
         opts: list[_Option] = []
         for dev in self.devices.values():
+            if dev.observe_only != watched:
+                continue
             r = readings.get(dev.id)
             if r is None or not r.available or now < self._rest_until.get(dev.id, now):
                 continue
@@ -458,6 +469,19 @@ class Guard:
                 if r.releasable and (r.soc is None or r.soc >= dev.min_soc):
                     opts.append(_Option(dev, dev.power_w / 1000.0))
         return opts
+
+    def _watch_notes(self, now: datetime, readings: dict[str, Reading], excess: float) -> list[Action]:
+        """For each device set to observe only: once per quarter hour, what the guard would take from it right now."""
+        notes: list[Action] = []
+        for o in self._options(now, readings, excess, watched=True):
+            key = (o.device.id, self.quarter)
+            if key in self._watch_noted:
+                continue
+            self._watch_noted.add(key)
+            notes.append(Action(o.device.id, "log", None, self.t("watch", name=o.device.name, kw=o.reduction_kw, excess=excess), False))
+        if len(self._watch_noted) > 200:
+            self._watch_noted = {k for k in self._watch_noted if k[1] == self.quarter}
+        return notes
 
     def _choose(self, opts: list[_Option], excess: float) -> list[_Option]:
         if self.strategy == STRATEGY_ORDER:

@@ -13,9 +13,10 @@ from homeassistant.config_entries import (
     ConfigEntry, ConfigFlow, ConfigFlowResult, ConfigSubentryFlow, OptionsFlow, SubentryFlowResult,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     BooleanSelector, ConfigEntrySelector, ConfigEntrySelectorConfig, EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
-    SelectSelector, SelectSelectorConfig, TextSelector,
+    SelectSelector, SelectSelectorConfig, TextSelector, TextSelectorConfig, TextSelectorType,
 )
 
 from .const import (
@@ -25,10 +26,12 @@ from .const import (
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
-    D_COMFORT, D_COMFORT_MIN, D_HOLD, D_MAX_VALUE, D_MIN_SOC, D_MIN_VALUE, D_PAUSE, D_REL1, D_REL1_VALUE, D_REL2,
+    D_COMFORT, D_COMFORT_MIN, D_HOLD, D_OBSERVE, D_MAX_VALUE, D_MIN_SOC, D_MIN_VALUE, D_PAUSE, D_REL1, D_REL1_VALUE, D_REL2,
     D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_STEP, D_VALUE,
 )
-from .engine import KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
+from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
+from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
+from .evcc import EvccAuthError, EvccClient, EvccError, parse_grid_kw, parse_loadpoint
 from .inputs import unit_errors
 
 ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
@@ -58,7 +61,11 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
     if first:
         s[vol.Required("name", default="Viertelstunden-Wächter")] = TextSelector()
     # any sensor: a template sensor with the unit W but without a device class is just as good (the unit is checked on saving)
-    s[vol.Required(CONF_GRID_POWER, default=d.get(CONF_GRID_POWER, vol.UNDEFINED))] = _ent("sensor")
+    s[_opt(CONF_GRID_POWER, d)] = _ent("sensor")
+    s[_opt(CONF_EVCC_URL, d)] = TextSelector()
+    s[_opt(CONF_EVCC_PASSWORD, d)] = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+    if not first:
+        s[vol.Required(CONF_EVCC_BACKUP, default=bool(d.get(CONF_EVCC_BACKUP, True)))] = BooleanSelector()
     s[_opt(CONF_GRID_ENERGY, d)] = _ent("sensor")
     if first:
         s[vol.Required(CONF_LIMIT, default=10.0)] = _num(1, 50, 0.1, "kW")
@@ -80,10 +87,28 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
     return vol.Schema(s)
 
 
+async def _grid_source_errors(hass: Any, u: dict[str, Any]) -> dict[str, str]:
+    """At least one source of the grid import is needed; an evcc address is tried right away (and must have a grid meter)."""
+    url = str(u.get(CONF_EVCC_URL) or "").strip()
+    if not u.get(CONF_GRID_POWER) and not url:
+        return {CONF_GRID_POWER: "grid_source_missing"}
+    if not url:
+        return {}
+    try:
+        state = await EvccClient(async_get_clientsession(hass), url, u.get(CONF_EVCC_PASSWORD)).state()
+    except EvccAuthError:
+        return {CONF_EVCC_PASSWORD: "evcc_auth"}
+    except EvccError:
+        return {CONF_EVCC_URL: "evcc_unreachable"}
+    if parse_grid_kw(state) is None:
+        return {CONF_EVCC_URL: "evcc_no_grid"}
+    return {}
+
+
 def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
     s: dict[Any, Any] = {vol.Required(D_NAME, default=d.get(D_NAME, vol.UNDEFINED)): TextSelector()}
     if kind != KIND_VEHICLE:
-        s[vol.Required(D_PRIORITY, default=d.get(D_PRIORITY, 1 if kind == KIND_WALLBOX else 5 if kind == KIND_SWITCH else 10))] = _num(1, 10)
+        s[vol.Required(D_PRIORITY, default=d.get(D_PRIORITY, 1 if kind in (KIND_WALLBOX, KIND_EVCC) else 5 if kind == KIND_SWITCH else 10))] = _num(1, 10)
     if kind == KIND_VEHICLE:
         s[vol.Required(D_SOC, default=d.get(D_SOC, vol.UNDEFINED))] = _ent("sensor")
         s[vol.Required(D_TARGET_SOC, default=d.get(D_TARGET_SOC, 80))] = _num(1, 100, 1, "%")
@@ -99,6 +124,15 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_START_VALUE, d)] = TextSelector()
         s[_opt(D_STOP, d)] = _ent(COMMAND_DOMAINS)
         s[_opt(D_STOP_VALUE, d)] = TextSelector()
+    elif kind == KIND_EVCC:
+        s[vol.Required(D_EVCC_URL, default=d.get(D_EVCC_URL, vol.UNDEFINED))] = TextSelector()
+        s[vol.Required(D_EVCC_LOADPOINT, default=d.get(D_EVCC_LOADPOINT, 1))] = _num(1, 20)
+        s[_opt(D_EVCC_PASSWORD, d)] = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+        s[vol.Required(D_MIN_CURRENT, default=d.get(D_MIN_CURRENT, 6))] = _num(6, 32, 1, "A")
+        s[vol.Required(D_MAX_CURRENT, default=d.get(D_MAX_CURRENT, 16))] = _num(6, 32, 1, "A")
+        s[vol.Required(D_EVCC_ONE_PHASE, default=bool(d.get(D_EVCC_ONE_PHASE, False)))] = BooleanSelector()
+        s[_opt(D_POWER, d)] = _ent("sensor")
+        s[_opt(D_ALLOW, d)] = _ent(ON_OFF_DOMAINS)
     elif kind == KIND_WALLBOX:
         s[vol.Required(D_POWER, default=d.get(D_POWER, vol.UNDEFINED))] = _ent("sensor")
         s[vol.Required(D_CURRENT, default=d.get(D_CURRENT, vol.UNDEFINED))] = _ent(["number", "input_number"])
@@ -160,6 +194,8 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 800))] = _num(10, 20000, 10, "W")
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
     s[_opt(D_ALLOW, d)] = _ent(ON_OFF_DOMAINS)
+    if kind != KIND_VEHICLE:
+        s[vol.Required(D_OBSERVE, default=bool(d.get(D_OBSERVE, False)))] = BooleanSelector()
     return vol.Schema(s)
 
 
@@ -167,7 +203,10 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
     """One line for the device list on the integration page: priority, name and what the guard does with it."""
     kind = kind or d.get(D_KIND)
     prio = int(d.get(D_PRIORITY, 5))
-    if kind == KIND_WALLBOX:
+    if kind == KIND_EVCC:
+        what = (f"evcc #{int(d.get(D_EVCC_LOADPOINT, 1))} · {int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A"
+                + (", 1~" if d.get(D_EVCC_ONE_PHASE) else ""))
+    elif kind == KIND_WALLBOX:
         what = f"{int(d.get(D_MAX_CURRENT, 16))}→{int(d.get(D_MIN_CURRENT, 6))} A" + (", 1~" if d.get(D_ONE_PHASE) else "")
     elif kind == KIND_SWITCH:
         what = f"aus ab {int(d.get(D_MIN_POWER, 100))} W" + (f", ≤ {int(d.get(D_MAX_OFF))} min" if d.get(D_MAX_OFF) else "")
@@ -181,6 +220,8 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
         what = f"Batterie ab {int(d.get(D_MIN_SOC, 30))} %, ≈ {int(d.get(D_POWER_W, 0))} W"
     else:
         what = f"Skript ≈ {int(d.get(D_POWER_W, 0))} W"
+    if d.get(D_OBSERVE):
+        what += " · nur beobachten"
     return f"{prio} · {d.get(D_NAME, '?')} · {what}"
 
 
@@ -189,10 +230,10 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,))
+            errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,)) or await _grid_source_errors(self.hass, user_input)
             if errors:
                 return self.async_show_form(step_id="user", data_schema=_general_schema(user_input, True), errors=errors)
-            data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY) if user_input.get(k)}
+            data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY, CONF_EVCC_URL, CONF_EVCC_PASSWORD) if user_input.get(k)}
             options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN]}
             return self.async_create_entry(title=user_input["name"], data=data, options=options)
         return self.async_show_form(step_id="user", data_schema=_general_schema({}, True))
@@ -206,7 +247,7 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
         return {
-            KIND_WALLBOX: WallboxFlow, KIND_SWITCH: SwitchFlow, KIND_SCRIPT: ScriptFlow, KIND_BATTERY: BatteryFlow,
+            KIND_WALLBOX: WallboxFlow, KIND_EVCC: EvccFlow, KIND_SWITCH: SwitchFlow, KIND_SCRIPT: ScriptFlow, KIND_BATTERY: BatteryFlow,
             KIND_SETTING: SettingFlow, KIND_THROTTLE: ThrottleFlow, KIND_VEHICLE: VehicleFlow,
         }
 
@@ -221,13 +262,14 @@ class WaechterOptionsFlow(OptionsFlow):
             if len(planners) == 1:
                 current[CONF_PLANNER] = planners[0].entry_id
         if user_input is not None:
-            errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,))
+            errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,)) or await _grid_source_errors(self.hass, user_input)
             if errors:
                 return self.async_show_form(step_id="init", data_schema=_general_schema({**current, **user_input}, False), errors=errors)
             keep = {k: v for k, v in self.config_entry.options.items() if k in (CONF_LIMIT, CONF_MARGIN)}
             keep.update({k: v for k, v in user_input.items() if v not in (None, "")})
-            if not user_input.get(CONF_GRID_ENERGY):
-                keep[CONF_GRID_ENERGY] = ""  # cleared on purpose; overrides the value from set-up
+            for cleared in (CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_EVCC_URL, CONF_EVCC_PASSWORD):
+                if not user_input.get(cleared):
+                    keep[cleared] = ""  # cleared on purpose; overrides the value from set-up
             return self.async_create_entry(data=keep)
         return self.async_show_form(step_id="init", data_schema=_general_schema(current, False))
 
@@ -246,8 +288,10 @@ class _DeviceFlow(ConfigSubentryFlow):
         if user_input is not None:
             errors = unit_errors(self.hass.states.get, user_input, (D_POWER,)) or self._validate(user_input)
             if not errors:
+                errors = await self._validate_async(user_input)
+            if not errors:
                 data = {k: v for k, v in user_input.items() if v not in (None, "")}
-                for k in (D_PRIORITY, D_MIN_CURRENT, D_MAX_CURRENT):
+                for k in (D_PRIORITY, D_MIN_CURRENT, D_MAX_CURRENT, D_EVCC_LOADPOINT):
                     if k in data:
                         data[k] = int(data[k])
                 data[D_KIND] = self.kind
@@ -262,6 +306,32 @@ class _DeviceFlow(ConfigSubentryFlow):
         return self.async_show_form(step_id=step, data_schema=_device_schema(self.kind, current), errors=errors)
 
     def _validate(self, u: dict[str, Any]) -> dict[str, str]:
+        return {}
+
+    async def _validate_async(self, u: dict[str, Any]) -> dict[str, str]:
+        return {}
+
+
+class EvccFlow(_DeviceFlow):
+    """A loadpoint of evcc: the guard sets evcc's ceiling for the charging current (see evcc.py). Checks the connection when saving."""
+
+    kind = KIND_EVCC
+
+    def _validate(self, u: dict[str, Any]) -> dict[str, str]:
+        if int(u.get(D_MIN_CURRENT, 6)) > int(u.get(D_MAX_CURRENT, 16)):
+            return {D_MIN_CURRENT: "min_above_max"}
+        return {}
+
+    async def _validate_async(self, u: dict[str, Any]) -> dict[str, str]:
+        client = EvccClient(async_get_clientsession(self.hass), str(u.get(D_EVCC_URL) or ""), u.get(D_EVCC_PASSWORD))
+        try:
+            state = await client.state()
+        except EvccAuthError:
+            return {D_EVCC_PASSWORD: "evcc_auth"}
+        except EvccError:
+            return {D_EVCC_URL: "evcc_unreachable"}
+        if parse_loadpoint(state, int(float(u.get(D_EVCC_LOADPOINT) or 1))) is None:
+            return {D_EVCC_LOADPOINT: "evcc_loadpoint"}
         return {}
 
 

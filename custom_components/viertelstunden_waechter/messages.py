@@ -12,6 +12,11 @@ MESSAGES: dict[str, dict[str, str]] = {
     "de": {
         # decisions
         "ahead": "Vorausschauend ({why}): {text}",
+        "watch": "Nur beobachten: {name} würde um {kw:.1f} kW gesenkt ({excess:.1f} kW zu viel), es wurde nichts gesendet",
+        "wb_twice": "Wallbox {a} und evcc-Ladepunkt {b} laden gleichzeitig mit fast gleicher Leistung ({kw:.1f} kW). Ist das dieselbe Wallbox? Bitte nur einmal eintragen.",
+        "grid_differ": "Netzbezug: Ihr Sensor zeigt {a:.1f} kW, evcc zeigt {b:.1f} kW. Der Wächter regelt mit Ihrem Sensor.",
+        "grid_backup_on": "Netzbezug: Ihr Sensor liefert nichts Brauchbares, der Wächter nimmt vorübergehend den Wert von evcc ({b:.1f} kW).",
+        "grid_backup_off": "Netzbezug: Ihr Sensor liefert wieder, der Wächter regelt wieder damit.",
         "limit_lost": "Grenze nicht zu halten: Prognose {fc:.1f} kW (Grenze {limit:.1f} kW), alle Hebel ausgeschöpft",
         "sw_off": "{name} aus ({w:.0f} W, {excess:.1f} kW zu viel)",
         "soc_part": ", Ladestand {soc:.0f} %",
@@ -76,6 +81,11 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "en": {
         "ahead": "Ahead ({why}): {text}",
+        "watch": "Observe only: {name} would be lowered by {kw:.1f} kW ({excess:.1f} kW too much), nothing was sent",
+        "wb_twice": "Wallbox {a} and evcc loadpoint {b} charge at the same time with nearly the same power ({kw:.1f} kW). Is it the same wallbox? Please enter it only once.",
+        "grid_differ": "Grid import: your sensor shows {a:.1f} kW, evcc shows {b:.1f} kW. The guard works with your sensor.",
+        "grid_backup_on": "Grid import: your sensor has no usable value, the guard temporarily uses the value from evcc ({b:.1f} kW).",
+        "grid_backup_off": "Grid import: your sensor is delivering again, the guard works with it again.",
         "limit_lost": "Limit cannot be held: forecast {fc:.1f} kW (limit {limit:.1f} kW), all levers used",
         "sw_off": "{name} off ({w:.0f} W, {excess:.1f} kW too much)",
         "soc_part": ", charge {soc:.0f} %",

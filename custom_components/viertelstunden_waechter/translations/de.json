@@ -9,13 +9,19 @@
           "grid_power": "Netzbezug (Leistung)",
           "grid_energy": "Bezugszähler",
           "limit_kw": "Grenze",
-          "margin_kw": "Sicherheitsabstand"
+          "margin_kw": "Sicherheitsabstand",
+          "evcc_site_url": "Adresse von evcc (optional)",
+          "evcc_site_password": "Passwort von evcc",
+          "evcc_backup": "evcc als Reserve für den Netzbezug"
         },
         "data_description": {
-          "grid_power": "Sensor mit der Leistung aus dem Netz (W oder kW). Negative Werte (Einspeisung) zählen als 0.",
+          "grid_power": "Sensor mit der Leistung, die aus dem Netz bezogen wird (W oder kW). Negative Werte (Einspeisung) zählen als 0. Optional, wenn Sie evcc eintragen.",
           "grid_energy": "Optional, aber empfohlen: Bezugszähler des Stromzählers. Damit stimmt die Viertelstunde auch nach einem Neustart genau.",
           "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
-          "margin_kw": "Der Wächter zielt auf Grenze minus Abstand."
+          "margin_kw": "Der Wächter zielt auf Grenze minus Abstand.",
+          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst.",
+          "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
+          "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück."
         }
       }
     },
@@ -24,7 +30,11 @@
     },
     "error": {
       "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
-      "not_energy": "Dieser Sensor hat keine Energieeinheit (Wh, kWh oder MWh). Ergänzen Sie beim Template-Sensor unit_of_measurement: kWh oder wählen Sie einen anderen Sensor."
+      "not_energy": "Dieser Sensor hat keine Energieeinheit (Wh, kWh oder MWh). Ergänzen Sie beim Template-Sensor unit_of_measurement: kWh oder wählen Sie einen anderen Sensor.",
+      "grid_source_missing": "Tragen Sie einen Sensor für den Netzbezug oder die Adresse von evcc ein.",
+      "evcc_unreachable": "evcc ist unter dieser Adresse nicht erreichbar.",
+      "evcc_auth": "evcc verlangt ein Passwort, oder das Passwort ist falsch.",
+      "evcc_no_grid": "evcc meldet keinen Netzzähler (keine Netzleistung)."
     }
   },
   "options": {
@@ -45,7 +55,10 @@
           "outdoor_temp_entity": "Außentemperatur-Sensor",
           "charge_plan_entities": "Andere Ladeplan-Sensoren",
           "planner_entry": "Auto-Planer",
-          "max_reading_age_s": "Höchstalter des Netzbezug-Messwerts"
+          "max_reading_age_s": "Höchstalter des Netzbezug-Messwerts",
+          "evcc_site_url": "Adresse von evcc (optional)",
+          "evcc_site_password": "Passwort von evcc",
+          "evcc_backup": "evcc als Reserve für den Netzbezug"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
@@ -58,13 +71,21 @@
           "outdoor_temp_entity": "Optional: ein Außentemperatur-Sensor. Genauer als die Wetter-Entität zum Lernen; mit seinem Verlauf kann die Korrektur sofort statt erst nach einigen Wochen beginnen.",
           "charge_plan_entities": "Nur für eine andere Quelle: Ladeplan-Sensoren von Hand (Attribute windows und departure). Nicht nötig, wenn Sie den Auto-Planer gewählt haben.",
           "planner_entry": "Wählen Sie den Auto-Planer (zum Beispiel Plugwhen), dann findet der Wächter die Ladepläne aller seiner Fahrzeuge selbst, auch später hinzugefügte. Bis zur Abfahrt weiß die Prognose dann, wann jedes Auto wirklich lädt, statt das gelernte Wallbox-Muster zu nehmen. Ohne ihn ändert sich nichts. Wird automatisch vorgeschlagen, wenn genau einer installiert ist.",
-          "max_reading_age_s": "Ein Messwert, der länger als das nicht geschrieben wurde, gilt als fehlend: Der Wächter greift nicht ein und gibt nach 90 Sekunden alles zurück. Schützt vor veralteten Werten (ein Sensor, der nur alle paar Minuten aktualisiert, taugt nicht zum Regeln). 0 = nie."
+          "max_reading_age_s": "Ein Messwert, der länger als das nicht geschrieben wurde, gilt als fehlend: Der Wächter greift nicht ein und gibt nach 90 Sekunden alles zurück. Schützt vor veralteten Werten (ein Sensor, der nur alle paar Minuten aktualisiert, taugt nicht zum Regeln). 0 = nie.",
+          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst.",
+          "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
+          "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück.",
+          "grid_power": "Sensor mit der Leistung, die aus dem Netz bezogen wird (W oder kW). Negative Werte (Einspeisung) zählen als 0. Optional, wenn Sie evcc eintragen."
         }
       }
     },
     "error": {
       "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
-      "not_energy": "Dieser Sensor hat keine Energieeinheit (Wh, kWh oder MWh). Ergänzen Sie beim Template-Sensor unit_of_measurement: kWh oder wählen Sie einen anderen Sensor."
+      "not_energy": "Dieser Sensor hat keine Energieeinheit (Wh, kWh oder MWh). Ergänzen Sie beim Template-Sensor unit_of_measurement: kWh oder wählen Sie einen anderen Sensor.",
+      "grid_source_missing": "Tragen Sie einen Sensor für den Netzbezug oder die Adresse von evcc ein.",
+      "evcc_unreachable": "evcc ist unter dieser Adresse nicht erreichbar.",
+      "evcc_auth": "evcc verlangt ein Passwort, oder das Passwort ist falsch.",
+      "evcc_no_grid": "evcc meldet keinen Netzzähler (keine Netzleistung)."
     }
   },
   "selector": {
@@ -250,14 +271,16 @@
             "phase_entity": "Phasenwahl",
             "one_phase_option": "Option für 1 Phase",
             "phases_entity": "Genutzte Phasen",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "phase_entity": "Optional. Ohne sie wird nur gedrosselt, nie auf 1 Phase umgeschaltet.",
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         },
         "reconfigure": {
@@ -273,14 +296,16 @@
             "phase_entity": "Phasenwahl",
             "one_phase_option": "Option für 1 Phase",
             "phases_entity": "Genutzte Phasen",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "phase_entity": "Optional. Ohne sie wird nur gedrosselt, nie auf 1 Phase umgeschaltet.",
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         }
       },
@@ -311,13 +336,15 @@
             "max_off_min": "Höchste Auszeit",
             "restore_entity": "Nur wieder einschalten, solange",
             "allow_entity": "Eingriff nur, solange",
-            "pause_min": "Pause nach dem Zurücknehmen"
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
-            "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz)."
+            "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         },
         "reconfigure": {
@@ -333,13 +360,15 @@
             "max_off_min": "Höchste Auszeit",
             "restore_entity": "Nur wieder einschalten, solange",
             "allow_entity": "Eingriff nur, solange",
-            "pause_min": "Pause nach dem Zurücknehmen"
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
-            "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz)."
+            "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         }
       },
@@ -364,10 +393,12 @@
             "off_script": "Skript: zurücknehmen",
             "power_w": "Erwartete Entlastung",
             "max_off_min": "Höchste Dauer",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
-            "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt."
+            "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         },
         "reconfigure": {
@@ -380,10 +411,12 @@
             "off_script": "Skript: zurücknehmen",
             "power_w": "Erwartete Entlastung",
             "max_off_min": "Höchste Dauer",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
-            "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt."
+            "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         }
       }
@@ -414,7 +447,8 @@
             "allow_entity": "Eingriff nur, solange",
             "reserve_entity": "Einstellung, die die Ladung hält",
             "reserve_value": "Wert, der die Ladung hält",
-            "reserve_lead_min": "Beginn vor einem Risikofenster"
+            "reserve_lead_min": "Beginn vor einem Risikofenster",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
@@ -430,7 +464,8 @@
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
             "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
-            "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze."
+            "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         },
         "reconfigure": {
@@ -452,7 +487,8 @@
             "allow_entity": "Eingriff nur, solange",
             "reserve_entity": "Einstellung, die die Ladung hält",
             "reserve_value": "Wert, der die Ladung hält",
-            "reserve_lead_min": "Beginn vor einem Risikofenster"
+            "reserve_lead_min": "Beginn vor einem Risikofenster",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
@@ -468,7 +504,8 @@
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
             "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
-            "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze."
+            "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         }
       },
@@ -505,7 +542,8 @@
             "max_off_min": "Höchste Dauer",
             "restore_original": "Vorherige Werte wiederherstellen",
             "off_script": "Skript nach dem Zurücknehmen",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -519,7 +557,8 @@
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         },
         "reconfigure": {
@@ -540,7 +579,8 @@
             "max_off_min": "Höchste Dauer",
             "restore_original": "Vorherige Werte wiederherstellen",
             "off_script": "Skript nach dem Zurücknehmen",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -554,7 +594,8 @@
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         }
       },
@@ -592,7 +633,8 @@
             "hold_min": "Mindestdauer",
             "pause_min": "Pause nach dem Zurücknehmen",
             "max_off_min": "Höchste Dauer",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -607,7 +649,8 @@
             "hold_min": "Ein Eingriff bleibt mindestens so lange (0 = 5 Minuten).",
             "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         },
         "reconfigure": {
@@ -627,7 +670,8 @@
             "hold_min": "Mindestdauer",
             "pause_min": "Pause nach dem Zurücknehmen",
             "max_off_min": "Höchste Dauer",
-            "allow_entity": "Eingriff nur, solange"
+            "allow_entity": "Eingriff nur, solange",
+            "observe_only": "Nur beobachten"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -642,7 +686,8 @@
             "hold_min": "Ein Eingriff bleibt mindestens so lange (0 = 5 Minuten).",
             "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
-            "allow_entity": "Optional. Nur solange diese Entität an ist."
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
           }
         }
       },
@@ -745,6 +790,81 @@
         "unknown_option": "Diese Option hat die Phasenwahl nicht.",
         "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
         "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen."
+      }
+    },
+    "evcc": {
+      "entry_type": "evcc-Ladepunkt (Wallbox)",
+      "initiate_flow": {
+        "user": "evcc-Ladepunkt hinzufügen",
+        "reconfigure": "evcc-Ladepunkt ändern"
+      },
+      "step": {
+        "user": {
+          "title": "evcc-Ladepunkt",
+          "description": "Der Wächter setzt den maximalen Ladestrom von evcc (eine Obergrenze, darunter regelt evcc weiter) und gibt ihn zurück. Das Laden wird nie gestoppt. Es wird keine andere Integration gebraucht, die Adresse von evcc genügt.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "evcc_url": "Adresse von evcc",
+            "evcc_loadpoint": "Nummer des Ladepunkts",
+            "evcc_password": "Passwort von evcc",
+            "min_current": "Mindeststrom",
+            "max_current": "Höchststrom",
+            "evcc_one_phase": "Darf auf 1 Phase umschalten",
+            "power_entity": "Ladeleistung (optional)",
+            "allow_entity": "Eingriff nur solange",
+            "observe_only": "Nur beobachten"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
+            "evcc_url": "Zum Beispiel http://192.168.1.20:7070 (von Home Assistant aus erreichbar).",
+            "evcc_loadpoint": "1 = der erste Ladepunkt in evcc.",
+            "evcc_password": "Nur wenn evcc ein Passwort verlangt (Administrator-Passwort).",
+            "max_current": "Zurückgegeben wird die Obergrenze, die evcc vorher hatte.",
+            "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
+            "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+          }
+        },
+        "reconfigure": {
+          "title": "evcc-Ladepunkt",
+          "description": "Der Wächter setzt den maximalen Ladestrom von evcc (eine Obergrenze, darunter regelt evcc weiter) und gibt ihn zurück. Das Laden wird nie gestoppt. Es wird keine andere Integration gebraucht, die Adresse von evcc genügt.",
+          "data": {
+            "name": "Name",
+            "priority": "Priorität",
+            "evcc_url": "Adresse von evcc",
+            "evcc_loadpoint": "Nummer des Ladepunkts",
+            "evcc_password": "Passwort von evcc",
+            "min_current": "Mindeststrom",
+            "max_current": "Höchststrom",
+            "evcc_one_phase": "Darf auf 1 Phase umschalten",
+            "power_entity": "Ladeleistung (optional)",
+            "allow_entity": "Eingriff nur solange",
+            "observe_only": "Nur beobachten"
+          },
+          "data_description": {
+            "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
+            "evcc_url": "Zum Beispiel http://192.168.1.20:7070 (von Home Assistant aus erreichbar).",
+            "evcc_loadpoint": "1 = der erste Ladepunkt in evcc.",
+            "evcc_password": "Nur wenn evcc ein Passwort verlangt (Administrator-Passwort).",
+            "max_current": "Zurückgegeben wird die Obergrenze, die evcc vorher hatte.",
+            "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
+            "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
+            "allow_entity": "Optional. Nur solange diese Entität an ist.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+          }
+        }
+      },
+      "error": {
+        "evcc_unreachable": "evcc ist unter dieser Adresse nicht erreichbar.",
+        "evcc_loadpoint": "evcc hat keinen Ladepunkt mit dieser Nummer.",
+        "evcc_auth": "evcc verlangt ein Passwort, oder das Passwort ist falsch.",
+        "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
+      },
+      "abort": {
+        "reconfigure_successful": "Done."
       }
     }
   },

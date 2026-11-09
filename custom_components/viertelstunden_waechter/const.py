@@ -8,6 +8,9 @@ UPDATE_INTERVAL = timedelta(seconds=20)
 
 # general settings (entry.data / entry.options)
 CONF_GRID_POWER = "grid_power"          # sensor, grid import power (W or kW); negative values (export) count as 0
+CONF_EVCC_URL = "evcc_site_url"          # optional: evcc as source of the grid import (own sensor wins)
+CONF_EVCC_PASSWORD = "evcc_site_password"
+CONF_EVCC_BACKUP = "evcc_backup"        # evcc takes over while the grid sensor has no usable value (default on)
 CONF_GRID_ENERGY = "grid_energy"        # sensor, grid import counter (Wh/kWh/MWh), optional but recommended
 CONF_LIMIT = "limit_kw"
 CONF_MARGIN = "margin_kw"
@@ -27,6 +30,10 @@ CONF_DEVICES = "devices"
 
 # device settings
 D_ID = "id"
+D_EVCC_URL = "evcc_url"                # evcc: address, e.g. http://192.168.1.20:7070
+D_EVCC_LOADPOINT = "evcc_loadpoint"    # evcc: number of the loadpoint (1 = first)
+D_EVCC_PASSWORD = "evcc_password"      # evcc: password, only if evcc asks for one
+D_EVCC_ONE_PHASE = "evcc_one_phase"    # evcc: the guard may switch the loadpoint to 1 phase (if the charger can)
 D_KIND = "kind"
 D_NAME = "name"
 D_PRIORITY = "priority"
@@ -57,6 +64,7 @@ D_MAX_VALUE = "max_value"               # throttle: normal value
 D_STEP = "step"                         # throttle: step size
 D_COMFORT = "comfort_entity"            # setting/throttle: sensor that must not fall below the minimum (room, hot water)
 D_COMFORT_MIN = "comfort_min"
+D_OBSERVE = "observe_only"                # the guard only writes what it would do with this device
 D_HOLD = "hold_min"                     # minimum time an intervention is kept
 D_PAUSE = "pause_min"
 D_TARGET_SOC = "target_soc"             # vehicle: target state of charge (%)

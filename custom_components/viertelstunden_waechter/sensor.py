@@ -66,6 +66,10 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "target_kw": w.guard.values.get("target_kw"),
             "grid_age_s": w.grid_age,
             "grid_stale": w.grid_stale,
+            "grid_source": w.grid_source,
+            "grid_evcc_kw": w.grid_evcc_kw,
+            "sources_differ": w.sources_differ,
+            "wallbox_twice": w.wallbox_twice,
             "configuration": w.configuration(),
         }
 

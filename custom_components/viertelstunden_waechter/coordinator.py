@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -24,6 +25,9 @@ from .const import (
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
     CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
+from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
+from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, choose_grid, parse_grid_kw, parse_loadpoint, sources_differ, target_ceiling,
+                   virtual_current)
 from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
 from .export import days_csv, quarters_csv
@@ -35,7 +39,7 @@ from .pricing import monthly_cost
 from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
-    DeviceConfig, Guard, Reading,
+    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -69,8 +73,12 @@ class Waechter:
             sid: {**sub.data, D_ID: sid, D_KIND: sub.subentry_type, D_NAME: sub.data.get(D_NAME) or sub.title}
             for sid, sub in entry.subentries.items()
         }
+        self._evcc_lp: dict[str, dict[str, Any] | None] = {}   # device id -> loadpoint as read from evcc (None = not reachable)
+        self._evcc_orig: dict[str, dict[str, float]] = {}      # device id -> ceiling and virtual current when a reduction began
+        self._evcc_clients: dict[tuple[str, str], EvccClient] = {}
+        self._evcc_down: set[tuple[str, str]] = set()
         self.guard = Guard(
-            [DeviceConfig.from_dict(d) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT,
+            [DeviceConfig.from_dict(self._engine_dict(d)) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT,
             float(self.cfg.get(CONF_VOLTAGE, 230.0)), hass.config.language,
         )
         self.t = Messages(hass.config.language)  # texts of the log lines and messages
@@ -117,6 +125,15 @@ class Waechter:
         self.forecast: dict[str, Any] = {}
         self.grid_age: float | None = None   # seconds since the grid reading was written
         self.grid_stale = False              # True: the reading is older than allowed and counts as missing
+        self.grid_source: str | None = None  # "sensor" or "evcc": where the grid import of this cycle came from
+        self.grid_evcc_kw: float | None = None  # what evcc reports (None = not asked or no grid meter there)
+        self.sources_differ = False          # sensor and evcc differ clearly (shown, never averaged)
+        self._diff_since: datetime | None = None
+        self._diff_noted = False
+        self._on_backup = False
+        self.wallbox_twice: str | None = None   # "wallbox name / evcc name" while both seem to be the same wallbox
+        self._twice_since: datetime | None = None
+        self._twice_noted = False
         # weather correction of the house forecast (needs a temperature; the switch is on by default)
         self.weather_enabled = True
         self.curve = WeatherCurve()
@@ -166,6 +183,7 @@ class Waechter:
         self.months = data.get("months", {})
         self.weekly = data.get("weekly", {})
         self._battery_orig = data.get("battery_orig", {})
+        self._evcc_orig = data.get("evcc_orig", {})
         self._plan_paused = bool(data.get("plan_paused"))  # resumed by the first cycle (the plan switch is off)
         if self.month_peak.get("month") and self.month_peak["month"] not in self.months:
             kw = float(self.month_peak.get("kw") or 0.0)  # taken over from version 0.2
@@ -186,6 +204,7 @@ class Waechter:
         if data.get("executing") and data.get("interventions"):
             # Home Assistant restarted while the guard had changed devices: give them back first
             self.guard.load({"interventions": data["interventions"]})
+            await self._poll_evcc()
             await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_restart")), True)
         self.guard.forget()
         self._unsub = async_track_time_interval(self.hass, self._tick, UPDATE_INTERVAL)
@@ -247,18 +266,65 @@ class Waechter:
         allowed age (default 2 minutes) is not a measurement any more: the guard then acts as without data (it gives
         everything back after 90 seconds) instead of steering by a stale number."""
         eid = self.cfg.get(CONF_GRID_POWER)
-        grid = self._power_kw(eid)
-        st = self._state(eid)
+        grid = self._power_kw(eid) if eid else None
+        st = self._state(eid) if eid else None
         self.grid_age, self.grid_stale = None, False
-        if grid is None or st is None:
-            return grid
-        stamp = max(st.last_updated, getattr(st, "last_reported", st.last_updated))
-        self.grid_age = round(max(0.0, (now - stamp).total_seconds()), 1)
-        max_age = float(self.cfg.get(CONF_MAX_AGE, DEFAULT_MAX_AGE_S))
-        if max_age > 0 and self.grid_age > max_age:
-            self.grid_stale = True
-            return None
-        return grid
+        if grid is not None and st is not None:
+            stamp = max(st.last_updated, getattr(st, "last_reported", st.last_updated))
+            self.grid_age = round(max(0.0, (now - stamp).total_seconds()), 1)
+            max_age = float(self.cfg.get(CONF_MAX_AGE, DEFAULT_MAX_AGE_S))
+            if max_age > 0 and self.grid_age > max_age:
+                self.grid_stale = True
+                grid = None
+        # the sensor the user entered wins; evcc fills the gap (no sensor entered, or reserve while the sensor has nothing usable)
+        kw, source = choose_grid(grid, self.grid_evcc_kw, bool(eid), bool(self.cfg.get(CONF_EVCC_BACKUP, True)))
+        self.grid_source = source
+        self._watch_sources(grid, source, now)
+        return kw
+
+    def _watch_wallbox_twice(self, now: datetime, readings: dict[str, Reading]) -> None:
+        """A wallbox device and an evcc loadpoint that charge at the same time with nearly the same power for two minutes are
+        probably the same wallbox entered twice (two controllers on one wallbox). Say it once per episode; nothing is changed."""
+        pair: tuple[str, str, float] | None = None
+        for wid, wd in self.raw_devices.items():
+            if wd.get(D_KIND) != KIND_WALLBOX:
+                continue
+            pw = (readings.get(wid) or Reading()).power_w or 0.0
+            for eid, ed in self.raw_devices.items():
+                if ed.get(D_KIND) != KIND_EVCC:
+                    continue
+                pe = (readings.get(eid) or Reading()).power_w or 0.0
+                if pw > 1000 and pe > 1000 and abs(pw - pe) <= 0.15 * max(pw, pe):
+                    pair = (str(wd.get(D_NAME)), str(ed.get(D_NAME)), max(pw, pe) / 1000.0)
+        if pair is None:
+            self._twice_since, self._twice_noted, self.wallbox_twice = None, False, None
+            return
+        if self._twice_since is None:
+            self._twice_since = now
+        elif (now - self._twice_since).total_seconds() >= SOURCES_DIFFER_AFTER_S:
+            self.wallbox_twice = f"{pair[0]} / {pair[1]}"
+            if not self._twice_noted:
+                self._twice_noted = True
+                self._log(Action("", "log", None, self.t("wb_twice", a=pair[0], b=pair[1], kw=pair[2]), False), False)
+
+    def _watch_sources(self, sensor_kw: float | None, source: str | None, now: datetime) -> None:
+        """Say it once when the reserve takes over or gives back, and once per episode when sensor and evcc differ clearly."""
+        if source == "evcc" and self.cfg.get(CONF_GRID_POWER) and not self._on_backup:
+            self._on_backup = True
+            self._log(Action("", "log", None, self.t("grid_backup_on", b=self.grid_evcc_kw or 0.0), False), False)
+        elif source == "sensor" and self._on_backup:
+            self._on_backup = False
+            self._log(Action("", "log", None, self.t("grid_backup_off"), False), False)
+        if sources_differ(sensor_kw, self.grid_evcc_kw):
+            if self._diff_since is None:
+                self._diff_since = now
+            elif (now - self._diff_since).total_seconds() >= SOURCES_DIFFER_AFTER_S:
+                self.sources_differ = True
+                if not self._diff_noted:
+                    self._diff_noted = True
+                    self._log(Action("", "log", None, self.t("grid_differ", a=sensor_kw or 0.0, b=self.grid_evcc_kw or 0.0), False), False)
+        else:
+            self._diff_since, self.sources_differ, self._diff_noted = None, False, False
 
     def _is_on(self, eid: str | None, unknown: bool) -> bool:
         if not eid:
@@ -275,7 +341,17 @@ class Waechter:
             p = self._power_kw(d.get(D_POWER))
             r.power_w = p * 1000.0 if p is not None else None
             kind = d[D_KIND]
-            if kind == KIND_WALLBOX:
+            if kind == KIND_EVCC:
+                lp = self._evcc_lp.get(dev_id)
+                if p is None and lp:
+                    r.power_w = lp["power_w"]
+                r.current_a = virtual_current(lp)
+                r.available = r.current_a is not None
+                if lp:
+                    r.phases = lp["phases_active"]
+                    if d.get(D_EVCC_ONE_PHASE) and lp["phases_switchable"] and lp["phases_configured"] is not None:
+                        r.phase_option = str(lp["phases_configured"])
+            elif kind == KIND_WALLBOX:
                 r.current_a = self._float(d.get(D_CURRENT))
                 r.available = r.current_a is not None
                 st = self._state(d.get(D_PHASE))
@@ -308,6 +384,7 @@ class Waechter:
             return
         async with self._lock:
             now = dt_util.now()
+            await self._poll_evcc()
             readings = self._readings()
             locked = self._is_on(self.cfg.get(CONF_LOCK), False)
             execute = self.mode == MODE_ACTIVE and not locked
@@ -317,6 +394,7 @@ class Waechter:
                 self.guard.forget()  # interventions seen in observe mode never happened
                 self.executing = execute
             self._wb_accumulate(now, readings)
+            self._watch_wallbox_twice(now, readings)
             needed = self._is_on(self.cfg.get(CONF_CONDITION), True)
             grid = self._grid_reading(now)
             self.guard.real_effect = execute
@@ -770,12 +848,12 @@ class Waechter:
     # ---------- house and wallbox apart ----------
 
     def _has_wallbox(self) -> bool:
-        return any(d[D_KIND] == KIND_WALLBOX for d in self.raw_devices.values())
+        return any(d[D_KIND] in WALLBOX_KINDS for d in self.raw_devices.values())
 
     def _wb_accumulate(self, now: datetime, readings: dict[str, Reading]) -> None:
         """Energy of all wallboxes in the running quarter hour (for learning the house without the wallbox)."""
         p = sum((r.power_w or 0.0) for dev_id, r in readings.items()
-                if self.raw_devices.get(dev_id, {}).get(D_KIND) == KIND_WALLBOX) / 1000.0
+                if self.raw_devices.get(dev_id, {}).get(D_KIND) in WALLBOX_KINDS) / 1000.0
         self._wb_kw_now = p
         q = now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0)
         w = self._wbq
@@ -1100,9 +1178,64 @@ class Waechter:
         async with asyncio.timeout(CALL_TIMEOUT_S):
             await self.hass.services.async_call(domain, service, data, blocking=True)
 
+    @staticmethod
+    def _engine_dict(d: dict[str, Any]) -> dict[str, Any]:
+        """What the engine gets of a device: an evcc loadpoint is a wallbox for it (one-phase option is the number of phases)."""
+        if d.get(D_KIND) != KIND_EVCC:
+            return d
+        return {**d, D_KIND: KIND_WALLBOX, "one_phase_option": "1" if d.get(D_EVCC_ONE_PHASE) else None}
+
+    def _evcc_client(self, url: str, password: str) -> EvccClient:
+        key = (url, password)
+        if key not in self._evcc_clients:
+            self._evcc_clients[key] = EvccClient(async_get_clientsession(self.hass), url, password)
+        return self._evcc_clients[key]
+
+    async def _poll_evcc(self) -> None:
+        """Read evcc once per address and keep the loadpoints of the devices (unreachable = None: the guard leaves the device alone)."""
+        states: dict[tuple[str, str], dict[str, Any] | None] = {}
+
+        async def read(key: tuple[str, str]) -> dict[str, Any] | None:
+            if key not in states:
+                try:
+                    states[key] = await self._evcc_client(*key).state()
+                    self._evcc_down.discard(key)
+                except Exception as err:  # noqa: BLE001 - evcc being down must not stop the guard
+                    states[key] = None
+                    if key not in self._evcc_down:  # say it once, not every cycle
+                        _LOGGER.warning("evcc at %s is not reachable: %s", key[0], err)
+                        self._evcc_down.add(key)
+            return states[key]
+
+        for dev_id, d in self.raw_devices.items():
+            if d.get(D_KIND) != KIND_EVCC:
+                continue
+            st = await read((str(d.get(D_EVCC_URL) or ""), str(d.get(D_EVCC_PASSWORD) or "")))
+            self._evcc_lp[dev_id] = parse_loadpoint(st, int(d.get(D_EVCC_LOADPOINT) or 1)) if st else None
+        site_url = str(self.cfg.get(CONF_EVCC_URL) or "")
+        self.grid_evcc_kw = parse_grid_kw(await read((site_url, str(self.cfg.get(CONF_EVCC_PASSWORD) or "")))) if site_url else None
+
+    async def _evcc_exec(self, a: Action, d: dict[str, Any]) -> None:
+        client = self._evcc_client(str(d.get(D_EVCC_URL) or ""), str(d.get(D_EVCC_PASSWORD) or ""))
+        loadpoint = int(d.get(D_EVCC_LOADPOINT) or 1)
+        if a.kind == "set_phase":
+            await client.set_phases(loadpoint, int(float(a.value)))
+            return
+        lp = self._evcc_lp.get(a.device_id)
+        orig = self._evcc_orig.get(a.device_id)
+        if orig is None and a.intervention and lp and lp.get("ceiling") is not None:
+            orig = {"ceiling": float(lp["ceiling"]), "virtual": float(virtual_current(lp) or lp["ceiling"])}
+            self._evcc_orig[a.device_id] = orig
+        amps, restored = target_ceiling(float(a.value), orig)
+        await client.set_max_current(loadpoint, amps)
+        if restored:
+            self._evcc_orig.pop(a.device_id, None)
+
     async def _exec(self, a: Action) -> None:
         d = self.raw_devices.get(a.device_id, {})
-        if a.kind == "set_current":
+        if d.get(D_KIND) == KIND_EVCC and a.kind in ("set_current", "set_phase"):
+            await self._evcc_exec(a, d)
+        elif a.kind == "set_current":
             eid = d[D_CURRENT]
             await self._call(eid.split(".")[0], "set_value", {"entity_id": eid, "value": a.value})
         elif a.kind == "set_phase":
@@ -1185,6 +1318,7 @@ class Waechter:
             "month_peak": self.month_peak,
             "months": self.months,
             "battery_orig": self._battery_orig,
+            "evcc_orig": self._evcc_orig,
             "plan_paused": self._plan_paused,
             "day_peaks": self.day_peaks,
             "weekly": self.weekly,
@@ -1216,6 +1350,7 @@ class Waechter:
         devices = sorted(self.raw_devices.values(), key=lambda d: int(d.get("priority", 5)))
         return {
             "grid_power": self.cfg.get(CONF_GRID_POWER),
+            "evcc_grid": bool(self.cfg.get(CONF_EVCC_URL)),
             "grid_energy": self.cfg.get(CONF_GRID_ENERGY),
             "condition": self.cfg.get(CONF_CONDITION),
             "lock": self.cfg.get(CONF_LOCK),
