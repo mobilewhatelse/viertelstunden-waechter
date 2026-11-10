@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
-from forecast import apply_car_plan, parse_plan_windows, risk_windows
+from forecast import apply_car_plan, parse_plan_windows, risk_windows, splice
 
 TZ = timezone(timedelta(hours=1))
 T0 = datetime(2027, 1, 12, 20, 0, tzinfo=TZ)
@@ -106,6 +106,13 @@ class ApplyTest(unittest.TestCase):
         apply_car_plan(house, view, [window(0, 4, 4.0, 4.0)], T0 + timedelta(hours=4))
         self.assertEqual(house, series())
         self.assertEqual(view, series(high=6.0))
+
+
+class SpliceTest(unittest.TestCase):
+    def test_first_hour_house_then_the_learned_wallbox(self):
+        out = splice(series(typical=0.5, high=1.0), series(typical=3.0, high=11.0), 4)
+        self.assertEqual([q["high"] for q in out[:5]], [1.0, 1.0, 1.0, 1.0, 11.0])
+        self.assertEqual(len(out), 16)
 
 
 if __name__ == "__main__":

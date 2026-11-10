@@ -4,6 +4,10 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **An unplugged car is planned from the second hour on:** before, a car that was not plugged in was left out of the 24-hour forecast
+  completely, although it is often plugged in later that day (expected peak 1 kW in the morning, 9 kW in the afternoon). Now the first hour
+  is the house alone (the car cannot charge right now), after that the learned wallbox pattern counts. A full car stays out. Attribute
+  `vehicle_included` says `after_1h` then.
 - **Fix:** a reload of the guard (for example after a change in the settings) within five minutes after a quarter hour lost the
   last quarter hours of the CSV export and of the learned model; both are saved on unload now. Found by an installation test that failed once.
 - **Shelly 3EM Pro confirmed:** a user set the guard up with a template sensor for the grid import of a real Shelly 3EM Pro and ran it

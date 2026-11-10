@@ -32,7 +32,7 @@ from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
 from .export import days_csv, quarters_csv
 from .forecast import (
-    MAX_PLAUSIBLE_KW, LoadModel, WeatherCurve, apply_car_plan, combine, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
+    MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, apply_car_plan, combine, splice, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
 )
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
@@ -702,10 +702,13 @@ class Waechter:
         self._forecast_at = now
         target = float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw))
         car = self._car_may_charge()
-        view = self._view_all() if car else self.model
+        unplugged = not car and self._car_unplugged()
+        view = self._view_all() if car or unplugged else self.model
         self._refit_curve(now)
         self._maybe_fetch_weather(now)
         series = view.horizon(now, 24, **self._wx_args())
+        if unplugged:   # not plugged in: cannot charge in the next hour, but may well be plugged in later today (the learned pattern)
+            series = splice(self.model.horizon(now, 24, **self._wx_args()), series, UNPLUGGED_HOUSE_ONLY_QUARTERS)
         plan = self._car_plan(now)
         if plan is not None:  # a charge plan that is executed says when the car really charges: it replaces the learned wallbox
             # pattern until departure. A plan nobody executes (learn mode) only adds to the usual view, it never lowers it.
@@ -718,7 +721,7 @@ class Waechter:
             "windows": risk_windows(series, target),
             "hours": hourly(series),
             "profile": weekly_profile(self._view_all()),
-            "vehicle_included": car,
+            "vehicle_included": car or (unplugged and "after_1h"),
             "car_plan": {
                 "configured": len(self._plan_entities()),
                 "used": plan is not None,
@@ -884,6 +887,16 @@ class Waechter:
         if v is None:
             return True
         if v.get(D_CONNECTED) and not self._is_on(v.get(D_CONNECTED), True):
+            return False
+        soc = self._float(v.get(D_SOC))
+        target = self._float(v.get(D_TARGET_ENTITY))
+        target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
+        return soc is None or soc < target - 0.5
+
+    def _car_unplugged(self) -> bool:
+        """True if a vehicle entry says the car is not plugged in (a full car is not 'unplugged': it does not charge today)."""
+        v = self._vehicle()
+        if v is None or not v.get(D_CONNECTED) or self._is_on(v.get(D_CONNECTED), True):
             return False
         soc = self._float(v.get(D_SOC))
         target = self._float(v.get(D_TARGET_ENTITY))

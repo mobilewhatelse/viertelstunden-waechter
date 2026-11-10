@@ -225,6 +225,14 @@ def combine(house: LoadModel, wallbox: LoadModel) -> LoadModel:
     return LoadModel(slots, temps)
 
 
+UNPLUGGED_HOUSE_ONLY_QUARTERS = 4   # an unplugged car cannot charge right now: the first hour is the house alone
+
+
+def splice(first: list[dict[str, Any]], rest: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
+    """The first `n` quarter hours from `first`, the others from `rest` (both series start at the same quarter hour)."""
+    return [a if i < n else b for i, (a, b) in enumerate(zip(first, rest))]
+
+
 def parse_plan_windows(windows: Any, tz) -> list[dict[str, Any]]:
     """Windows `{start, end, energy_kwh, peak_kw}` of a charge plan with real times; broken entries are skipped."""
     out: list[dict[str, Any]] = []

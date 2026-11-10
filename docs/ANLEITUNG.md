@@ -363,6 +363,8 @@ binden Sie über das Feld *Andere Ladeplan-Sensoren* an. Ein Ladeplan-Sensor bra
 - Bis zur Abfahrt ist die Prognose das Haus allein **plus das, was der Plan für das Auto in dieser Viertelstunde vorsieht** (Durchschnitt für
   *typisch*, Spitze für *hoch*). Das gelernte Wallbox-Muster zählt dort nicht: Der Plan weiß besser, wann das Auto wirklich lädt.
 - Ein Plan ohne Fenster (*nicht nötig*) heißt: keine Auto-Last bis zur Abfahrt. Nach der Abfahrt gilt wieder die übliche Sicht.
+- **Abgestecktes Auto:** Ist das Auto laut Fahrzeug-Eintrag nicht angesteckt, rechnet die Prognose die erste Stunde nur mit dem Haus und
+  danach mit dem gelernten Wallbox-Muster (es wird oft später am Tag angesteckt). Ein volles Auto zählt nicht.
 - **Nur ein ausgeführter Plan ersetzt das gelernte Wallbox-Muster.** Sagt der Planer mit dem Attribut `executed: false`, dass er nur empfiehlt
   und niemand die Wallbox nach dem Plan schaltet (Plugwhen im Lernmodus), dann zählt der **höhere** Wert aus Plan und gelerntem Muster: Das Auto
   kann ja trotzdem laden, sobald es angesteckt ist. (Vorher hat ein Plan „nicht nötig“ das Auto aus der Prognose genommen; in einem Haus lag die
