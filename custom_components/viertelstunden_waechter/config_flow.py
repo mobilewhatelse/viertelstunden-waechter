@@ -6,6 +6,7 @@ Devices are subentries: Home Assistant lists them on the integration page with "
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 import voluptuous as vol
@@ -14,15 +15,16 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.selector import (
     BooleanSelector, ConfigEntrySelector, ConfigEntrySelectorConfig, EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
     SelectSelector, SelectSelectorConfig, TextSelector, TextSelectorConfig, TextSelectorType,
 )
 
 from .const import (
-    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_NOTIFY,
+    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_INVERT, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_NOTIFY,
     CONF_STARTUP_MODE, CONF_VOLTAGE, CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE, D_ALLOW, D_CURRENT, D_KIND, D_MAX_CURRENT, D_MAX_OFF, D_MIN_CURRENT, D_MIN_POWER, D_NAME,
-    D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_W, D_PRIORITY, D_RESTORE,
+    D_OFF_SCRIPT, D_ON_SCRIPT, D_ONE_PHASE, D_PHASE, D_PHASES, D_POWER, D_POWER_INVERT, D_POWER_W, D_PRIORITY, D_RESTORE,
     D_SWITCH, DOMAIN, STARTUP_MODES, STARTUP_RESTORE,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
@@ -32,7 +34,7 @@ from .const import (
 from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
 from .evcc import EvccAuthError, EvccClient, EvccError, parse_grid_kw, parse_loadpoint
-from .inputs import unit_errors
+from .inputs import grid_sign_hint, loadpoint_choices, loadpoint_prefill, looks_inverted, quarter_peak, unit_errors
 
 ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
 RELEASE_DOMAINS = ["number", "input_number", "select", "input_select", "switch", "input_boolean"]
@@ -62,15 +64,14 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
         s[vol.Required("name", default="Viertelstunden-Wächter")] = TextSelector()
     # any sensor: a template sensor with the unit W but without a device class is just as good (the unit is checked on saving)
     s[_opt(CONF_GRID_POWER, d)] = _ent("sensor")
+    if not first:
+        s[vol.Required(CONF_GRID_INVERT, default=bool(d.get(CONF_GRID_INVERT, False)))] = BooleanSelector()
     s[_opt(CONF_EVCC_URL, d)] = TextSelector()
     s[_opt(CONF_EVCC_PASSWORD, d)] = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
     if not first:
         s[vol.Required(CONF_EVCC_BACKUP, default=bool(d.get(CONF_EVCC_BACKUP, True)))] = BooleanSelector()
     s[_opt(CONF_GRID_ENERGY, d)] = _ent("sensor")
-    if first:
-        s[vol.Required(CONF_LIMIT, default=10.0)] = _num(1, 50, 0.1, "kW")
-        s[vol.Required(CONF_MARGIN, default=0.5)] = _num(0, 5, 0.1, "kW")
-    else:
+    if not first:
         s[_opt(CONF_CONDITION, d)] = _ent(ON_OFF_DOMAINS)
         s[_opt(CONF_LOCK, d)] = _ent(ON_OFF_DOMAINS)
         s[_opt(CONF_NOTIFY, d)] = TextSelector()
@@ -105,6 +106,69 @@ async def find_local_evcc(hass: Any, need_grid: bool = False) -> str | None:
         if not need_grid or parse_grid_kw(state) is not None:
             return url
     return None
+
+
+async def _history_kw(hass: Any, entity_id: str, days: int = 3, invert: bool = False) -> list[tuple[Any, float]]:
+    """(local time, kW) of the recorded states of a power sensor over the last `days` days; empty if there is no history."""
+    try:
+        from homeassistant.components.recorder import get_instance, history
+
+        start = dt_util.utcnow() - timedelta(days=days)
+        found = await get_instance(hass).async_add_executor_job(
+            lambda: history.state_changes_during_period(hass, start, None, entity_id, include_start_time_state=False))
+    except Exception:  # noqa: BLE001 - no recorder, no history: nothing to say
+        return []
+    out: list[tuple[Any, float]] = []
+    for st in (found or {}).get(entity_id, []):
+        try:
+            v = float(st.state)
+        except (TypeError, ValueError):
+            continue
+        unit = str(st.attributes.get("unit_of_measurement") or "W").strip()
+        v *= {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001)
+        out.append((dt_util.as_local(st.last_changed), -v if invert else v))
+    return out
+
+
+async def _peak_kw(hass: Any, entity_id: str, invert: bool) -> float | None:
+    """The highest quarter-hour mean of the grid import in the short-term statistics (about the last 10 days), or None."""
+    try:
+        from homeassistant.components.recorder import get_instance
+        from homeassistant.components.recorder.statistics import statistics_during_period
+
+        start = dt_util.utcnow() - timedelta(days=10)
+        stats = await get_instance(hass).async_add_executor_job(
+            statistics_during_period, hass, start, None, {entity_id}, "5minute", None, {"mean"})
+        st = hass.states.get(entity_id)
+        unit = str((st.attributes.get("unit_of_measurement") if st else None) or "W").strip()
+        f = {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001) * (-1 if invert else 1)
+        pts = []
+        for row in stats.get(entity_id, []):
+            t, m = row.get("start"), row.get("mean")
+            if t is None or m is None:
+                continue
+            t = dt_util.utc_from_timestamp(t) if isinstance(t, (int, float)) else t
+            pts.append((dt_util.as_local(t), float(m) * f))
+        return quarter_peak(pts)
+    except Exception:  # noqa: BLE001 - no statistics (e.g. a sensor without state_class): no suggestion
+        return None
+
+
+async def _evcc_state(hass: Any, url: str | None, password: str | None) -> dict[str, Any] | None:
+    if not url:
+        return None
+    try:
+        return await EvccClient(async_get_clientsession(hass), str(url), password, timeout=PROBE_TIMEOUT_S).state()
+    except EvccError:
+        return None
+
+
+async def _device_sign_errors(hass: Any, kind: str, u: dict[str, Any]) -> dict[str, str]:
+    """A consumer whose power sensor shows nearly only negative values counts consumption the other way round."""
+    if kind not in (KIND_WALLBOX, KIND_EVCC, KIND_SWITCH, KIND_THROTTLE) or not u.get(D_POWER) or u.get(D_POWER_INVERT):
+        return {}
+    values = [v for _, v in await _history_kw(hass, u[D_POWER], 3)]
+    return {D_POWER_INVERT: "looks_inverted"} if looks_inverted(values) else {}
 
 
 async def _grid_source_errors(hass: Any, u: dict[str, Any]) -> dict[str, str]:
@@ -216,7 +280,12 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
     s[_opt(D_ALLOW, d)] = _ent(ON_OFF_DOMAINS)
     if kind != KIND_VEHICLE:
         s[vol.Required(D_OBSERVE, default=bool(d.get(D_OBSERVE, False)))] = BooleanSelector()
-    return vol.Schema(s)
+    out: dict[Any, Any] = {}
+    for key, value in s.items():
+        out[key] = value
+        if str(key) == D_POWER:
+            out[vol.Required(D_POWER_INVERT, default=bool(d.get(D_POWER_INVERT, False)))] = BooleanSelector()
+    return vol.Schema(out)
 
 
 def device_title(d: dict[str, Any], kind: str | None = None) -> str:
@@ -248,16 +317,118 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
 class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 2
 
+    # The set-up is an assistant: what is needed (grid import), its sign checked against the last nights, the limit with the highest
+    # quarter hour of the last days as a hint, then the devices that matter most (evcc loadpoint, wallbox) - everything else later.
+
+    def __init__(self) -> None:
+        self._data: dict[str, Any] = {}
+        self._options: dict[str, Any] = {}
+        self._devices: list[dict[str, Any]] = []
+        self._evcc: dict[str, Any] | None = None
+        self._pending: dict[str, Any] = {}
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Step 1: name and where the grid import comes from (a sensor, evcc, or both)."""
         if user_input is not None:
             errors = unit_errors(self.hass.states.get, user_input, (CONF_GRID_POWER,), (CONF_GRID_ENERGY,)) or await _grid_source_errors(self.hass, user_input)
             if errors:
                 return self.async_show_form(step_id="user", data_schema=_general_schema(user_input, True), errors=errors)
-            data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY, CONF_EVCC_URL, CONF_EVCC_PASSWORD) if user_input.get(k)}
-            options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN]}
-            return self.async_create_entry(title=user_input["name"], data=data, options=options)
+            self._name = user_input["name"]
+            self._data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY, CONF_EVCC_URL, CONF_EVCC_PASSWORD) if user_input.get(k)}
+            if self._data.get(CONF_EVCC_URL):
+                self._evcc = await _evcc_state(self.hass, self._data[CONF_EVCC_URL], self._data.get(CONF_EVCC_PASSWORD))
+            if self._data.get(CONF_GRID_POWER):
+                return await self.async_step_grid_check()
+            return await self.async_step_limit()
         local = await find_local_evcc(self.hass, need_grid=True)
         return self.async_show_form(step_id="user", data_schema=_general_schema({CONF_EVCC_URL: local} if local else {}, True))
+
+    async def async_step_grid_check(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Step 2: is the sign right? At night there is no sun, so the grid sensor must show import (positive) then."""
+        if user_input is not None:
+            if user_input.get(CONF_GRID_INVERT):
+                self._data[CONF_GRID_INVERT] = True
+            return await self.async_step_limit()
+        eid = self._data[CONF_GRID_POWER]
+        st = self.hass.states.get(eid)
+        now_txt = f"{st.state} {st.attributes.get('unit_of_measurement') or ''}".strip() if st else "?"
+        hint = grid_sign_hint((t.hour, v) for t, v in await _history_kw(self.hass, eid, 3))
+        # one translated page per verdict (the text follows the language of the user, not of the server)
+        step = {"invert": "grid_check_invert", "ok": "grid_check_ok"}.get(hint["verdict"] or "", "grid_check")
+        night = f"{hint['night_kw']:.2f}" if hint["night_kw"] is not None else "?"
+        schema = vol.Schema({vol.Required(CONF_GRID_INVERT, default=hint["verdict"] == "invert"): BooleanSelector()})
+        return self.async_show_form(step_id=step, data_schema=schema, description_placeholders={"entity": eid, "now": now_txt, "night": night})
+
+    async def async_step_grid_check_invert(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self.async_step_grid_check(user_input)
+
+    async def async_step_grid_check_ok(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self.async_step_grid_check(user_input)
+
+    async def async_step_limit(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Step 3: the limit, with the highest quarter hour of the last days as a hint."""
+        if user_input is not None:
+            self._options = {CONF_LIMIT: user_input[CONF_LIMIT], CONF_MARGIN: user_input[CONF_MARGIN]}
+            return await self.async_step_devices()
+        peak = await _peak_kw(self.hass, self._data[CONF_GRID_POWER], bool(self._data.get(CONF_GRID_INVERT))) if self._data.get(CONF_GRID_POWER) else None
+        schema = vol.Schema({
+            vol.Required(CONF_LIMIT, default=10.0): _num(1, 50, 0.1, "kW"),
+            vol.Required(CONF_MARGIN, default=0.5): _num(0, 5, 0.1, "kW"),
+        })
+        if peak is None:
+            return self.async_show_form(step_id="limit_nodata", data_schema=schema)
+        return self.async_show_form(step_id="limit", data_schema=schema, description_placeholders={"peak": f"{peak:.1f}"})
+
+    async def async_step_limit_nodata(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self.async_step_limit(user_input)
+
+    async def async_step_devices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Step 4: what the guard may turn down. The most important devices right here, everything else later on the integration page."""
+        done = ", ".join(device_title(d) for d in self._devices) or "–"
+        options = (["add_evcc"] if loadpoint_choices(self._evcc) else []) + ["add_wallbox", "finish"]
+        return self.async_show_menu(step_id="devices", menu_options=options, description_placeholders={"devices": done})
+
+    async def async_step_add_evcc(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        choices = loadpoint_choices(self._evcc)
+        if len(choices) > 1 and user_input is None:
+            return self.async_show_form(step_id="add_evcc", data_schema=_loadpoint_schema(choices))
+        n = int((user_input or {}).get("loadpoint") or 1)
+        self._pending = {D_EVCC_URL: self._data.get(CONF_EVCC_URL), **({D_EVCC_PASSWORD: self._data[CONF_EVCC_PASSWORD]} if self._data.get(CONF_EVCC_PASSWORD) else {}),
+                         **loadpoint_prefill(self._evcc, n)}
+        return await self.async_step_evcc_device()
+
+    async def async_step_evcc_device(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._device_step("evcc_device", KIND_EVCC, user_input)
+
+    async def async_step_add_wallbox(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._device_step("add_wallbox", KIND_WALLBOX, user_input)
+
+    async def _device_step(self, step: str, kind: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            errors = unit_errors(self.hass.states.get, user_input, (D_POWER,))
+            if not errors and int(user_input.get(D_MIN_CURRENT, 6)) > int(user_input.get(D_MAX_CURRENT, 16)):
+                errors = {D_MIN_CURRENT: "min_above_max"}
+            if not errors:
+                errors = await _device_sign_errors(self.hass, kind, user_input)
+            if not errors and kind == KIND_EVCC:
+                errors = await EvccFlow._validate_async(self, user_input)  # type: ignore[arg-type]
+            if not errors:
+                data = {k: v for k, v in user_input.items() if v not in (None, "")}
+                for k in (D_PRIORITY, D_MIN_CURRENT, D_MAX_CURRENT, D_EVCC_LOADPOINT):
+                    if k in data:
+                        data[k] = int(data[k])
+                data[D_KIND] = kind
+                self._devices.append(data)
+                self._pending = {}
+                return await self.async_step_devices()
+        current = user_input if user_input is not None else self._pending
+        return self.async_show_form(step_id=step, data_schema=_device_schema(kind, current), errors=errors)
+
+    async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        subentries = [{"subentry_type": d[D_KIND], "title": device_title(d), "data": d, "unique_id": None} for d in self._devices]
+        return self.async_create_entry(title=getattr(self, "_name", "Viertelstunden-Wächter"), data=self._data, options=self._options,
+                                       subentries=subentries)
 
     @staticmethod
     @callback
@@ -313,6 +484,8 @@ class _DeviceFlow(ConfigSubentryFlow):
         if user_input is not None:
             errors = unit_errors(self.hass.states.get, user_input, (D_POWER,)) or self._validate(user_input)
             if not errors:
+                errors = await _device_sign_errors(self.hass, self.kind, user_input)
+            if not errors:
                 errors = await self._validate_async(user_input)
             if not errors:
                 data = {k: v for k, v in user_input.items() if v not in (None, "")}
@@ -337,6 +510,11 @@ class _DeviceFlow(ConfigSubentryFlow):
         return {}
 
 
+def _loadpoint_schema(choices: list[tuple[int, str]]) -> vol.Schema:
+    return vol.Schema({vol.Required("loadpoint", default=str(choices[0][0])): SelectSelector(SelectSelectorConfig(
+        options=[{"value": str(n), "label": f"{n} · {title}"} for n, title in choices]))})
+
+
 class EvccFlow(_DeviceFlow):
     """A loadpoint of evcc: the guard sets evcc's ceiling for the charging current (see evcc.py). Checks the connection when saving."""
 
@@ -357,6 +535,20 @@ class EvccFlow(_DeviceFlow):
             local = await find_local_evcc(self.hass)
             if local:
                 current[D_EVCC_URL] = local
+        self._current = current
+        state = await _evcc_state(self.hass, current.get(D_EVCC_URL), current.get(D_EVCC_PASSWORD))
+        self._state_evcc = state
+        choices = loadpoint_choices(state)
+        if len(choices) > 1:
+            return self.async_show_form(step_id="loadpoint", data_schema=_loadpoint_schema(choices))
+        if choices:
+            current.update(loadpoint_prefill(state, 1))
+        return await self._form(None, current)
+
+    async def async_step_loadpoint(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        """Several loadpoints in evcc: pick one by its name; its settings are taken over."""
+        n = int((user_input or {}).get("loadpoint") or 1)
+        current = {**getattr(self, "_current", {}), **loadpoint_prefill(getattr(self, "_state_evcc", None), n)}
         return await self._form(None, current)
 
     def _validate(self, u: dict[str, Any]) -> dict[str, str]:

@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Quarter-hour peak guard",
-        "description": "Keeps the average grid import of every quarter hour below a limit (power-based grid tariffs). Devices are added afterwards under Configure.",
+        "title": "Set-up 1 of 4: grid import",
+        "description": "Keeps the mean grid import of every quarter hour below a limit (demand charge). **Needed:** where the grid import comes from, a power sensor of your meter or evcc with a grid meter (or both). **Recommended:** the import counter. Everything else can follow later.",
         "data": {
           "name": "Name",
           "grid_power": "Grid import power",
@@ -23,6 +23,133 @@
           "evcc_site_password": "Only if evcc asks for a password.",
           "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself."
         }
+      },
+      "grid_check": {
+        "title": "Set-up 2 of 4: is the sign right?",
+        "description": "Sensor **{entity}**, now: **{now}**.\n\nThere is not enough night-time history yet to check. Rule of thumb: import from the grid must be positive, export negative.\n\nIf your meter shows import as negative, tick the box: no template sensor needed.",
+        "data": {
+          "grid_invert": "Turn the sign round"
+        },
+        "data_description": {
+          "grid_invert": "On = the sensor counts import as negative (e.g. a meter that shows export as positive)."
+        }
+      },
+      "limit": {
+        "title": "Set-up 3 of 4: the limit",
+        "description": "Your highest quarter hour of the last days: **{peak} kW**.\n\nThe guard keeps every quarter hour below this mean value. You can change it any time (entity Limit).",
+        "data": {
+          "limit_kw": "Limit",
+          "margin_kw": "Safety margin"
+        },
+        "data_description": {
+          "limit_kw": "The quarter-hour average that must not be exceeded.",
+          "margin_kw": "The guard aims at limit minus margin."
+        }
+      },
+      "devices": {
+        "title": "Set-up 4 of 4: devices",
+        "description": "Added so far: {devices}.\n\nThe most important device is usually the wallbox. Pumps, batteries, heating and more can be added later on the integration page.",
+        "menu_options": {
+          "add_evcc": "Add the evcc loadpoint (settings taken from evcc)",
+          "add_wallbox": "Add a wallbox (directly via Home Assistant)",
+          "finish": "Finish set-up"
+        }
+      },
+      "add_evcc": {
+        "title": "Which evcc loadpoint?",
+        "description": "evcc reports several loadpoints. Its name, the currents and whether it can switch phases are taken over.",
+        "data": {
+          "loadpoint": "Loadpoint"
+        }
+      },
+      "evcc_device": {
+        "title": "evcc loadpoint",
+        "description": "The guard sets evcc's maximum charging current (a ceiling, evcc keeps regulating below it) and takes it back. Charging is never stopped. No other integration is needed, the address of evcc is enough.",
+        "data": {
+          "name": "Name",
+          "priority": "Priority",
+          "evcc_url": "Address of evcc",
+          "evcc_loadpoint": "Loadpoint number",
+          "evcc_password": "Password of evcc",
+          "min_current": "Minimum current",
+          "max_current": "Maximum current",
+          "evcc_one_phase": "May switch to 1 phase",
+          "power_entity": "Charging power (optional)",
+          "allow_entity": "Intervention only while",
+          "observe_only": "Observe only",
+          "power_invert": "Turn the sign round (power sensor)"
+        },
+        "data_description": {
+          "priority": "1 = restricted first, 10 = only when nothing else helps.",
+          "evcc_url": "For example http://192.168.1.20:7070 (reachable from Home Assistant).",
+          "evcc_loadpoint": "1 = the first loadpoint in evcc.",
+          "evcc_password": "Only if evcc asks for a password (administrator password).",
+          "max_current": "The ceiling the guard gives back to evcc afterwards is the one evcc had before.",
+          "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
+          "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
+          "allow_entity": "Optional. Only while this entity is on.",
+          "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+          "power_invert": "On = the power sensor counts consumption as negative."
+        }
+      },
+      "add_wallbox": {
+        "title": "Wallbox",
+        "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is never stopped.",
+        "data": {
+          "name": "Name",
+          "priority": "Priority",
+          "power_entity": "Charging power",
+          "current_entity": "Charging current setting",
+          "min_current": "Minimum current",
+          "max_current": "Maximum current",
+          "phase_entity": "Phase selection",
+          "one_phase_option": "Option for 1 phase",
+          "phases_entity": "Phases in use",
+          "allow_entity": "Intervention only while",
+          "observe_only": "Observe only",
+          "power_invert": "Turn the sign round (power sensor)"
+        },
+        "data_description": {
+          "priority": "1 = restricted first, 10 = only when nothing else helps.",
+          "phase_entity": "Optional. Without it the wallbox is only throttled, never switched to 1 phase.",
+          "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
+          "phases_entity": "Optional sensor with the number of phases currently used.",
+          "allow_entity": "Optional. Only while this entity is on.",
+          "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+          "power_invert": "On = the power sensor counts consumption as negative."
+        }
+      },
+      "grid_check_invert": {
+        "title": "Set-up 2 of 4: is the sign right?",
+        "description": "Sensor **{entity}**, now: **{now}**.\n\nAt night (0 to 5 o'clock, no sun) the sensor shows **{night} kW** on average, i.e. negative. Your meter seems to count import as negative, so “turn the sign round” is ticked.",
+        "data": {
+          "grid_invert": "Turn the sign round"
+        },
+        "data_description": {
+          "grid_invert": "On = the sensor counts import as negative (e.g. a meter that shows export as positive)."
+        }
+      },
+      "grid_check_ok": {
+        "title": "Set-up 2 of 4: is the sign right?",
+        "description": "Sensor **{entity}**, now: **{now}**.\n\nAt night (0 to 5 o'clock, no sun) the sensor shows **{night} kW** import on average. The sign is right.",
+        "data": {
+          "grid_invert": "Turn the sign round"
+        },
+        "data_description": {
+          "grid_invert": "On = the sensor counts import as negative (e.g. a meter that shows export as positive)."
+        }
+      },
+      "limit_nodata": {
+        "title": "Set-up 3 of 4: the limit",
+        "description": "There is no history for a suggestion yet.\n\nThe guard keeps every quarter hour below this mean value. You can change it any time (entity Limit).",
+        "data": {
+          "limit_kw": "Limit",
+          "margin_kw": "Safety margin"
+        },
+        "data_description": {
+          "limit_kw": "The quarter-hour average that must not be exceeded.",
+          "margin_kw": "The guard aims at limit minus margin."
+        }
       }
     },
     "abort": {
@@ -34,7 +161,12 @@
       "grid_source_missing": "Enter a grid import sensor or the address of evcc.",
       "evcc_unreachable": "evcc cannot be reached at this address.",
       "evcc_auth": "evcc asks for a password, or the password is wrong.",
-      "evcc_no_grid": "evcc reports no grid meter (no grid power)."
+      "evcc_no_grid": "evcc reports no grid meter (no grid power).",
+      "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”.",
+      "evcc_loadpoint": "evcc has no loadpoint with this number.",
+      "min_above_max": "Minimum current is above maximum current.",
+      "phase_pair": "Phase selection and option for 1 phase belong together.",
+      "unknown_option": "The phase selection has no such option."
     }
   },
   "options": {
@@ -58,7 +190,8 @@
           "max_reading_age_s": "Maximum age of the grid reading",
           "evcc_site_url": "Address of evcc (optional)",
           "evcc_site_password": "Password of evcc",
-          "evcc_backup": "evcc as a reserve for the grid import"
+          "evcc_backup": "evcc as a reserve for the grid import",
+          "grid_invert": "Turn the sign round"
         },
         "data_description": {
           "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
@@ -75,7 +208,8 @@
           "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins. If evcc runs on the same machine as Home Assistant (add-on), the address is suggested; clear the field if you do not want it.",
           "evcc_site_password": "Only if evcc asks for a password.",
           "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself.",
-          "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0. Optional if you enter evcc."
+          "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0. Optional if you enter evcc.",
+          "grid_invert": "On = the sensor counts import as negative (e.g. a meter that shows export as positive)."
         }
       }
     },
@@ -272,7 +406,8 @@
             "one_phase_option": "Option for 1 phase",
             "phases_entity": "Phases in use",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -280,7 +415,8 @@
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
         "reconfigure": {
@@ -297,7 +433,8 @@
             "one_phase_option": "Option for 1 phase",
             "phases_entity": "Phases in use",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -305,7 +442,8 @@
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         }
       },
@@ -313,7 +451,8 @@
         "min_above_max": "Minimum current is above maximum current.",
         "phase_pair": "Phase selection and option for 1 phase belong together.",
         "unknown_option": "The phase selection has no such option.",
-        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
+        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”."
       }
     },
     "switch": {
@@ -337,14 +476,16 @@
             "restore_entity": "Switch on again only while",
             "allow_entity": "Intervention only while",
             "pause_min": "Pause after taking back",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
         "reconfigure": {
@@ -361,19 +502,22 @@
             "restore_entity": "Switch on again only while",
             "allow_entity": "Intervention only while",
             "pause_min": "Pause after taking back",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         }
       },
       "error": {
-        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
+        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”."
       }
     },
     "script": {
@@ -634,7 +778,8 @@
             "pause_min": "Pause after taking back",
             "max_off_min": "Maximum duration",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -650,7 +795,8 @@
             "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
         "reconfigure": {
@@ -671,7 +817,8 @@
             "pause_min": "Pause after taking back",
             "max_off_min": "Maximum duration",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -687,7 +834,8 @@
             "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         }
       },
@@ -698,7 +846,8 @@
         "unknown_option": "The phase selection has no such option.",
         "min_above_max": "Minimum current is above maximum current.",
         "phase_pair": "Phase selection and option for 1 phase belong together.",
-        "step_too_big": "The step is larger than the range between lowest and normal value."
+        "step_too_big": "The step is larger than the range between lowest and normal value.",
+        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”."
       }
     },
     "vehicle": {
@@ -813,7 +962,8 @@
             "evcc_one_phase": "May switch to 1 phase",
             "power_entity": "Charging power (optional)",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -824,7 +974,8 @@
             "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
             "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
         "reconfigure": {
@@ -841,7 +992,8 @@
             "evcc_one_phase": "May switch to 1 phase",
             "power_entity": "Charging power (optional)",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "power_invert": "Turn the sign round (power sensor)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -852,7 +1004,15 @@
             "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
             "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative."
+          }
+        },
+        "loadpoint": {
+          "title": "Which evcc loadpoint?",
+          "description": "evcc reports several loadpoints. Its name, the currents and whether it can switch phases are taken over.",
+          "data": {
+            "loadpoint": "Loadpoint"
           }
         }
       },
@@ -861,7 +1021,8 @@
         "evcc_loadpoint": "evcc has no loadpoint with this number.",
         "evcc_auth": "evcc asks for a password, or the password is wrong.",
         "min_above_max": "Minimum current is above maximum current.",
-        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor."
+        "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
+        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”."
       },
       "abort": {
         "reconfigure_successful": "Done."

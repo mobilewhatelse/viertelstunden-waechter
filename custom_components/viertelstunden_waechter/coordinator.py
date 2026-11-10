@@ -17,8 +17,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_VOLTAGE,
-    CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER,
+    CONF_CONDITION, CONF_GRID_ENERGY, CONF_GRID_INVERT, CONF_GRID_POWER, CONF_LIMIT, CONF_LOCK, CONF_MARGIN, CONF_VOLTAGE,
+    CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER, D_POWER_INVERT,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
@@ -251,10 +251,13 @@ class Waechter:
         except ValueError:
             return None
 
-    def _power_kw(self, eid: str | None) -> float | None:
+    def _power_kw(self, eid: str | None, invert: bool = False) -> float | None:
+        """Power in kW, the unit converted; `invert` turns the sign round (a sensor that counts import or consumption as negative)."""
         v = self._float(eid)
         if v is None:
             return None
+        if invert:
+            v = -v
         unit = (self.hass.states.get(eid).attributes.get("unit_of_measurement") or "W").strip()
         return v * {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001)
 
@@ -270,7 +273,7 @@ class Waechter:
         allowed age (default 2 minutes) is not a measurement any more: the guard then acts as without data (it gives
         everything back after 90 seconds) instead of steering by a stale number."""
         eid = self.cfg.get(CONF_GRID_POWER)
-        grid = self._power_kw(eid) if eid else None
+        grid = self._power_kw(eid, bool(self.cfg.get(CONF_GRID_INVERT))) if eid else None
         st = self._state(eid) if eid else None
         self.grid_age, self.grid_stale = None, False
         if grid is not None and st is not None:
@@ -342,7 +345,7 @@ class Waechter:
             if d[D_KIND] == KIND_VEHICLE:
                 continue
             r = Reading(allowed=self._is_on(d.get(D_ALLOW), False) if d.get(D_ALLOW) else True)
-            p = self._power_kw(d.get(D_POWER))
+            p = self._power_kw(d.get(D_POWER), bool(d.get(D_POWER_INVERT)))
             r.power_w = p * 1000.0 if p is not None else None
             kind = d[D_KIND]
             if kind == KIND_EVCC:

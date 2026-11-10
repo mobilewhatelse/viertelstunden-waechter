@@ -8,6 +8,7 @@ UPDATE_INTERVAL = timedelta(seconds=20)
 
 # general settings (entry.data / entry.options)
 CONF_GRID_POWER = "grid_power"          # sensor, grid import power (W or kW); negative values (export) count as 0
+CONF_GRID_INVERT = "grid_invert"        # the grid sensor counts import as negative: turn the sign round
 CONF_EVCC_URL = "evcc_site_url"          # optional: evcc as source of the grid import (own sensor wins)
 CONF_EVCC_PASSWORD = "evcc_site_password"
 CONF_EVCC_BACKUP = "evcc_backup"        # evcc takes over while the grid sensor has no usable value (default on)
@@ -38,6 +39,7 @@ D_KIND = "kind"
 D_NAME = "name"
 D_PRIORITY = "priority"
 D_POWER = "power_entity"
+D_POWER_INVERT = "power_invert"        # the power sensor of the device counts consumption as negative
 D_SWITCH = "switch_entity"
 D_CURRENT = "current_entity"
 D_PHASE = "phase_entity"

@@ -4,6 +4,18 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Set-up assistant:** adding the integration is now four short steps instead of one long page: grid import (a sensor and/or evcc,
+  a local evcc is filled in), *is the sign right?* (current value and a check of the last nights), the limit (with the highest quarter
+  hour of the last days as a hint), the devices that matter most (evcc loadpoint or wallbox) - then finish. Everything else stays on the
+  integration page.
+- **Turn the sign round** for the grid sensor (set-up and settings) and for the power sensor of every device: a meter that counts
+  import as negative needs no template sensor any more. The set-up proposes it when the sensor was negative at night (no sun, so it
+  must be import); a device dialog says so when a consumer shows nearly only negative values.
+- **evcc loadpoint taken over:** the dialog lists evcc's loadpoints by name and takes name, minimum and maximum current and whether the
+  charger can switch phases from evcc.
+
+  *Deutsch:* Einrichtungsassistent in vier Schritten; „Vorzeichen umkehren“ für Netzbezug und Geräte, mit Erkennung aus der Nacht;
+  evcc-Ladepunkt mit Name, Strömen und Phasen aus evcc übernommen.
 - **An unplugged car is planned from the second hour on:** before, a car that was not plugged in was left out of the 24-hour forecast
   completely, although it is often plugged in later that day (expected peak 1 kW in the morning, 9 kW in the afternoon). Now the first hour
   is the house alone (the car cannot charge right now), after that the learned wallbox pattern counts. A full car stays out. Attribute

@@ -90,10 +90,19 @@ In beiden Fällen arbeitet der Wächter mit dem Netzbezug in W oder kW und, wenn
    Home Assistant neu starten. (Wird es im Marketplace noch nicht gefunden, weil der Antrag für die Standardliste noch läuft,
    einmalig als Benutzerdefiniertes Repository hinzufügen: Marketplace → ⋮ → Benutzerdefinierte Repositories → dieses
    Repository, Kategorie *Integration*.)
-2. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Viertelstunden-Wächter**:
-   Netzbezug, Bezugszähler, Grenze (z. B. 10 kW), Sicherheitsabstand (z. B. 0,5 kW).
-3. Geräte **auf der Integrationsseite** hinzufügen (siehe 3.): Schaltflächen **Wallbox / Schaltbares Gerät /
-   Notfall-Aktion hinzufügen**. Jedes Gerät steht danach als eigener Eintrag in der Liste, mit ⋮ → **Ändern**
+2. Einstellungen → Geräte & Dienste → Integration hinzufügen → **Viertelstunden-Wächter**. Ein Assistent führt in vier Schritten
+   durch das Nötige (seit 0.14):
+   1. **Netzbezug:** Leistungssensor Ihres Zählers und/oder evcc mit Netzzähler (läuft evcc auf demselben Rechner, ist die Adresse
+      schon eingetragen), dazu empfohlen der Bezugszähler.
+   2. **Stimmt das Vorzeichen?** Der Wächter zeigt den aktuellen Wert und prüft den Verlauf der letzten Nächte (0 bis 5 Uhr, ohne
+      Sonne muss Bezug positiv sein). Zählt Ihr Zähler den Bezug negativ, ist **„Vorzeichen umkehren“** schon angekreuzt. Ein
+      eigener Template-Sensor zum Umdrehen ist nicht mehr nötig.
+   3. **Grenze** (z. B. 10 kW) und Sicherheitsabstand (z. B. 0,5 kW), mit Ihrer höchsten Viertelstunde der letzten Tage als Hinweis.
+   4. **Geräte:** evcc-Ladepunkt (Name, Mindest- und Höchststrom und ob er Phasen umschalten kann, werden aus evcc übernommen; bei
+      mehreren Ladepunkten wählen Sie ihn nach Namen) oder Wallbox direkt. Dann **Einrichtung abschließen**.
+3. Weitere Geräte **auf der Integrationsseite** hinzufügen (siehe 3.): Schaltflächen **Wallbox / Schaltbares Gerät /
+   Notfall-Aktion hinzufügen**. Neben jedem Leistungssensor eines Geräts gibt es ebenfalls **„Vorzeichen umkehren“**; zeigt der
+   Sensor eines Verbrauchers fast nur negative Werte, weist der Dialog beim Speichern darauf hin. Jedes Gerät steht danach als eigener Eintrag in der Liste, mit ⋮ → **Ändern**
    oder **Löschen**. Das Zahnrad öffnet die allgemeinen Einstellungen.
 
 Der Wächter startet in der Betriebsart **„Nur beobachten“**: Er entscheidet und schreibt mit, schaltet aber

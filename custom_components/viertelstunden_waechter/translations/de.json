@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Viertelstunden-Wächter",
-        "description": "Hält den mittleren Netzbezug jeder Viertelstunde unter einer Grenze (Leistungspreis beim Netzentgelt). Die Geräte fügen Sie danach unter „Konfigurieren“ hinzu.",
+        "title": "Einrichtung 1 von 4: Netzbezug",
+        "description": "Hält den mittleren Netzbezug jeder Viertelstunde unter einer Grenze (Leistungspreis beim Netzentgelt). **Nötig:** woher der Netzbezug kommt, ein Leistungssensor Ihres Zählers oder evcc mit Netzzähler (oder beides). **Empfohlen:** der Bezugszähler. Alles andere kann später folgen.",
         "data": {
           "name": "Name",
           "grid_power": "Netzbezug (Leistung)",
@@ -23,6 +23,133 @@
           "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
           "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück."
         }
+      },
+      "grid_check": {
+        "title": "Einrichtung 2 von 4: Stimmt das Vorzeichen?",
+        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nFür eine Prüfung gibt es noch zu wenig Verlauf aus der Nacht. Faustregel: Bezug aus dem Netz muss positiv sein, Einspeisung negativ.\n\nZeigt Ihr Zähler den Bezug negativ, Häkchen setzen: Ein Template-Sensor ist nicht nötig.",
+        "data": {
+          "grid_invert": "Vorzeichen umkehren"
+        },
+        "data_description": {
+          "grid_invert": "An = der Sensor zählt den Bezug negativ (z. B. ein Zähler, der die Einspeisung positiv zeigt)."
+        }
+      },
+      "limit": {
+        "title": "Einrichtung 3 von 4: die Grenze",
+        "description": "Ihre höchste Viertelstunde der letzten Tage: **{peak} kW**.\n\nDer Wächter hält jede Viertelstunde im Mittel unter diesem Wert. Sie können ihn jederzeit ändern (Entität Grenze).",
+        "data": {
+          "limit_kw": "Grenze",
+          "margin_kw": "Sicherheitsabstand"
+        },
+        "data_description": {
+          "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
+          "margin_kw": "Der Wächter zielt auf Grenze minus Abstand."
+        }
+      },
+      "devices": {
+        "title": "Einrichtung 4 von 4: Geräte",
+        "description": "Bisher hinzugefügt: {devices}.\n\nDas wichtigste Gerät ist meist die Wallbox. Pumpen, Batterien, Heizung und mehr können Sie später auf der Seite der Integration hinzufügen.",
+        "menu_options": {
+          "add_evcc": "evcc-Ladepunkt hinzufügen (Einstellungen aus evcc übernommen)",
+          "add_wallbox": "Wallbox hinzufügen (direkt über Home Assistant)",
+          "finish": "Einrichtung abschließen"
+        }
+      },
+      "add_evcc": {
+        "title": "Welcher evcc-Ladepunkt?",
+        "description": "evcc meldet mehrere Ladepunkte. Name, Ströme und ob er die Phasen umschalten kann, werden übernommen.",
+        "data": {
+          "loadpoint": "Ladepunkt"
+        }
+      },
+      "evcc_device": {
+        "title": "evcc-Ladepunkt",
+        "description": "Der Wächter setzt den maximalen Ladestrom von evcc (eine Obergrenze, darunter regelt evcc weiter) und gibt ihn zurück. Das Laden wird nie gestoppt. Es wird keine andere Integration gebraucht, die Adresse von evcc genügt.",
+        "data": {
+          "name": "Name",
+          "priority": "Priorität",
+          "evcc_url": "Adresse von evcc",
+          "evcc_loadpoint": "Nummer des Ladepunkts",
+          "evcc_password": "Passwort von evcc",
+          "min_current": "Mindeststrom",
+          "max_current": "Höchststrom",
+          "evcc_one_phase": "Darf auf 1 Phase umschalten",
+          "power_entity": "Ladeleistung (optional)",
+          "allow_entity": "Eingriff nur solange",
+          "observe_only": "Nur beobachten",
+          "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+        },
+        "data_description": {
+          "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
+          "evcc_url": "Zum Beispiel http://192.168.1.20:7070 (von Home Assistant aus erreichbar).",
+          "evcc_loadpoint": "1 = der erste Ladepunkt in evcc.",
+          "evcc_password": "Nur wenn evcc ein Passwort verlangt (Administrator-Passwort).",
+          "max_current": "Zurückgegeben wird die Obergrenze, die evcc vorher hatte.",
+          "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
+          "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
+          "allow_entity": "Optional. Nur solange diese Entität an ist.",
+          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+          "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+        }
+      },
+      "add_wallbox": {
+        "title": "Wallbox",
+        "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nie gestoppt.",
+        "data": {
+          "name": "Name",
+          "priority": "Priorität",
+          "power_entity": "Ladeleistung",
+          "current_entity": "Einstellung Ladestrom",
+          "min_current": "Mindeststrom",
+          "max_current": "Höchststrom",
+          "phase_entity": "Phasenwahl",
+          "one_phase_option": "Option für 1 Phase",
+          "phases_entity": "Genutzte Phasen",
+          "allow_entity": "Eingriff nur, solange",
+          "observe_only": "Nur beobachten",
+          "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+        },
+        "data_description": {
+          "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
+          "phase_entity": "Optional. Ohne sie wird nur gedrosselt, nie auf 1 Phase umgeschaltet.",
+          "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
+          "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
+          "allow_entity": "Optional. Nur solange diese Entität an ist.",
+          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+          "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+        }
+      },
+      "grid_check_invert": {
+        "title": "Einrichtung 2 von 4: Stimmt das Vorzeichen?",
+        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nNachts (0 bis 5 Uhr, ohne Sonne) zeigt der Sensor im Mittel **{night} kW**, also negativ. Ihr Zähler zählt den Bezug wohl negativ: „Vorzeichen umkehren“ ist deshalb angekreuzt.",
+        "data": {
+          "grid_invert": "Vorzeichen umkehren"
+        },
+        "data_description": {
+          "grid_invert": "An = der Sensor zählt den Bezug negativ (z. B. ein Zähler, der die Einspeisung positiv zeigt)."
+        }
+      },
+      "grid_check_ok": {
+        "title": "Einrichtung 2 von 4: Stimmt das Vorzeichen?",
+        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nNachts (0 bis 5 Uhr, ohne Sonne) zeigt der Sensor im Mittel **{night} kW** Bezug. Das Vorzeichen passt.",
+        "data": {
+          "grid_invert": "Vorzeichen umkehren"
+        },
+        "data_description": {
+          "grid_invert": "An = der Sensor zählt den Bezug negativ (z. B. ein Zähler, der die Einspeisung positiv zeigt)."
+        }
+      },
+      "limit_nodata": {
+        "title": "Einrichtung 3 von 4: die Grenze",
+        "description": "Für einen Vorschlag gibt es noch keinen Verlauf.\n\nDer Wächter hält jede Viertelstunde im Mittel unter diesem Wert. Sie können ihn jederzeit ändern (Entität Grenze).",
+        "data": {
+          "limit_kw": "Grenze",
+          "margin_kw": "Sicherheitsabstand"
+        },
+        "data_description": {
+          "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
+          "margin_kw": "Der Wächter zielt auf Grenze minus Abstand."
+        }
       }
     },
     "abort": {
@@ -34,7 +161,12 @@
       "grid_source_missing": "Tragen Sie einen Sensor für den Netzbezug oder die Adresse von evcc ein.",
       "evcc_unreachable": "evcc ist unter dieser Adresse nicht erreichbar.",
       "evcc_auth": "evcc verlangt ein Passwort, oder das Passwort ist falsch.",
-      "evcc_no_grid": "evcc meldet keinen Netzzähler (keine Netzleistung)."
+      "evcc_no_grid": "evcc meldet keinen Netzzähler (keine Netzleistung).",
+      "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen.",
+      "evcc_loadpoint": "evcc hat keinen Ladepunkt mit dieser Nummer.",
+      "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
+      "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
+      "unknown_option": "Diese Option hat die Phasenwahl nicht."
     }
   },
   "options": {
@@ -58,7 +190,8 @@
           "max_reading_age_s": "Höchstalter des Netzbezug-Messwerts",
           "evcc_site_url": "Adresse von evcc (optional)",
           "evcc_site_password": "Passwort von evcc",
-          "evcc_backup": "evcc als Reserve für den Netzbezug"
+          "evcc_backup": "evcc als Reserve für den Netzbezug",
+          "grid_invert": "Vorzeichen umkehren"
         },
         "data_description": {
           "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
@@ -75,7 +208,8 @@
           "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst. Läuft evcc auf demselben Rechner wie Home Assistant (Add-on), wird die Adresse vorgeschlagen; zum Abwählen das Feld leeren.",
           "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
           "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück.",
-          "grid_power": "Sensor mit der Leistung, die aus dem Netz bezogen wird (W oder kW). Negative Werte (Einspeisung) zählen als 0. Optional, wenn Sie evcc eintragen."
+          "grid_power": "Sensor mit der Leistung, die aus dem Netz bezogen wird (W oder kW). Negative Werte (Einspeisung) zählen als 0. Optional, wenn Sie evcc eintragen.",
+          "grid_invert": "An = der Sensor zählt den Bezug negativ (z. B. ein Zähler, der die Einspeisung positiv zeigt)."
         }
       }
     },
@@ -272,7 +406,8 @@
             "one_phase_option": "Option für 1 Phase",
             "phases_entity": "Genutzte Phasen",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -280,7 +415,8 @@
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
         "reconfigure": {
@@ -297,7 +433,8 @@
             "one_phase_option": "Option für 1 Phase",
             "phases_entity": "Genutzte Phasen",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -305,7 +442,8 @@
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         }
       },
@@ -313,7 +451,8 @@
         "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
         "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
         "unknown_option": "Diese Option hat die Phasenwahl nicht.",
-        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
+        "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen."
       }
     },
     "switch": {
@@ -337,14 +476,16 @@
             "restore_entity": "Nur wieder einschalten, solange",
             "allow_entity": "Eingriff nur, solange",
             "pause_min": "Pause nach dem Zurücknehmen",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
         "reconfigure": {
@@ -361,19 +502,22 @@
             "restore_entity": "Nur wieder einschalten, solange",
             "allow_entity": "Eingriff nur, solange",
             "pause_min": "Pause nach dem Zurücknehmen",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         }
       },
       "error": {
-        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
+        "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen."
       }
     },
     "script": {
@@ -634,7 +778,8 @@
             "pause_min": "Pause nach dem Zurücknehmen",
             "max_off_min": "Höchste Dauer",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -650,7 +795,8 @@
             "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
         "reconfigure": {
@@ -671,7 +817,8 @@
             "pause_min": "Pause nach dem Zurücknehmen",
             "max_off_min": "Höchste Dauer",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -687,7 +834,8 @@
             "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         }
       },
@@ -698,7 +846,8 @@
         "unknown_option": "Diese Option hat die Phasenwahl nicht.",
         "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
         "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
-        "step_too_big": "Der Schritt ist größer als der Bereich zwischen niedrigstem Wert und Normalwert."
+        "step_too_big": "Der Schritt ist größer als der Bereich zwischen niedrigstem Wert und Normalwert.",
+        "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen."
       }
     },
     "vehicle": {
@@ -813,7 +962,8 @@
             "evcc_one_phase": "Darf auf 1 Phase umschalten",
             "power_entity": "Ladeleistung (optional)",
             "allow_entity": "Eingriff nur solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
@@ -824,7 +974,8 @@
             "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
             "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
         "reconfigure": {
@@ -841,7 +992,8 @@
             "evcc_one_phase": "Darf auf 1 Phase umschalten",
             "power_entity": "Ladeleistung (optional)",
             "allow_entity": "Eingriff nur solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
@@ -852,7 +1004,15 @@
             "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
             "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+          }
+        },
+        "loadpoint": {
+          "title": "Welcher evcc-Ladepunkt?",
+          "description": "evcc meldet mehrere Ladepunkte. Name, Ströme und ob er die Phasen umschalten kann, werden übernommen.",
+          "data": {
+            "loadpoint": "Ladepunkt"
           }
         }
       },
@@ -861,7 +1021,8 @@
         "evcc_loadpoint": "evcc hat keinen Ladepunkt mit dieser Nummer.",
         "evcc_auth": "evcc verlangt ein Passwort, oder das Passwort ist falsch.",
         "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
-        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor."
+        "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
+        "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen."
       },
       "abort": {
         "reconfigure_successful": "Done."

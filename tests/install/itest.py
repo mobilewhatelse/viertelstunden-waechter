@@ -127,22 +127,29 @@ def ws_session():
 
 
 def flow_finish(path, init_body, user_input):
+    """Runs a flow to its end: every form gets the values of `user_input` it has fields for (the rest stay at their defaults);
+    a menu takes `user_input["_menu"]` or else "finish"."""
     s, d = api("POST", path, init_body)
     if s != 200:
         return None, f"init {s} {d}"
-    for _ in range(4):
+    for _ in range(12):
         if d.get("type") == "create_entry":
             return d, ""
         if d.get("type") == "abort":
             return None, f"abort {d.get('reason')}"
-        if d.get("type") == "form":
-            s, d = api("POST", f"{path}/{d['flow_id']}", user_input)
-            if s != 200:
-                return None, f"step {s} {d}"
-            if d.get("errors"):
-                return None, f"errors {d['errors']}"
+        if d.get("type") == "menu":
+            opts = list(d.get("menu_options") or [])
+            pick = user_input.get("_menu") if user_input.get("_menu") in opts else ("finish" if "finish" in opts else opts[-1])
+            s, d = api("POST", f"{path}/{d['flow_id']}", {"next_step_id": pick})
+        elif d.get("type") == "form":
+            names = {f.get("name") for f in (d.get("data_schema") or [])}
+            s, d = api("POST", f"{path}/{d['flow_id']}", {k: v for k, v in user_input.items() if k in names})
         else:
             return None, f"unexpected {d.get('type')}"
+        if s != 200:
+            return None, f"step {s} {d}"
+        if d.get("errors"):
+            return None, f"errors {d['errors']}"
     return (d if d.get("type") == "create_entry" else None), "no create_entry"
 
 
@@ -167,8 +174,25 @@ def main():
     fields = {f.get("name"): f for f in (d.get("data_schema") or [])}
     sel = ((fields.get("grid_power") or {}).get("selector") or {}).get("entity") or {}
     log(bool(sel) and not sel.get("device_class") and "device_class" not in str(sel), "Netzbezug-Feld filtert nicht nach Geraeteklasse (Issue 1)", str(sel))
-    s2, d2 = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {"name": "Viertelstunden-Wächter", "grid_power": "sensor.netz_ohne_einheit", "limit_kw": 10.0, "margin_kw": 0.5})
+    s2, d2 = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {"name": "Viertelstunden-Wächter", "grid_power": "sensor.netz_ohne_einheit"})
     log(s2 == 200 and d2.get("type") == "form" and (d2.get("errors") or {}).get("grid_power") == "not_power", "Sensor ohne Einheit wird mit klarem Fehler abgelehnt", str(d2.get("errors")))
+    api("DELETE", f"/api/config/config_entries/flow/{d['flow_id']}")
+    # the assistant: grid import -> sign check -> limit -> devices (menu)
+    s, d = api("POST", "/api/config/config_entries/flow", {"handler": "viertelstunden_waechter", "show_advanced_options": False})
+    s, d = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {"name": "Viertelstunden-Wächter", "grid_power": "sensor.netzbezug"})
+    gc_fields = {f.get("name") for f in (d.get("data_schema") or [])}
+    log(str(d.get("step_id")).startswith("grid_check") and "grid_invert" in gc_fields,
+        "Assistent Schritt 2: Vorzeichen-Pruefung mit Schalter 'Vorzeichen umkehren'", f"{d.get('step_id')} {sorted(gc_fields)} {d.get('description_placeholders')}")
+    s, d = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {})
+    lim_fields = {f.get("name") for f in (d.get("data_schema") or [])}
+    log(str(d.get("step_id")).startswith("limit") and {"limit_kw", "margin_kw"} <= lim_fields,
+        "Assistent Schritt 3: Grenze mit Hinweis auf die hoechste Viertelstunde", f"{d.get('step_id')} {d.get('description_placeholders')}")
+    s, d = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {"limit_kw": 10.0, "margin_kw": 0.5})
+    opts = list(d.get("menu_options") or [])
+    log(d.get("type") == "menu" and "add_wallbox" in opts and "finish" in opts, "Assistent Schritt 4: Geraete-Menue (Wallbox, Abschliessen)", f"{d.get('type')} {opts}")
+    s, d = api("POST", f"/api/config/config_entries/flow/{d['flow_id']}", {"next_step_id": "add_wallbox"})
+    wb_fields = {f.get("name") for f in (d.get("data_schema") or [])}
+    log(d.get("step_id") == "add_wallbox" and "power_invert" in wb_fields, "Wallbox im Assistenten, mit 'Vorzeichen umkehren' beim Leistungssensor", str(sorted(wb_fields)))
     api("DELETE", f"/api/config/config_entries/flow/{d['flow_id']}")
     entry, err = flow_finish("/api/config/config_entries/flow", {"handler": "viertelstunden_waechter", "show_advanced_options": False},
                              {"name": "Viertelstunden-Wächter", "grid_power": "sensor.netzbezug", "limit_kw": 10.0, "margin_kw": 0.5})
