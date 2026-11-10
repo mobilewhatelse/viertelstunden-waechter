@@ -4,6 +4,9 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Observe only says the real step for a wallbox or an evcc loadpoint:** the note named the whole lever ("lowered by 6.5 kW", down
+  to the minimum) although only 2.0 kW were too much. Now it says what the guard would set: "limited from 16 A to 12 A (−2.0 kW)",
+  the same arithmetic as for a real wallbox.
 - **Set-up assistant:** adding the integration is now four short steps instead of one long page: grid import (a sensor and/or evcc,
   a local evcc is filled in), *is the sign right?* (current value and a check of the last nights), the limit (with the highest quarter
   hour of the last days as a hint), the devices that matter most (evcc loadpoint or wallbox) - then finish. Everything else stays on the

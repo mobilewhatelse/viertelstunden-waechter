@@ -257,7 +257,7 @@ Charging is never stopped and the mode of evcc is not touched. Switching to 1 ph
 `tests/install/itest_evcc.py`), not yet on real hardware. Do not enter the same wallbox a second time with its own integration.
 
 **Observe only (every device, since 0.14):** a switch in each device. The guard then only writes to the log what it would do with
-that device (*Observe only: Wallbox would be lowered by 3.6 kW …*, at most once per quarter hour), sends nothing to it and does not
+that device (*Observe only: Wallbox would be limited from 16 A to 12 A (−2.0 kW …)*, at most once per quarter hour), sends nothing to it and does not
 count it as a lever, so it does not move on to other devices because of it. Good for trying a new device (for example an evcc
 loadpoint) next to the running guard.
 

@@ -27,6 +27,20 @@ class ObserveOnlyTests(unittest.TestCase):
         self.assertIn("Nur beobachten: Wallbox", text)
         self.assertIn("nichts gesendet", text)
 
+    def test_the_note_names_the_step_the_guard_would_take_not_the_whole_lever(self):
+        """Seen on 2026-11-10: 2.0 kW too much, the note said 'lowered by 6.5 kW' (down to the minimum); the real wallbox got 16 -> 12 A."""
+        import re
+        house = House(cooker=[(5, 35, 7.0)])
+        _, log = run(house, engine.Guard(with_observed({"wb"})), 40)
+        note = next(ln for ln in log if "Nur beobachten: Wallbox" in ln)
+        m = re.search(r"von (\d+) A auf (\d+) A begrenzt \(−([\d.]+) kW, ([\d.]+) kW zu viel\)", note)
+        self.assertIsNotNone(m, note)
+        cur, new, kw, excess = int(m.group(1)), int(m.group(2)), float(m.group(3)), float(m.group(4))
+        self.assertEqual(cur, 16)
+        self.assertLess(new, cur)
+        self.assertGreaterEqual(new, 6)
+        self.assertLessEqual(kw, excess + 1e-9, "never more than what is too much")
+
     def test_the_other_levers_still_work(self):
         house = House(cooker=[(5, 35, 7.0)])
         _, log = run(house, engine.Guard(with_observed({"wb"})), 40)

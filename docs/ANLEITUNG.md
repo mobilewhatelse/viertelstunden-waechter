@@ -154,7 +154,7 @@ nie gestoppt, der Modus von evcc bleibt unberührt. Umschalten auf 1 Phase nur, 
 `tests/install/itest_evcc.py`), noch nicht an echter Hardware. Dieselbe Wallbox nicht zusätzlich über ihre eigene Integration eintragen.
 
 **Nur beobachten (jedes Gerät, seit 0.14):** ein Schalter in jedem Gerät. Der Wächter schreibt dann nur ins Protokoll, was er mit diesem Gerät
-tun würde (*Nur beobachten: Wallbox würde um 3,6 kW gesenkt …*, höchstens einmal je Viertelstunde), sendet nichts und zählt das Gerät nicht als
+tun würde (*Nur beobachten: Wallbox würde von 16 A auf 12 A begrenzt (−2,0 kW …)*, bei schaltbaren Geräten *würde um 0,8 kW gesenkt*, höchstens einmal je Viertelstunde), sendet nichts und zählt das Gerät nicht als
 Hebel, weicht also deshalb auch nicht auf andere Geräte aus. Gut, um ein neues Gerät (zum Beispiel einen evcc-Ladepunkt) neben dem laufenden
 Wächter auszuprobieren.
 

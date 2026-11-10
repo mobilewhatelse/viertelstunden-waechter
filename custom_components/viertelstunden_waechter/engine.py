@@ -478,6 +478,17 @@ class Guard:
             if key in self._watch_noted:
                 continue
             self._watch_noted.add(key)
+            dev, r = o.device, readings[o.device.id]
+            if dev.kind in WALLBOX_KINDS:
+                # the same step the guard would take with a real wallbox: only as much as is needed, not the whole lever
+                cur, new, one_phase = self._wb_would(dev, r, min(excess + 0.2, o.reduction_kw + 0.2))
+                if new >= cur and not one_phase:
+                    self._watch_noted.discard(key)   # nothing to say yet: a later moment of this quarter hour may have
+                    continue
+                kw = min(excess, o.reduction_kw)
+                key_t = "watch_wb1" if one_phase else "watch_wb"
+                notes.append(Action(dev.id, "log", None, self.t(key_t, name=dev.name, cur=cur, new=new, kw=kw, excess=excess), False))
+                continue
             notes.append(Action(o.device.id, "log", None, self.t("watch", name=o.device.name, kw=o.reduction_kw, excess=excess), False))
         if len(self._watch_noted) > 200:
             self._watch_noted = {k for k in self._watch_noted if k[1] == self.quarter}
@@ -651,6 +662,23 @@ class Guard:
         if cur > dev.min_current:
             return max(0.0, p_wb - dev.min_current * self.v1 / 1000.0)
         return 0.0
+
+    def _wb_would(self, dev: DeviceConfig, r: Reading, want_kw: float) -> tuple[int, int, bool]:
+        """(current now, current the guard would set, switch to one phase) for a reduction of `want_kw` - the arithmetic of
+        `_wb_reduce` without touching anything (for devices set to observe only)."""
+        p_wb = (r.power_w or 0.0) / 1000.0
+        cur = int(r.current_a if r.current_a is not None else dev.max_current)
+        goal = p_wb - want_kw
+        if self._phases(dev, r) == 3:
+            a = int(goal * 1000.0 / self.v3)
+            if a >= dev.min_current:
+                return cur, min(cur, a), False
+            if cur > dev.min_current:
+                return cur, dev.min_current, False
+            if dev.one_phase_option:
+                return cur, _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current), True
+            return cur, cur, False
+        return cur, min(cur, _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)), False
 
     def _wb_reduce(self, dev: DeviceConfig, r: Reading, want_kw: float, now: datetime, excess: float) -> list[Action]:
         p_wb = (r.power_w or 0.0) / 1000.0
