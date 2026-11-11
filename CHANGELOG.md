@@ -2,7 +2,7 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
-## Unreleased
+## 0.14.0 - 2026-11-12
 
 - **Anonymous usage statistics, voluntary (default off):** asked in the last step of the set-up, afterwards a switch. Weekly: a
   random id, versions, country and language, kinds of devices and the integrations their entities come from; never names, entity
