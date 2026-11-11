@@ -159,6 +159,9 @@ class Guard:
         self.interventions: dict[str, dict[str, Any]] = {}
         self.quarter: datetime | None = None
         self.energy_kwh = 0.0
+        self.quarter_estimated = False     # the running quarter hour began with a guess (started in its middle, nothing to resume)
+        self.finished_estimated = False    # ... and so did the quarter hour that just ended: its value is no measurement
+        self._resume: dict[str, Any] | None = None
         self.finished_quarter_kw: float | None = None  # set in the cycle in which a quarter hour ended
         self.values: dict[str, Any] = {}
         self.state = "ready"
@@ -192,9 +195,43 @@ class Guard:
 
     # ---------- quarter-hour accounting ----------
 
+    def quarter_state(self) -> dict[str, Any] | None:
+        """The running quarter hour, to be saved when the guard stops (a reload, a restart of Home Assistant)."""
+        if self.quarter is None:
+            return None
+        return {"quarter": self.quarter.isoformat(), "energy_kwh": round(self.energy_kwh, 4), "saved_kwh": round(self.saved_kwh, 4),
+                "counter_at_q": self._counter_at_q, "at": self._last_t.isoformat() if self._last_t else None,
+                "estimated": self.quarter_estimated}
+
+    def resume_quarter(self, state: dict[str, Any] | None) -> None:
+        """What was saved at the last stop; used by the first cycle if it is still the same quarter hour."""
+        self._resume = state if isinstance(state, dict) else None
+
+    def _resume_into(self, q: datetime, now: datetime, grid_kw: float | None, counter_kwh: float | None) -> bool:
+        """Continue the quarter hour that was running when the guard stopped: with the counter exactly (it also counted while the
+        guard was away), else the saved energy plus the gap at the present power. False if there is nothing to continue."""
+        r, self._resume = self._resume, None
+        if not r or r.get("quarter") != q.isoformat():
+            return False
+        try:
+            saved_energy, at = float(r.get("energy_kwh") or 0.0), datetime.fromisoformat(str(r.get("at")))
+        except (TypeError, ValueError):
+            return False
+        elapsed_h = max(1.0, (now - q).total_seconds()) / 3600.0
+        base = r.get("counter_at_q")
+        if counter_kwh is not None and base is not None and 0.0 <= counter_kwh - float(base) <= MAX_PLAUSIBLE_KW * elapsed_h + 0.05:
+            self.energy_kwh = counter_kwh - float(base)
+        else:
+            gap_h = max(0.0, min((now - q).total_seconds(), (now - at).total_seconds())) / 3600.0
+            self.energy_kwh = saved_energy + (grid_kw or 0.0) * gap_h
+        self.saved_kwh = float(r.get("saved_kwh") or 0.0)
+        self.quarter_estimated = bool(r.get("estimated"))
+        return True
+
     def _account(self, now: datetime, grid_kw: float | None, counter_kwh: float | None) -> None:
         self.finished_quarter_kw = None
         self.finished_unguarded_kw = None
+        self.finished_estimated = False
         q = now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0)
         if self.quarter != q:
             first = self.quarter is None
@@ -205,13 +242,18 @@ class Guard:
                     self.saved_kwh += self._last_saved * tail
                 self.finished_quarter_kw = round(self.energy_kwh / 0.25, 3)
                 self.finished_unguarded_kw = round((self.energy_kwh + self.saved_kwh) / 0.25, 3)
+                self.finished_estimated = self.quarter_estimated
             self.quarter = q
             self.energy_kwh = 0.0
             self.saved_kwh = 0.0
+            self.quarter_estimated = False
             self._notified_q = None
             if first:
-                # started in the middle of a quarter hour: estimate what came before with the current power
-                self.energy_kwh = (grid_kw or 0.0) * (now - q).total_seconds() / 3600.0
+                if not self._resume_into(q, now, grid_kw, counter_kwh):
+                    # started in the middle of a quarter hour with nothing to continue: guess what came before from the present
+                    # power. Careful for the control, but no measurement: this quarter hour is not recorded as a peak.
+                    self.energy_kwh = (grid_kw or 0.0) * (now - q).total_seconds() / 3600.0
+                    self.quarter_estimated = (now - q).total_seconds() > 30.0
                 self._last_t = now
             else:
                 self._last_t = q
@@ -524,7 +566,7 @@ class Guard:
         if smooth_only:  # forecast-based: never switch devices off, only lower wallbox current and throttles
             opts = [o for o in opts if o.device.kind in (KIND_WALLBOX, KIND_THROTTLE)]
         if not opts:
-            if not smooth_only and forecast > limit_kw and rest_h < 0.1 and self._notified_q != self.quarter:
+            if not smooth_only and forecast > limit_kw and rest_h < 0.1 and self._notified_q != self.quarter and not self.quarter_estimated:
                 self._notified_q = self.quarter
                 return [Action("", "notify", round(forecast, 1),
                                self.t("limit_lost", fc=forecast, limit=limit_kw))]

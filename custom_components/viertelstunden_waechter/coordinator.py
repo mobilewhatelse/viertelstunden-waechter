@@ -21,7 +21,7 @@ from .const import (
     CONF_NOTIFY, D_ALLOW, D_CURRENT, D_ID, D_KIND, D_NAME, D_OFF_SCRIPT, D_ON_SCRIPT, D_PHASE, D_PHASES, D_POWER, D_POWER_INVERT,
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
-    D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
+    D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC, D_OBSERVE,
     D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
     CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
@@ -32,7 +32,7 @@ from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
 from .export import days_csv, quarters_csv
 from .forecast import (
-    MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, apply_car_plan, combine, splice, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
+    MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
 )
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
@@ -207,6 +207,7 @@ class Waechter:
             await self._poll_evcc()
             await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_restart")), True)
         self.guard.forget()
+        self.guard.resume_quarter(data.get("quarter"))   # a reload or restart within a quarter hour continues it instead of guessing
         self._unsub = async_track_time_interval(self.hass, self._tick, UPDATE_INTERVAL)
 
     async def async_stop(self) -> None:
@@ -425,7 +426,9 @@ class Waechter:
                 await self._push_intervention(acts, now)
             await self._prewarning(now, needed)
             await self._weekly_due(now)
-            if self.guard.finished_quarter_kw is not None:
+            if self.guard.finished_quarter_kw is not None and self.guard.finished_estimated:
+                self.last_quarter_kw = None   # began with a guess (the guard started in its middle): no peak, nothing learned
+            elif self.guard.finished_quarter_kw is not None:
                 self._quarter_done(self.guard.finished_quarter_kw, self.guard.finished_unguarded_kw, now)
             self._maybe_bootstrap()
             self._update_forecast(now)
@@ -716,6 +719,9 @@ class Waechter:
         if plan is not None:  # a charge plan that is executed says when the car really charges: it replaces the learned wallbox
             # pattern until departure. A plan nobody executes (learn mode) only adds to the usual view, it never lowers it.
             series = apply_car_plan(self.model.horizon(now, 24, **self._wx_args()), series, plan[0], plan[1], plan[2])
+        running = self._running_charge(now)
+        if running is not None:   # a charge that runs now is in the forecast until its probable end, whatever was learned
+            series = add_running_charge(self.model.horizon(now, 24, **self._wx_args()), series, running[0], running[1])
         highs = [q["high"] for q in series if q["high"] is not None]
         self.forecast = {
             "target": target,
@@ -732,6 +738,7 @@ class Waechter:
                 "until": plan[1].isoformat() if plan else None,
                 "executed": plan[2] if plan else None,
             },
+            "running_charge": {"kw": round(running[0], 2), "until": running[1].isoformat()} if running else None,
             "weather": {
                 "enabled": self.weather_enabled,
                 "configured": bool(self.cfg.get(CONF_WEATHER) or self.cfg.get(CONF_OUTDOOR_TEMP)),
@@ -748,6 +755,17 @@ class Waechter:
             "samples": self.model.samples,
             "slots": self.model.slots_with_data,
         }
+
+    def _running_charge(self, now: datetime) -> tuple[float, datetime] | None:
+        """(power in kW, probable end) of a charge that runs right now, or None. The end comes from the vehicle entry (state of
+        charge up to the car's own limit, capacity); without one a usual duration is assumed."""
+        p = self._wb_kw_now
+        if p < 1.0:
+            return None
+        v = self._vehicle() or {}
+        limit = self._float(v.get(D_TARGET_ENTITY))
+        hours = running_charge_hours(p, self._float(v.get(D_SOC)), limit, v.get(D_CAPACITY), v.get(D_EFFICIENCY))
+        return (p, now + timedelta(hours=hours)) if hours > 0 else None
 
     def _plan_entities(self) -> list[str]:
         """Charge plan sensors: those of the chosen car planner (all vehicles, found by their unique id) plus entities named by hand."""
@@ -778,9 +796,11 @@ class Waechter:
             if dep is None or dep <= now:
                 continue
             windows += parse_plan_windows(st.attributes.get("windows"), now.tzinfo)
-            until = dep if until is None or dep > until else until
             if st.attributes.get("executed") is False:
                 executed = False
+            else:   # an executed plan: nothing is charged before the planner's next need, so it covers the car until then
+                dep = quiet_until(st.attributes.get("horizon"), dep, now, now.tzinfo)
+            until = dep if until is None or dep > until else until
         return (windows, until, executed) if until is not None else None
 
     def _maybe_bootstrap(self) -> None:
@@ -869,8 +889,8 @@ class Waechter:
 
     def _wb_accumulate(self, now: datetime, readings: dict[str, Reading]) -> None:
         """Energy of all wallboxes in the running quarter hour (for learning the house without the wallbox)."""
-        p = sum((r.power_w or 0.0) for dev_id, r in readings.items()
-                if self.raw_devices.get(dev_id, {}).get(D_KIND) in WALLBOX_KINDS) / 1000.0
+        p = wallbox_total_w([(r.power_w, bool(self.raw_devices[dev_id].get(D_OBSERVE))) for dev_id, r in readings.items()
+                             if self.raw_devices.get(dev_id, {}).get(D_KIND) in WALLBOX_KINDS]) / 1000.0
         self._wb_kw_now = p
         q = now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0)
         w = self._wbq
@@ -1355,6 +1375,7 @@ class Waechter:
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,
             "interventions": self.guard.interventions if self.executing else {},
+            "quarter": self.guard.quarter_state(),
         }
 
     # ---------- for the entities ----------

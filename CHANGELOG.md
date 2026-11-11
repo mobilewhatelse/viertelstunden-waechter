@@ -4,6 +4,26 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Fix: a reload or restart in the middle of a quarter hour could record a peak that never happened.** When it stops, the guard gives
+  everything back (the wallbox to full power); when it started again it took the power of that moment for the whole quarter hour so
+  far. Seen: 10.8 kW recorded as the month's peak, "limit cannot be kept" sent and the wallbox set to 6 A, while the meter counted
+  8.4 kW. Now the running quarter hour is saved on stop and continued on start - exactly with the import counter (it kept counting
+  while the guard was away), else the saved energy plus the gap. A quarter hour that really has to begin with a guess (first start,
+  nothing saved) is still handled carefully, but it is not recorded as a peak, not learned, and sends no "limit cannot be kept".
+- **A running charge is in the forecast:** a car that charges right now stays in the 24-hour forecast until its probable end (the
+  energy missing up to the car's limit at the present power; two hours if state of charge or capacity are unknown). Before, an
+  evening charge showed 0.4 kW in the forecast while the wallbox drew 8.6 kW, because the learned pattern had no charging there.
+  Attribute `running_charge` (power, until). The forecast is never lowered by it.
+- **An executed plan covers the car until the next need:** when the planner switches the wallbox by its plan and its look-ahead says
+  that nothing has to be charged before a later day, the learned wallbox pattern does not count until then (before: only until the
+  next departure). A plan that only recommends changes nothing, the car may then charge whenever it is plugged in.
+- **Fix: one wallbox entered twice was counted twice.** A wallbox entered directly and, set to observe only, as an evcc loadpoint
+  was added up (17 kW instead of 8.5 kW) for learning the house without the wallbox. An observed device with nearly the same power
+  as a real wallbox now counts once.
+- **Set-up with evcc, three gaps closed:** an evcc without a grid meter is still found for its loadpoints (before, the assistant offered
+  no evcc loadpoint then); a loadpoint that is a heating device in evcc (heat pump, heating rod) is not offered and refused with a clear
+  message; a password is tried when saving (evcc answers its state without a login, so a wrong password only showed at the first
+  intervention).
 - **Observe only says the real step for a wallbox or an evcc loadpoint:** the note named the whole lever ("lowered by 6.5 kW", down
   to the minimum) although only 2.0 kW were too much. Now it says what the guard would set: "limited from 16 A to 12 A (−2.0 kW)",
   the same arithmetic as for a real wallbox.

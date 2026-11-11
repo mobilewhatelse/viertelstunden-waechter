@@ -85,7 +85,9 @@ def loadpoint_choices(state: dict[str, Any] | None) -> list[tuple[int, str]]:
     lps = (state or {}).get("loadpoints")
     if not isinstance(lps, list):
         return []
-    return [(i, str(lp.get("title") or lp.get("name") or f"#{i}")) for i, lp in enumerate(lps, 1) if isinstance(lp, dict)]
+    # a heat pump or heating rod that evcc runs as a loadpoint is no wallbox: its "current" is not a lever for the guard
+    return [(i, str(lp.get("title") or lp.get("name") or f"#{i}")) for i, lp in enumerate(lps, 1)
+            if isinstance(lp, dict) and not lp.get("chargerFeatureHeating")]
 
 
 def loadpoint_prefill(state: dict[str, Any] | None, number: int) -> dict[str, Any]:

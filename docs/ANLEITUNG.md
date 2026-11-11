@@ -362,6 +362,12 @@ daher weniger Kühllast zeigen als ein heißer, bewölkter. Die Solarprognose al
 Tagesmittel, kein Tagesverlauf der Heizung. Mit Wallbox bleibt das Auto aus der Berechnung (Haus ohne Wallbox), sobald der Wächter
 es live misst; der erste Import aus der Statistik enthält das Auto noch.
 
+### Laufende Ladung (seit 0.14)
+
+Lädt das Auto gerade, steht diese Ladung bis zu ihrem voraussichtlichen Ende in der Prognose, auch wenn zu dieser Uhrzeit sonst nie
+geladen wurde: Hauslast plus die aktuelle Ladeleistung. Das Ende ergibt sich aus dem Fahrzeug-Eintrag (Ladestand bis zur Ladegrenze
+des Autos, Kapazität); ohne Fahrzeug-Eintrag werden zwei Stunden angenommen. Die Prognose wird dadurch nie gesenkt.
+
 ### Ladeplan eines Auto-Planers (optional)
 
 In den allgemeinen Einstellungen wählen Sie einfach **den Auto-Planer** aus (zum Beispiel *Plugwhen*; er wird vorgeschlagen, wenn genau einer

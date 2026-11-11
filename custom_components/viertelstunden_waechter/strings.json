@@ -166,7 +166,8 @@
       "evcc_loadpoint": "evcc has no loadpoint with this number.",
       "min_above_max": "Minimum current is above maximum current.",
       "phase_pair": "Phase selection and option for 1 phase belong together.",
-      "unknown_option": "The phase selection has no such option."
+      "unknown_option": "The phase selection has no such option.",
+      "evcc_not_charger": "This loadpoint is a heating device (heat pump, heating rod) in evcc, not a wallbox. The guard cannot limit it by a charging current."
     }
   },
   "options": {
@@ -1022,7 +1023,8 @@
         "evcc_auth": "evcc asks for a password, or the password is wrong.",
         "min_above_max": "Minimum current is above maximum current.",
         "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
-        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”."
+        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”.",
+        "evcc_not_charger": "This loadpoint is a heating device (heat pump, heating rod) in evcc, not a wallbox. The guard cannot limit it by a charging current."
       },
       "abort": {
         "reconfigure_successful": "Done."

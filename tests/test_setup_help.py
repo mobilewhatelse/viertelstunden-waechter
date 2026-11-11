@@ -53,6 +53,10 @@ class EvccTakeoverTest(unittest.TestCase):
         self.assertEqual(loadpoint_choices(self.STATE), [(1, "Carport"), (2, "Garage")])
         self.assertEqual(loadpoint_choices(None), [])
 
+    def test_a_heating_loadpoint_is_not_offered(self):
+        state = {"loadpoints": [{"title": "Carport"}, {"title": "Heat pump", "chargerFeatureHeating": True}, {"title": "Garage"}]}
+        self.assertEqual(loadpoint_choices(state), [(1, "Carport"), (3, "Garage")])   # the numbers stay evcc's numbers
+
     def test_prefill(self):
         self.assertEqual(loadpoint_prefill(self.STATE, 1), {"name": "Carport", "evcc_loadpoint": 1, "min_current": 6, "max_current": 16})
         p = loadpoint_prefill(self.STATE, 2)

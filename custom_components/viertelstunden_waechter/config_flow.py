@@ -179,7 +179,9 @@ async def _grid_source_errors(hass: Any, u: dict[str, Any]) -> dict[str, str]:
     if not url:
         return {}
     try:
-        state = await EvccClient(async_get_clientsession(hass), url, u.get(CONF_EVCC_PASSWORD)).state()
+        client = EvccClient(async_get_clientsession(hass), url, u.get(CONF_EVCC_PASSWORD))
+        state = await client.state()
+        await client.check_password()
     except EvccAuthError:
         return {CONF_EVCC_PASSWORD: "evcc_auth"}
     except EvccError:
@@ -335,8 +337,11 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_show_form(step_id="user", data_schema=_general_schema(user_input, True), errors=errors)
             self._name = user_input["name"]
             self._data = {k: user_input[k] for k in (CONF_GRID_POWER, CONF_GRID_ENERGY, CONF_EVCC_URL, CONF_EVCC_PASSWORD) if user_input.get(k)}
-            if self._data.get(CONF_EVCC_URL):
-                self._evcc = await _evcc_state(self.hass, self._data[CONF_EVCC_URL], self._data.get(CONF_EVCC_PASSWORD))
+            self._evcc_url = self._data.get(CONF_EVCC_URL)
+            if not self._evcc_url:   # no evcc for the grid import (e.g. it has no grid meter): its loadpoints are still offered
+                self._evcc_url = await find_local_evcc(self.hass)
+            if self._evcc_url:
+                self._evcc = await _evcc_state(self.hass, self._evcc_url, self._data.get(CONF_EVCC_PASSWORD))
             if self._data.get(CONF_GRID_POWER):
                 return await self.async_step_grid_check()
             return await self.async_step_limit()
@@ -393,7 +398,7 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
         if len(choices) > 1 and user_input is None:
             return self.async_show_form(step_id="add_evcc", data_schema=_loadpoint_schema(choices))
         n = int((user_input or {}).get("loadpoint") or 1)
-        self._pending = {D_EVCC_URL: self._data.get(CONF_EVCC_URL), **({D_EVCC_PASSWORD: self._data[CONF_EVCC_PASSWORD]} if self._data.get(CONF_EVCC_PASSWORD) else {}),
+        self._pending = {D_EVCC_URL: getattr(self, "_evcc_url", None) or self._data.get(CONF_EVCC_URL), **({D_EVCC_PASSWORD: self._data[CONF_EVCC_PASSWORD]} if self._data.get(CONF_EVCC_PASSWORD) else {}),
                          **loadpoint_prefill(self._evcc, n)}
         return await self.async_step_evcc_device()
 
@@ -560,12 +565,16 @@ class EvccFlow(_DeviceFlow):
         client = EvccClient(async_get_clientsession(self.hass), str(u.get(D_EVCC_URL) or ""), u.get(D_EVCC_PASSWORD))
         try:
             state = await client.state()
+            await client.check_password()
         except EvccAuthError:
             return {D_EVCC_PASSWORD: "evcc_auth"}
         except EvccError:
             return {D_EVCC_URL: "evcc_unreachable"}
-        if parse_loadpoint(state, int(float(u.get(D_EVCC_LOADPOINT) or 1))) is None:
+        lp = parse_loadpoint(state, int(float(u.get(D_EVCC_LOADPOINT) or 1)))
+        if lp is None:
             return {D_EVCC_LOADPOINT: "evcc_loadpoint"}
+        if lp.get("heating"):
+            return {D_EVCC_LOADPOINT: "evcc_not_charger"}
         return {}
 
 

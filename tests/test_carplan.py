@@ -6,7 +6,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
-from forecast import apply_car_plan, parse_plan_windows, risk_windows, splice
+from forecast import (add_running_charge, apply_car_plan, parse_plan_windows, quiet_until, risk_windows, running_charge_hours, splice,
+                      wallbox_total_w)
 
 TZ = timezone(timedelta(hours=1))
 T0 = datetime(2027, 1, 12, 20, 0, tzinfo=TZ)
@@ -113,6 +114,55 @@ class SpliceTest(unittest.TestCase):
         out = splice(series(typical=0.5, high=1.0), series(typical=3.0, high=11.0), 4)
         self.assertEqual([q["high"] for q in out[:5]], [1.0, 1.0, 1.0, 1.0, 11.0])
         self.assertEqual(len(out), 16)
+
+
+class RunningChargeTest(unittest.TestCase):
+    """Seen on 2026-11-10: the car charged with 8.6 kW in the evening, the forecast showed 0.4 to 0.8 kW (evenings were rarely
+    charging time in the learned pattern)."""
+    T0 = datetime(2026, 11, 10, 19, 0, tzinfo=timezone(timedelta(hours=1)))
+
+    def series(self, typical, high, n=16):
+        return [{"t": self.T0 + timedelta(minutes=15 * i), "typical": typical, "high": high} for i in range(n)]
+
+    def test_hours_from_what_is_missing(self):
+        self.assertAlmostEqual(running_charge_hours(8.6, 62, 100, 66, 90), (0.38 * 66 / 0.9) / 8.6, places=3)
+        self.assertEqual(running_charge_hours(8.6, None, None, None), 2.0)          # end unknown: a usual duration
+        self.assertEqual(running_charge_hours(8.6, 100, 100, 66), 0.0)              # full
+        self.assertEqual(running_charge_hours(1.0, 0, 100, 100), 12.0)              # capped
+        self.assertEqual(running_charge_hours(0.0, 50, 100, 66), 0.0)
+
+    def test_the_forecast_has_the_charge_until_its_end_and_is_never_lowered(self):
+        house, view = self.series(0.3, 0.6), self.series(0.3, 0.8)
+        view[10]["high"] = 11.0                                                     # a learned peak later that evening stays
+        out = add_running_charge(house, view, 8.6, self.T0 + timedelta(hours=2))
+        self.assertEqual([q["high"] for q in out[:8]], [9.2] * 8)
+        self.assertEqual(out[0]["typical"], 8.9)
+        self.assertEqual(out[8]["high"], 0.8)                                       # after the end: as before
+        self.assertEqual(out[10]["high"], 11.0)
+
+    def test_one_wallbox_entered_twice_counts_once(self):
+        self.assertEqual(wallbox_total_w([(8500.0, False), (8570.0, True)]), 8500.0)   # directly and as evcc loadpoint (observe only)
+        self.assertEqual(wallbox_total_w([(8500.0, False), (3600.0, True)]), 12100.0)  # a second wallbox that is only observed
+        self.assertEqual(wallbox_total_w([(None, False), (7000.0, True)]), 7000.0)
+        self.assertEqual(wallbox_total_w([(8500.0, False), (8500.0, False)]), 17000.0) # two real wallboxes
+
+
+class QuietUntilTest(unittest.TestCase):
+    TZ = timezone(timedelta(hours=1))
+    NOW = datetime(2026, 11, 10, 19, 0, tzinfo=TZ)
+    DEP = datetime(2026, 11, 11, 7, 0, tzinfo=TZ)
+
+    def test_an_executed_plan_covers_the_car_until_the_next_need(self):
+        h = {"status": "ok", "first_need": {"window_start": "2026-11-12T17:30:00+01:00"}}
+        self.assertEqual(quiet_until(h, self.DEP, self.NOW, self.TZ), datetime(2026, 11, 12, 17, 30, tzinfo=self.TZ))
+
+    def test_no_need_at_all_covers_the_whole_day(self):
+        self.assertEqual(quiet_until({"status": "ok", "first_need": None}, self.DEP, self.NOW, self.TZ), self.NOW + timedelta(hours=24))
+
+    def test_without_a_look_ahead_it_is_the_departure(self):
+        self.assertEqual(quiet_until(None, self.DEP, self.NOW, self.TZ), self.DEP)
+        self.assertEqual(quiet_until({"status": "unknown_soc"}, self.DEP, self.NOW, self.TZ), self.DEP)
+        self.assertEqual(quiet_until({"status": "ok", "first_need": {"window_start": "kaputt"}}, self.DEP, self.NOW, self.TZ), self.DEP)
 
 
 if __name__ == "__main__":

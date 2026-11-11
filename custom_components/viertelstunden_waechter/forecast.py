@@ -233,6 +233,52 @@ def splice(first: list[dict[str, Any]], rest: list[dict[str, Any]], n: int) -> l
     return [a if i < n else b for i, (a, b) in enumerate(zip(first, rest))]
 
 
+def wallbox_total_w(items: list[tuple[float | None, bool]]) -> float:
+    """Power of all wallboxes in W; `items` = (power in W, observe only). A device set to observe only that shows nearly the same
+    power as a real wallbox is the same wallbox entered a second time (e.g. directly and as an evcc loadpoint): it counts once."""
+    real = [float(p or 0.0) for p, observed in items if not observed]
+    total = sum(real)
+    for p, observed in items:
+        if not observed:
+            continue
+        p = float(p or 0.0)
+        if any(r > 1000.0 and abs(p - r) <= 0.15 * max(p, r) for r in real):
+            continue
+        total += p
+    return total
+
+
+RUNNING_CHARGE_UNKNOWN_H = 2.0   # a running charge whose end is not known is assumed to go on this long
+RUNNING_CHARGE_MAX_H = 12.0
+
+
+def running_charge_hours(power_kw: float, soc: float | None, limit_soc: float | None, capacity_kwh: float | None,
+                         efficiency_pct: float | None = 90.0) -> float:
+    """How long a charge that runs right now will probably go on: the energy still missing up to the car's limit, at the present
+    power. Without a state of charge or capacity a usual duration is assumed."""
+    if power_kw <= 0:
+        return 0.0
+    if soc is None or not capacity_kwh:
+        return RUNNING_CHARGE_UNKNOWN_H
+    limit = 100.0 if limit_soc is None else float(limit_soc)
+    missing = max(0.0, (limit - float(soc)) / 100.0 * float(capacity_kwh)) / max(0.5, float(efficiency_pct or 90.0) / 100.0)
+    return min(RUNNING_CHARGE_MAX_H, missing / power_kw)
+
+
+def add_running_charge(house: list[dict[str, Any]], series: list[dict[str, Any]], power_kw: float, until: datetime) -> list[dict[str, Any]]:
+    """The car charges right now: until `until` the forecast is at least the house plus the present charging power - the learned
+    pattern does not know about a charge that began at an unusual time. Never lowers the forecast."""
+    out: list[dict[str, Any]] = []
+    for h, v in zip(house, series):
+        if h["t"] >= until or h["typical"] is None or h["high"] is None:
+            out.append(v)
+            continue
+        typical, high = round(h["typical"] + power_kw, 3), round(h["high"] + power_kw, 3)
+        out.append({**v, "typical": max(typical, v["typical"]) if v["typical"] is not None else typical,
+                    "high": max(high, v["high"]) if v["high"] is not None else high})
+    return out
+
+
 def parse_plan_windows(windows: Any, tz) -> list[dict[str, Any]]:
     """Windows `{start, end, energy_kwh, peak_kw}` of a charge plan with real times; broken entries are skipped."""
     out: list[dict[str, Any]] = []
@@ -253,6 +299,24 @@ def parse_plan_windows(windows: Any, tz) -> list[dict[str, Any]]:
         hours = (end - start).total_seconds() / 3600.0
         out.append({"start": start, "end": end, "avg_kw": energy / hours if energy > 0 else peak, "peak_kw": peak or energy / hours})
     return out
+
+
+def quiet_until(horizon: Any, departure: datetime, now: datetime, tz) -> datetime:
+    """Until when an executed plan covers the car: the planner's look-ahead says when charging is needed next (the start of the
+    home window of its first need). Before that nothing is charged, so the learned wallbox pattern does not count there either.
+    Without a usable look-ahead it is the departure, as before."""
+    if not isinstance(horizon, dict) or horizon.get("status") != "ok":
+        return departure
+    first = horizon.get("first_need")
+    if first is None:
+        return max(departure, now + timedelta(hours=24))
+    try:
+        start = datetime.fromisoformat(str(first.get("window_start")))
+    except (AttributeError, ValueError):
+        return departure
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=tz)
+    return max(departure, start)
 
 
 def apply_car_plan(house: list[dict[str, Any]], view: list[dict[str, Any]], windows: list[dict[str, Any]],

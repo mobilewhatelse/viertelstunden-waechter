@@ -61,6 +61,7 @@ def parse_loadpoint(state: dict[str, Any] | None, loadpoint: int) -> dict[str, A
         "phases_active": int(pa) if pa is not None else None,
         "phases_configured": int(pc) if pc is not None else None,
         "phases_switchable": bool(lp.get("chargerPhases1p3p")),
+        "heating": bool(lp.get("chargerFeatureHeating")),
     }
 
 
@@ -132,6 +133,18 @@ class EvccClient:
             except ValueError:
                 return text
         return text
+
+    async def check_password(self) -> None:
+        """evcc answers /api/state without a login, so a wrong password would only show at the first intervention. With a password
+        entered, log in once: raises EvccAuthError if evcc refuses it. Anything else (no login on this evcc) is not an error here."""
+        if not self._password:
+            return
+        try:
+            await self._login()
+        except EvccAuthError:
+            raise
+        except EvccError:
+            return
 
     async def state(self) -> dict[str, Any]:
         data = await self._request("GET", "/api/state")
