@@ -245,6 +245,11 @@ def main():
     fc = "sensor.viertelstunden_wachter_typischer_bezug_jetzt_prognose"
     cp0 = wait_for(lambda: ((state(fc) or {}).get("attributes", {}).get("car_plan") or None), 180) or {}  # the first forecast takes a moment
     log(cp0.get("used") is False and cp0.get("configured") == 0, "Ohne Ladeplan-Verbindung aendert sich nichts (car_plan used = false)", str(cp0))
+    pk = (state("sensor.viertelstunden_wachter_erwartete_spitze_in_24_h_prognose") or {}).get("attributes", {})
+    hh, hs = pk.get("hours_house") or [], pk.get("hours") or []
+    log(len(hh) == len(hs) and len(hh) > 0 and all(a["t"] == b["t"] for a, b in zip(hh, hs))
+        and all((a["high"] or 0) <= (b["high"] or 0) + 1e-6 for a, b in zip(hh, hs)),
+        "Hausprognose ohne Wallbox fuer Lade-Planer (hours_house, nie hoeher als hours)", f"{len(hh)}/{len(hs)}")
     s_o, d_o = api("POST", "/api/config/config_entries/options/flow", {"handler": entry_id})
     s_o2, d_o2 = api("POST", f"/api/config/config_entries/options/flow/{d_o['flow_id']}",
                      {"grid_power": "sensor.netzbezug", "mains_voltage": 230, "startup_mode": "restore", "charge_plan_entities": ["sensor.test_ladeplan"]})

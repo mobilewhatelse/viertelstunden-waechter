@@ -2,6 +2,19 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.14.1 - unreleased
+
+- **House forecast without the car for charge planners:** the sensor *expected peak in 24 h* gets the attribute `hours_house`
+  (the house alone: no wallbox, no running charge, no car plan). `hours` stays as it is (the guard's own view with the expected charging).
+  A charge planner such as Plugwhen must not count the car it plans as load, otherwise it finds "no room" every night.
+- **First fill of the forecast without the wallboxes:** the hourly statistics of the grid import get the mean power of every wallbox
+  (and evcc loadpoint) with a power sensor taken off, so the house model no longer learns the charging of the car as house load.
+- **Rebuilt once:** a house model from an earlier version is filled again on the first start (statistics without the wallboxes, then
+  the quarter hours measured here, wallbox taken off). Nothing to do.
+
+*Deutsch:* Eigene Hausprognose ohne Auto (`hours_house`) für Lade-Planer wie Plugwhen; die Startbefüllung aus der Statistik zieht die
+Wallboxen ab; das Hausmodell wird beim ersten Start einmal neu aufgebaut.
+
 ## 0.14.0 - 2026-11-12
 
 - **Anonymous usage statistics, voluntary (default off):** asked in the last step of the set-up, afterwards a switch. Weekly: a

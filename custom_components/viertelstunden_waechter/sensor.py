@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
 
 
 class StatusSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = STATUS_OPTIONS
     _attr_icon = "mdi:shield-half-full"
@@ -137,7 +137,7 @@ PLAN_STATES = ["off", "no_vehicle", "no_data", "no_departure", "not_needed", "pl
 
 
 class ChargePlanSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     """Charge plan for the car: when to charge so that the car is ready at departure."""
 
     _attr_device_class = SensorDeviceClass.ENUM
@@ -178,7 +178,7 @@ class ChargePlanSensor(WaechterEntity, SensorEntity):
 
 
 class ForecastNowSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     """Typical grid import for the running quarter hour, learned from the same weekday and time of day."""
 
     _attr_device_class = SensorDeviceClass.POWER
@@ -203,7 +203,7 @@ class ForecastNowSensor(WaechterEntity, SensorEntity):
 
 
 class ForecastPeakSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     """Highest expected quarter hour in the next 24 hours; attributes: risk windows and hourly series."""
 
     _attr_device_class = SensorDeviceClass.POWER
@@ -226,6 +226,7 @@ class ForecastPeakSensor(WaechterEntity, SensorEntity):
             "windows": [{"start": x["start"].isoformat(), "end": x["end"].isoformat(),
                          "high_kw": x["high_kw"], "typical_kw": x["typical_kw"]} for x in f.get("windows", [])],
             "hours": [{"t": x["t"].isoformat(), "typical": x["typical"], "high": x["high"]} for x in f.get("hours", [])],
+            "hours_house": [{"t": x["t"].isoformat(), "typical": x["typical"], "high": x["high"]} for x in f.get("hours_house", [])],
         }
 
 
@@ -274,7 +275,7 @@ class CostSensor(WaechterEntity, SensorEntity):
 
 
 class SavingsYearSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:piggy-bank"
@@ -314,7 +315,7 @@ class LastQuarterSensor(WaechterEntity, SensorEntity):
 
 
 class TodayPeakSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     """Highest quarter hour today; attribute `days` lists the peaks of the last 31 days (for a table or chart)."""
 
     _attr_device_class = SensorDeviceClass.POWER
@@ -338,7 +339,7 @@ class TodayPeakSensor(WaechterEntity, SensorEntity):
 
 
 class MonthPeakSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     _attr_device_class = SensorDeviceClass.POWER
     _attr_native_unit_of_measurement = UnitOfPower.KILO_WATT
     _attr_suggested_display_precision = 2
@@ -366,7 +367,7 @@ class MonthPeakSensor(WaechterEntity, SensorEntity):
 
 
 class InterventionsTodaySensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
     _attr_icon = "mdi:counter"
 
     def __init__(self, w) -> None:
