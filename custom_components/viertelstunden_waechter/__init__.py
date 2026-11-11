@@ -66,6 +66,7 @@ SERVICE_IMPORT_HISTORY = "import_history"
 SERVICE_WEEK_REPORT = "send_week_report"
 SERVICE_EXPORT = "export_csv"
 SERVICE_EXPLAIN = "explain_today"
+SERVICE_CORRECT = "correct_quarter"
 
 
 def _register_services(hass: HomeAssistant) -> None:
@@ -122,6 +123,19 @@ def _register_services(hass: HomeAssistant) -> None:
     async_register_admin_service(
         hass, DOMAIN, SERVICE_EXPLAIN, handle_explain,
         schema=vol.Schema({vol.Optional("push", default=False): cv.boolean}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    async def handle_correct(call: ServiceCall) -> dict[str, Any]:
+        try:
+            return await _guard().correct_quarter(str(call.data["start"]).strip()[:16], float(call.data["kw"]))
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    async_register_admin_service(
+        hass, DOMAIN, SERVICE_CORRECT, handle_correct,
+        schema=vol.Schema({vol.Required("start"): cv.string,
+                           vol.Required("kw"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1000.0))}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 

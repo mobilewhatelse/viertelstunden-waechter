@@ -1091,6 +1091,20 @@
           "description": "Zusätzlich an die Benachrichtigungsdienste senden."
         }
       }
+    },
+    "correct_quarter": {
+      "name": "Viertelstunde korrigieren",
+      "description": "Ersetzt einen falsch verbuchten Viertelstundenwert durch den Wert vom Zähler und rechnet die Spitze des Tages und des Monats neu. Nur für Administratoren.",
+      "fields": {
+        "start": {
+          "name": "Beginn",
+          "description": "Beginn der Viertelstunde in Ortszeit, z. B. 2026-11-10T19:15."
+        },
+        "kw": {
+          "name": "Wert",
+          "description": "Mittlerer Netzbezug dieser Viertelstunde laut Zähler, in kW."
+        }
+      }
     }
   }
 }

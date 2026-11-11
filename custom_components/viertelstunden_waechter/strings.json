@@ -1091,6 +1091,20 @@
           "description": "Also send it to the notify services."
         }
       }
+    },
+    "correct_quarter": {
+      "name": "Correct a quarter hour",
+      "description": "Replaces a quarter-hour value that was recorded wrong with the value from the meter and works out the day's and the month's peak again. Only for administrators.",
+      "fields": {
+        "start": {
+          "name": "Start",
+          "description": "Local start of the quarter hour, e.g. 2026-11-10T19:15."
+        },
+        "kw": {
+          "name": "Value",
+          "description": "Mean grid import of that quarter hour from the meter, in kW."
+        }
+      }
     }
   }
 }

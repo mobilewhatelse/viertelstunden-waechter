@@ -4,6 +4,8 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Service `correct_quarter`:** a quarter hour recorded wrong gets the value from the meter; the day's and the month's peak are
+  worked out again from the recorded quarter hours (an older real peak outside the record is never removed) and a line goes to the log.
 - **Fix: a reload or restart in the middle of a quarter hour could record a peak that never happened.** When it stops, the guard gives
   everything back (the wallbox to full power); when it started again it took the power of that moment for the whole quarter hour so
   far. Seen: 10.8 kW recorded as the month's peak, "limit cannot be kept" sent and the wallbox set to 6 A, while the meter counted

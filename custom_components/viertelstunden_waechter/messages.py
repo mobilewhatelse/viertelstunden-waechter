@@ -13,6 +13,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         # decisions
         "ahead": "Vorausschauend ({why}): {text}",
         "watch": "Nur beobachten: {name} würde um {kw:.1f} kW gesenkt ({excess:.1f} kW zu viel), es wurde nichts gesendet",
+        "corrected": "Viertelstunde {start} korrigiert: {old:.2f} kW -> {new:.2f} kW (Wert vom Zähler)",
         "watch_wb": "Nur beobachten: {name} würde von {cur} A auf {new} A begrenzt (−{kw:.1f} kW, {excess:.1f} kW zu viel), es wurde nichts gesendet",
         "watch_wb1": "Nur beobachten: {name} würde auf 1 Phase mit {new} A umgeschaltet ({excess:.1f} kW zu viel), es wurde nichts gesendet",
         "wb_twice": "Wallbox {a} und evcc-Ladepunkt {b} laden gleichzeitig mit fast gleicher Leistung ({kw:.1f} kW). Ist das dieselbe Wallbox? Bitte nur einmal eintragen.",
@@ -84,6 +85,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "en": {
         "ahead": "Ahead ({why}): {text}",
         "watch": "Observe only: {name} would be lowered by {kw:.1f} kW ({excess:.1f} kW too much), nothing was sent",
+        "corrected": "Quarter hour {start} corrected: {old:.2f} kW -> {new:.2f} kW (value from the meter)",
         "watch_wb": "Observe only: {name} would be limited from {cur} A to {new} A (−{kw:.1f} kW, {excess:.1f} kW too much), nothing was sent",
         "watch_wb1": "Observe only: {name} would be switched to 1 phase with {new} A ({excess:.1f} kW too much), nothing was sent",
         "wb_twice": "Wallbox {a} and evcc loadpoint {b} charge at the same time with nearly the same power ({kw:.1f} kW). Is it the same wallbox? Please enter it only once.",
