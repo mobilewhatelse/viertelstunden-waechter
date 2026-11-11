@@ -150,6 +150,13 @@
           "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
           "margin_kw": "Der Wächter zielt auf Grenze minus Abstand."
         }
+      },
+      "finish": {
+        "title": "Darf ich Sie um etwas bitten?",
+        "description": "Eine anonyme Nutzungsstatistik hilft mir, den Viertelstunden-Wächter weiterzuentwickeln und zu betreiben. Gesendet werden nur Versionen, Land und welche Geräte verwendet werden, **nie** Namen, Messwerte oder Kennwörter.\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+        "data": {
+          "share_usage": "Ja, ich bin einverstanden"
+        }
       }
     },
     "abort": {
@@ -382,6 +389,19 @@
       },
       "weather_enabled": {
         "name": "Wetterkorrektur der Prognose"
+      },
+      "share_usage": {
+        "name": "Anonyme Nutzungsstatistik senden"
+      }
+    },
+    "text": {
+      "feedback_text": {
+        "name": "Rückmeldung"
+      }
+    },
+    "button": {
+      "feedback_send": {
+        "name": "Rückmeldung senden"
       }
     }
   },
@@ -1103,6 +1123,40 @@
         "kw": {
           "name": "Wert",
           "description": "Mittlerer Netzbezug dieser Viertelstunde laut Zähler, in kW."
+        }
+      }
+    },
+    "send_feedback": {
+      "name": "Rückmeldung senden",
+      "description": "Schickt Ihre Rückmeldung an den Autor des Viertelstunden-Wächters (aiwhatelse.eu). Mit „Einrichtung mitsenden“ geht eine Übersicht mit: welche Gerätearten und aus welchen Integrationen, keine Namen, Entitäts-IDs oder Messwerte.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "Was funktioniert, was nicht, was Sie sich wünschen."
+        },
+        "contact": {
+          "name": "Kontakt (optional)",
+          "description": "Eine E-Mail-Adresse, wenn Sie eine Antwort möchten."
+        },
+        "include_setup": {
+          "name": "Einrichtung mitsenden",
+          "description": "Gerätearten und ihre Integrationen, keine Namen oder Werte."
+        }
+      }
+    }
+  },
+  "issues": {
+    "share_usage_question": {
+      "title": "Anonyme Nutzungsstatistik senden? (eine Bitte)",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Darf ich Sie um etwas bitten?",
+            "description": "Eine anonyme Nutzungsstatistik hilft mir, den Viertelstunden-Wächter weiterzuentwickeln und zu betreiben. Gesendet werden nur Versionen, Land und welche Geräte verwendet werden, **nie** Namen, Messwerte oder Kennwörter.\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+            "data": {
+              "share_usage": "Ja, ich bin einverstanden"
+            }
+          }
         }
       }
     }

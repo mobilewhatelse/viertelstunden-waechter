@@ -35,6 +35,7 @@ from .forecast import (
     MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
 )
 from .corrections import correct_quarter as _correct_quarter
+from . import rueckmeldung as rm
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
 from .report import week_label, week_report
@@ -101,6 +102,10 @@ class Waechter:
         self.predictive = False          # use the load forecast: lower the wallbox early in a risk quarter hour (default off)
         self.prewarn = False             # message before an intervention: the quarter hour heads for the limit (default off)
         self.weekly_enabled = True       # weekly report on Monday morning
+        self.share_usage = bool(self.cfg.get("share_usage"))   # voluntary anonymous usage statistics, weekly (default off, rueckmeldung.py)
+        self.feedback_text = ""          # the text field for a feedback
+        self._usage: dict[str, Any] = {}  # {"kennung", "gesendet"}: the random id of this installation and the last report
+        self._usage_busy = False
         self.weekly: dict[str, Any] = {}  # the last report
         self._prewarn_q: datetime | None = None
         self._session: list[str] = []     # what the guard did since the first intervention (for the summary message)
@@ -198,6 +203,8 @@ class Waechter:
         self.quarters = (await self._quarters_store.async_load() or {}).get("rows", [])
         self.explanation = data.get("explanation", {})
         self._ai_calls = data.get("ai_calls", {})
+        self._usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
+        self.ask_usage_once()
         self._reserve = data.get("reserve", {})
         if self._reserve:
             await self._end_reserve_all(self.t("r_restart"))  # restarted while a battery was held: give it back first
@@ -427,6 +434,7 @@ class Waechter:
                 await self._push_intervention(acts, now)
             await self._prewarning(now, needed)
             await self._weekly_due(now)
+            self._usage_step(now)
             if self.guard.finished_quarter_kw is not None and self.guard.finished_estimated:
                 self.last_quarter_kw = None   # began with a guess (the guard started in its middle): no peak, nothing learned
             elif self.guard.finished_quarter_kw is not None:
@@ -780,6 +788,108 @@ class Waechter:
         await self._quarters_store.async_save({"rows": self.quarters})
         async_dispatcher_send(self.hass, self.signal)
         return result
+
+    # ---------- voluntary usage statistics and feedback (rueckmeldung.py) ----------
+
+    def setup_overview(self) -> dict[str, Any]:
+        """What is set up, without names, entity ids or values: kinds of devices and the integrations their entities come from."""
+        from homeassistant.helpers import entity_registry as er
+
+        reg = er.async_get(self.hass)
+        kinds: dict[str, int] = {}
+        ids: list[str] = [x for x in (self.cfg.get(CONF_GRID_POWER), self.cfg.get(CONF_GRID_ENERGY)) if x]
+        for d in self.raw_devices.values():
+            kinds[d[D_KIND]] = kinds.get(d[D_KIND], 0) + 1
+            ids += [v for k, v in d.items() if str(k).endswith("_entity") and isinstance(v, str)]
+
+        def platform(eid: str) -> str | None:
+            ent = reg.async_get(eid)
+            return ent.platform if ent else None
+
+        return {
+            "geraete": kinds,
+            "herkunft": rm.herkunft(ids, platform),
+            "nur_beobachten": sum(1 for d in self.raw_devices.values() if d.get("observe_only")),
+            "netzbezug": "beide" if self.cfg.get(CONF_GRID_POWER) and self.cfg.get(CONF_EVCC_URL)
+                         else "evcc" if self.cfg.get(CONF_EVCC_URL) else "sensor",
+            "vorzeichen_umgekehrt": bool(self.cfg.get(CONF_GRID_INVERT)),
+            "betriebsart": self.mode,
+            "planer": bool(self.cfg.get(CONF_PLANNER) or self.cfg.get(CONF_CHARGE_PLAN)),
+            "prognose": bool(self.forecast_enabled), "wetter": bool(self.weather_enabled), "vorausschauend": bool(self.predictive),
+        }
+
+    def _version(self) -> tuple[str, str]:
+        from homeassistant.const import __version__ as ha_version
+        from homeassistant.loader import async_get_loaded_integration
+
+        try:
+            v = str(async_get_loaded_integration(self.hass, DOMAIN).version or "?")
+        except Exception:  # noqa: BLE001
+            v = "?"
+        return v, ha_version
+
+    def ask_usage_once(self) -> None:
+        """An installation from before the question (set up without the last step of the assistant): ask once, in Settings >
+        Repairs. Not again after an answer or after "ignore"."""
+        from homeassistant.helpers import issue_registry as ir
+
+        if "share_usage" in self.entry.options:
+            self._usage["gefragt"] = True   # answered in the set-up; a later change of the settings must not ask again
+            return
+        if self._usage.get("gefragt") or self.share_usage:
+            return
+        ir.async_create_issue(self.hass, DOMAIN, "share_usage_question", is_fixable=True, is_persistent=False,
+                              severity=ir.IssueSeverity.WARNING, translation_key="share_usage_question")
+
+    def answer_usage(self, share: bool) -> None:
+        self.share_usage = bool(share)
+        self._usage["gefragt"] = True
+        self._store.async_delay_save(self._data, 1)
+        from homeassistant.helpers.dispatcher import async_dispatcher_send
+
+        async_dispatcher_send(self.hass, self.signal)
+
+    def _usage_step(self, now: datetime) -> None:
+        """Weekly while the switch is on; once 'delete' after it was switched off. Runs in the background, never blocks."""
+        if self._usage_busy:
+            return
+        if self.share_usage and rm.faellig(self._usage.get("gesendet"), now):
+            if not self._usage.get("kennung"):
+                self._usage["kennung"] = rm.neue_kennung()
+            v, ha = self._version()
+            daten = rm.statistik(DOMAIN, v, ha, self._usage["kennung"], self.hass.config.country, self.hass.config.language,
+                                 self.setup_overview())
+        elif not self.share_usage and self._usage.get("kennung"):
+            daten = rm.loeschen(DOMAIN, self._usage["kennung"])
+        else:
+            return
+        self._usage_busy = True
+        self.entry.async_create_background_task(self.hass, self._usage_send(daten, now), f"{DOMAIN} usage")
+
+    async def _usage_send(self, daten: dict[str, Any], now: datetime) -> None:
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+        try:
+            ok = await rm.senden(async_get_clientsession(self.hass), rm.ZIEL_STATISTIK, daten)
+            if daten.get("loeschen"):
+                if ok:
+                    self._usage = {"gefragt": True} if self._usage.get("gefragt") else {}
+            else:
+                # sent or not: the next try comes in a week, never every cycle (an unreachable server must not cause traffic)
+                self._usage["gesendet"] = now.isoformat()
+            self._store.async_delay_save(self._data, 5)
+        finally:
+            self._usage_busy = False
+
+    async def send_feedback(self, text: str, kontakt: str | None, mit_einrichtung: bool) -> bool:
+        """A feedback the user writes and sends himself (service send_feedback, or the text field and its button)."""
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+        if not str(text or "").strip():
+            return False
+        v, ha = self._version()
+        daten = rm.rueckmeldung(DOMAIN, v, ha, text, kontakt, self.setup_overview() if mit_einrichtung else None)
+        return await rm.senden(async_get_clientsession(self.hass), rm.ZIEL_RUECKMELDUNG, daten)
 
     def _plan_entities(self) -> list[str]:
         """Charge plan sensors: those of the chosen car planner (all vehicles, found by their unique id) plus entities named by hand."""
@@ -1385,6 +1495,7 @@ class Waechter:
             "weekly": self.weekly,
             "explanation": self.explanation,
             "ai_calls": self._ai_calls,
+            "usage": self._usage,
             "reserve": self._reserve,
             "last_quarter_kw": self.last_quarter_kw,
             "executing": self.executing,

@@ -73,3 +73,19 @@ correct_quarter:
           step: 0.001
           unit_of_measurement: kW
           mode: box
+send_feedback:
+  fields:
+    text:
+      required: true
+      selector:
+        text:
+          multiline: true
+    contact:
+      required: false
+      selector:
+        text:
+    include_setup:
+      required: false
+      default: true
+      selector:
+        boolean:

@@ -150,6 +150,13 @@
           "limit_kw": "The quarter-hour average that must not be exceeded.",
           "margin_kw": "The guard aims at limit minus margin."
         }
+      },
+      "finish": {
+        "title": "May I ask a favour?",
+        "description": "An anonymous usage statistic helps me keep developing and running the Viertelstunden-Wächter. Only versions, country and which devices are used are sent, **never** names, measurements or passwords.\n\nVoluntary, and you can switch it off any time. Thank you!",
+        "data": {
+          "share_usage": "Yes, I agree"
+        }
       }
     },
     "abort": {
@@ -382,6 +389,19 @@
       },
       "weather_enabled": {
         "name": "Weather correction of the forecast"
+      },
+      "share_usage": {
+        "name": "Share anonymous usage statistics"
+      }
+    },
+    "text": {
+      "feedback_text": {
+        "name": "Feedback"
+      }
+    },
+    "button": {
+      "feedback_send": {
+        "name": "Send feedback"
       }
     }
   },
@@ -1103,6 +1123,40 @@
         "kw": {
           "name": "Value",
           "description": "Mean grid import of that quarter hour from the meter, in kW."
+        }
+      }
+    },
+    "send_feedback": {
+      "name": "Send feedback",
+      "description": "Sends your feedback to the author of the Viertelstunden-Wächter (aiwhatelse.eu). With 'include setup' an overview goes along: which kinds of devices and from which integrations, no names, entity ids or values.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "What works, what does not, what you would like."
+        },
+        "contact": {
+          "name": "Contact (optional)",
+          "description": "An e-mail address if you want an answer."
+        },
+        "include_setup": {
+          "name": "Include setup",
+          "description": "Kinds of devices and their integrations, no names or values."
+        }
+      }
+    }
+  },
+  "issues": {
+    "share_usage_question": {
+      "title": "Share anonymous usage statistics? (a request)",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "May I ask a favour?",
+            "description": "An anonymous usage statistic helps me keep developing and running the Viertelstunden-Wächter. Only versions, country and which devices are used are sent, **never** names, measurements or passwords.\n\nVoluntary, and you can switch it off any time. Thank you!",
+            "data": {
+              "share_usage": "Yes, I agree"
+            }
+          }
         }
       }
     }

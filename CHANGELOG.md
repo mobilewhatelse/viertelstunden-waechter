@@ -4,6 +4,10 @@ Format: newest first. German version below each English block is a short summary
 
 ## Unreleased
 
+- **Anonymous usage statistics, voluntary (default off):** asked in the last step of the set-up, afterwards a switch. Weekly: a
+  random id, versions, country and language, kinds of devices and the integrations their entities come from; never names, entity
+  ids, measurements or passwords; switching off requests deletion. **Feedback:** a text field and a button on the device, and
+  the action `send_feedback`.
 - **Service `correct_quarter`:** a quarter hour recorded wrong gets the value from the meter; the day's and the month's peak are
   worked out again from the recorded quarter hours (an older real peak outside the record is never removed) and a line goes to the log.
 - **Fix: a reload or restart in the middle of a quarter hour could record a peak that never happened.** When it stops, the guard gives

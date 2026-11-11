@@ -26,6 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         FeatureSwitch(w, "weekly_report_enabled", "weekly_enabled", "mdi:calendar-week"),
         FeatureSwitch(w, "charge_plan_enabled", "plan_enabled", "mdi:ev-station"),
         ExecuteSwitch(w, "charge_plan_execute", "plan_execute", "mdi:play-circle-outline"),
+        ShareSwitch(w, "share_usage", "share_usage", "mdi:chart-donut"),
     ])
 
 
@@ -71,3 +72,13 @@ class ExecuteSwitch(FeatureSwitch):
     async def async_added_to_hass(self) -> None:
         await WaechterEntity.async_added_to_hass(self)
         setattr(self.waechter, self._attr, False)
+
+
+class ShareSwitch(FeatureSwitch):
+    """The voluntary usage statistics: as chosen in the last step of the set-up (default off), afterwards the last state."""
+
+    async def async_added_to_hass(self) -> None:
+        await WaechterEntity.async_added_to_hass(self)
+        last = await self.async_get_last_state()
+        if last is not None:
+            self.waechter.share_usage = last.state == "on"

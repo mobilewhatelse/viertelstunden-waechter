@@ -67,6 +67,7 @@ SERVICE_WEEK_REPORT = "send_week_report"
 SERVICE_EXPORT = "export_csv"
 SERVICE_EXPLAIN = "explain_today"
 SERVICE_CORRECT = "correct_quarter"
+SERVICE_FEEDBACK = "send_feedback"
 
 
 def _register_services(hass: HomeAssistant) -> None:
@@ -136,6 +137,20 @@ def _register_services(hass: HomeAssistant) -> None:
         hass, DOMAIN, SERVICE_CORRECT, handle_correct,
         schema=vol.Schema({vol.Required("start"): cv.string,
                            vol.Required("kw"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1000.0))}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    async def handle_feedback(call: ServiceCall) -> dict[str, Any]:
+        ok = await _guard().send_feedback(call.data["text"], call.data.get("contact"), call.data["include_setup"])
+        if not ok:
+            raise ServiceValidationError("Sending the feedback failed (no connection, or the text is empty)")
+        return {"sent": True}
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_FEEDBACK, handle_feedback,
+        schema=vol.Schema({vol.Required("text"): vol.All(cv.string, vol.Length(min=1, max=4000)),
+                           vol.Optional("contact"): vol.All(cv.string, vol.Length(max=200)),
+                           vol.Optional("include_setup", default=True): cv.boolean}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 

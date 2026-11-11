@@ -717,6 +717,26 @@ python tests/sim.py                    # one simulated evening: car + cooker + p
 
 `engine.py` contains all decisions and has no Home Assistant imports.
 
+## Anonymous usage statistics (voluntary) and feedback
+
+**Usage statistics, off unless you switch them on.** The last step of the set-up asks; afterwards the switch *Share anonymous
+usage statistics* on the integration's device. While it is on, once a week this goes to `aiwhatelse.eu`:
+
+| Sent | Never sent |
+|---|---|
+| a random id of this installation (not traceable to you) | names, entity ids, addresses, location |
+| version of the integration and of Home Assistant, country and language of Home Assistant | measurements, consumption, peaks, trips |
+| which kinds of devices are set up and how many (e.g. 1 wallbox, 2 switches) | passwords, tokens, evcc address |
+| which integrations their entities come from (e.g. `shelly`, `fronius`) | |
+| which features are used (e.g. evcc, solar forecast, mode) | |
+
+No IP address is stored. Switching it off sends one request to delete the data of this id. Why: to see which wallboxes,
+meters and cars are used, so that they are tested first.
+
+**Feedback.** Write into the text field *Feedback* on the integration's device and press *Send feedback*, or use the action
+`send_feedback` (longer texts, an optional contact address, with or without the setup overview above). It goes to the author,
+nothing else is sent.
+
 ## Support and feedback
 
 Bug reports and questions go to the [issues](https://github.com/mobilewhatelse/viertelstunden-waechter/issues) (templates
