@@ -42,6 +42,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry) -> bool:
         title = device_title(dict(sub.data), sub.subentry_type)
         if sub.title != title:
             hass.config_entries.async_update_subentry(entry, sub, title=title)
+    from .vorschau import async_register as register_preview
+
+    await register_preview(hass)   # the picture in the question about sharing anonymous data (Repairs)
     waechter = Waechter(hass, entry)
     entry.runtime_data = waechter
     # entities first: mode, limit and strategy restore their last values before the first cycle

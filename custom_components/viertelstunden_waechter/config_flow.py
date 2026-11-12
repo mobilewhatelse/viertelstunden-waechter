@@ -433,6 +433,9 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Last step: the voluntary, anonymous usage statistics (off unless ticked), then the entry is created."""
         if user_input is None:
+            from .vorschau import async_register as register_preview
+
+            await register_preview(self.hass)   # the picture in the description is served by the integration itself
             return self.async_show_form(step_id="finish", data_schema=vol.Schema(
                 {vol.Required("share_usage", default=False): BooleanSelector()}))
         self._options["share_usage"] = bool(user_input.get("share_usage"))
