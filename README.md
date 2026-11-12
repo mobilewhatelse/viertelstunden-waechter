@@ -4,7 +4,7 @@ Home Assistant integration that keeps the **average grid import of every quarter
 throttling the wallbox and switching flexible loads only as far as needed.
 
 > Status: **0.13.2, in the Marketplace (HACS default list), in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
-> Start in observe mode. Use at your own risk.
+> Start in observe mode. Use at your own risk, see [Safety and liability](#safety-and-liability).
 
 ## What is this for?
 
@@ -679,7 +679,8 @@ from the database to keep it small.
 1. Run a few evenings in **Observe only** and read the status attribute `today` (lines marked "observed").
 2. If an older guard or automation still controls the same devices, set it as *lock entity*: active mode is
    refused while it is on.
-3. Switch the old one off, set **Active**, watch one evening with the car charging and the cooker on.
+3. Switch the old one off, set **Active** (see [Safety and liability](#safety-and-liability)), watch one evening with
+   the car charging and the cooker on.
 4. Back: set **Observe only** – everything the guard changed is given back immediately.
 
 ## Entities
@@ -743,6 +744,19 @@ Bug reports and questions go to the [issues](https://github.com/mobilewhatelse/v
 *Bug report* and *Device test report*). Please add the integration version, your Home Assistant version and the
 guard's log (the *Status* sensor and the log on the device page); remove personal data first. This is a spare-time
 project: answers can take a few days, and there is no guarantee. For commercial support see [LICENSING.md](LICENSING.md).
+
+## Safety and liability
+
+The guard switches real devices: it throttles the wallbox and switches loads off and on again. It is a free
+hobby project and comes **without any warranty**, as stated in sections 15 and 16 of the AGPL-3.0. It can be
+wrong, switch late or not at all, and devices do not always react as expected.
+
+- Before **Active**, check that every device copes with being switched off and on, and that no protective
+  function depends on it: frost protection, the legionella cycle of a water heater, or rules of the maker or the
+  grid operator. Never connect safety-relevant loads.
+- Start in **Observe only** and switch to **Active** only when what the guard would do looks right to you.
+- Your installation stays your responsibility. Liability that the law does not allow to be excluded (for
+  example for intent or gross negligence) is not affected.
 
 ## Licence
 
