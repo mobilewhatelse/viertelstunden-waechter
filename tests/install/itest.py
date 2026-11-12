@@ -223,8 +223,11 @@ def main():
     ents = states_like("viertelstunden_wachter")
     names = sorted(e["entity_id"] for e in ents)
     log(len(ents) >= 37, "Entitaeten der Integration angelegt", f"{len(ents)} Stueck")
-    share = [e for e in ents if e["entity_id"].startswith("switch.") and "nutzungsstatistik" in e["entity_id"]]
-    log(len(share) == 1 and share[0]["state"] == "off", "Nutzungsstatistik: Schalter da und aus (nur mit Zustimmung)", str([(e["entity_id"], e["state"]) for e in share]))
+    share = [e for e in ents if e["entity_id"].startswith("switch.") and ("anonyme_daten_teilen" in e["entity_id"] or "share_anonymous_data" in e["entity_id"])]
+    for l in ('de', 'en'):
+        pv = urllib.request.urlopen(f"{BASE}/viertelstunden_waechter/vorschau/geraete-check-{l}.webp", timeout=20)
+        log(pv.status == 200 and pv.headers.get_content_type() == 'image/webp', f'Vorschau {l} wird lokal ausgeliefert', str(pv.status))
+    log(len(share) == 1 and share[0]["state"] == "off", "Anonyme Daten teilen: ein Schalter, aus (nur mit Zustimmung)", str([(e["entity_id"], e["state"]) for e in share]))
     fb = [e["entity_id"] for e in ents if e["entity_id"].startswith(("text.", "button.")) and "ruckmeldung" in e["entity_id"]]
     log(len(fb) == 2, "Rueckmeldung: Textfeld und Knopf da", str(fb))
     need = ["select.viertelstunden_wachter_betriebsart", "sensor.viertelstunden_wachter_status", "number.viertelstunden_wachter_grenze",
