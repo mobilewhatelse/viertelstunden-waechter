@@ -342,8 +342,9 @@ def main():
     log(s == 200 and "Wochenbericht" in txt, "Dienst 'Wochenbericht senden' erzeugt den Bericht", txt.replace("\n", " | ")[:140])
     s, d = svc("viertelstunden_waechter", "import_history", {"days": [{"date": "2026-10-01", "kw": 7.8, "at": "18:15"}], "months": [{"month": "2026-10", "peak_kw": 9.1}]}, resp=True)
     log(s == 200 and (d.get("service_response") or {}).get("days") == 1, "Dienst 'Verlauf importieren'", str(d.get("service_response") if isinstance(d, dict) else d))
-    # the export and the learning need at least one finished quarter hour (the test may start in the middle of one)
-    lq = wait_for(lambda: val("sensor.viertelstunden_wachter_letzte_viertelstunde") not in (None, "unknown", "unavailable"), 960, 15)
+    # the export and the learning need one finished quarter hour; since 0.14.0 the quarter hour the guard started in is not recorded,
+    # so the first one ends up to 30 minutes after the start
+    lq = wait_for(lambda: val("sensor.viertelstunden_wachter_letzte_viertelstunde") not in (None, "unknown", "unavailable"), 1900, 15)
     log(bool(lq), "Erste Viertelstunde abgeschlossen und gelernt", f"{val('sensor.viertelstunden_wachter_letzte_viertelstunde')} kW")
     s, d = svc("viertelstunden_waechter", "export_csv", {"kind": "days", "days": 400, "format": "excel_de"}, resp=True)
     r = (d.get("service_response") or {}) if isinstance(d, dict) else {}
