@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Einrichtung 1 von 4: Netzbezug",
-        "description": "Hält den mittleren Netzbezug jeder Viertelstunde unter einer Grenze (Leistungspreis beim Netzentgelt). **Nötig:** woher der Netzbezug kommt, ein Leistungssensor Ihres Zählers oder evcc mit Netzzähler (oder beides). **Empfohlen:** der Bezugszähler. Alles andere kann später folgen.",
+        "description": "Hält jede Viertelstunde des Netzbezugs unter Ihrer Grenze. **Nötig:** ein Leistungssensor Ihres Zählers oder evcc mit Netzzähler. **Empfohlen:** der Bezugszähler. Alles andere kann später folgen.",
         "data": {
           "name": "Name",
           "grid_power": "Netzbezug (Leistung)",
@@ -19,14 +19,14 @@
           "grid_energy": "Optional, aber empfohlen: Bezugszähler des Stromzählers. Damit stimmt die Viertelstunde auch nach einem Neustart genau.",
           "limit_kw": "Dieser Viertelstunden-Mittelwert soll nicht überschritten werden.",
           "margin_kw": "Der Wächter zielt auf Grenze minus Abstand.",
-          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst. Läuft evcc auf demselben Rechner wie Home Assistant (Add-on), wird die Adresse vorgeschlagen; zum Abwählen das Feld leeren.",
+          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen, zum Beispiel http://192.168.1.20:7070. Ihr eigener Sensor gilt immer zuerst. Zum Abwählen das Feld leeren.",
           "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
           "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück."
         }
       },
       "grid_check": {
         "title": "Einrichtung 2 von 4: Stimmt das Vorzeichen?",
-        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nFür eine Prüfung gibt es noch zu wenig Verlauf aus der Nacht. Faustregel: Bezug aus dem Netz muss positiv sein, Einspeisung negativ.\n\nZeigt Ihr Zähler den Bezug negativ, Häkchen setzen: Ein Template-Sensor ist nicht nötig.",
+        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nFür eine Prüfung fehlt noch Verlauf aus der Nacht. Bezug aus dem Netz muss positiv sein. Zeigt Ihr Zähler ihn negativ, setzen Sie das Häkchen.",
         "data": {
           "grid_invert": "Vorzeichen umkehren"
         },
@@ -64,7 +64,7 @@
       },
       "evcc_device": {
         "title": "evcc-Ladepunkt",
-        "description": "Der Wächter setzt den maximalen Ladestrom von evcc (eine Obergrenze, darunter regelt evcc weiter) und gibt ihn zurück. Das Laden wird nie gestoppt. Es wird keine andere Integration gebraucht, die Adresse von evcc genügt.",
+        "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nie gestoppt. Die Adresse von evcc genügt.",
         "data": {
           "name": "Name",
           "priority": "Priorität",
@@ -88,7 +88,7 @@
           "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
           "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
           "allow_entity": "Optional. Nur solange diese Entität an ist.",
-          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
           "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
         }
       },
@@ -115,13 +115,13 @@
           "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
           "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
           "allow_entity": "Optional. Nur solange diese Entität an ist.",
-          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
           "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
         }
       },
       "grid_check_invert": {
         "title": "Einrichtung 2 von 4: Stimmt das Vorzeichen?",
-        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nNachts (0 bis 5 Uhr, ohne Sonne) zeigt der Sensor im Mittel **{night} kW**, also negativ. Ihr Zähler zählt den Bezug wohl negativ: „Vorzeichen umkehren“ ist deshalb angekreuzt.",
+        "description": "Sensor **{entity}**, jetzt: **{now}**.\n\nNachts zeigt der Sensor im Mittel **{night} kW**, also negativ. Deshalb ist „Vorzeichen umkehren“ angekreuzt.",
         "data": {
           "grid_invert": "Vorzeichen umkehren"
         },
@@ -153,7 +153,7 @@
       },
       "finish": {
         "title": "Anonyme Daten teilen, mehr zurückbekommen",
-        "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Der Wächter prüft dann einmal am Tag Ihre Geräte (Wallbox, Hausakku, Pumpen, Wärmepumpe, Boiler) und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst; ohne Teilen gibt es keinen Geräte-Check, alles andere am Wächter läuft unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten), einmal am Tag die Messwerte der Geräte für die Prüfung (Leistung der Ladungen, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell) und anonyme Tageswerte für den Vergleich mit gleichen Geräten anderer. **Nie** Namen, Orte, Datum, Uhrzeiten oder Kennwörter; die Messwerte ohne jede Kennung. Gespeichert werden nur die anonymen Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+        "description": "Wer anonyme Daten teilt, bekommt den Geräte-Check: Der Wächter prüft einmal am Tag Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst. Ohne Teilen läuft alles andere unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\n**Gesendet wird:** eine Nutzungsstatistik (Versionen, Land, Gerätearten) und einmal am Tag Messwerte der Geräte (Leistung, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell).\n**Nie:** Namen, Orte, Datum, Uhrzeiten oder Kennwörter. Gespeichert werden nur anonyme Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar.",
         "data": {
           "share_usage": "Ja, ich bin einverstanden"
         }
@@ -202,7 +202,7 @@
           "grid_invert": "Vorzeichen umkehren"
         },
         "data_description": {
-          "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist (z. B. eine Vorlage, die an ist, wenn das Auto aus dem Netz laden kann). Aus: alles wird freigegeben.",
+          "condition_entity": "Optional. Der Wächter greift nur ein, solange diese Entität an ist. Ist sie aus, wird alles freigegeben.",
           "lock_entity": "Optional. Solange sie an ist, wird „Aktiv“ verweigert und der Wächter beobachtet nur (z. B. ein älterer Wächter, der noch läuft).",
           "notify_services": "Optional, mit Komma getrennt, z. B. notify.mobile_app_handy. Für den Fall, dass die Grenze nicht zu halten ist.",
           "startup_mode": "Wiederherstellen = die Betriebsart von vor dem Neustart.",
@@ -211,9 +211,9 @@
           "weather_entity": "Optional: eine Wetter-Entität. Damit folgt die Lastprognose der erwarteten Außentemperatur (Heizen im Winter, Klimaanlage im Sommer). Ohne sie ändert sich nichts.",
           "outdoor_temp_entity": "Optional: ein Außentemperatur-Sensor. Genauer als die Wetter-Entität zum Lernen; mit seinem Verlauf kann die Korrektur sofort statt erst nach einigen Wochen beginnen.",
           "charge_plan_entities": "Nur für eine andere Quelle: Ladeplan-Sensoren von Hand (Attribute windows und departure). Nicht nötig, wenn Sie den Auto-Planer gewählt haben.",
-          "planner_entry": "Wählen Sie den Auto-Planer (zum Beispiel Plugwhen), dann findet der Wächter die Ladepläne aller seiner Fahrzeuge selbst, auch später hinzugefügte. Bis zur Abfahrt weiß die Prognose dann, wann jedes Auto wirklich lädt, statt das gelernte Wallbox-Muster zu nehmen. Ohne ihn ändert sich nichts. Wird automatisch vorgeschlagen, wenn genau einer installiert ist.",
-          "max_reading_age_s": "Ein Messwert, der länger als das nicht geschrieben wurde, gilt als fehlend: Der Wächter greift nicht ein und gibt nach 90 Sekunden alles zurück. Schützt vor veralteten Werten (ein Sensor, der nur alle paar Minuten aktualisiert, taugt nicht zum Regeln). 0 = nie.",
-          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen (zum Beispiel http://192.168.1.20:7070). Ihr eigener Sensor oben gilt immer zuerst. Läuft evcc auf demselben Rechner wie Home Assistant (Add-on), wird die Adresse vorgeschlagen; zum Abwählen das Feld leeren.",
+          "planner_entry": "Optional. Mit einem Auto-Planer (zum Beispiel Plugwhen) weiß die Prognose, wann jedes Auto wirklich lädt. Wird vorgeschlagen, wenn genau einer installiert ist.",
+          "max_reading_age_s": "Ein älterer Messwert gilt als fehlend: Der Wächter greift nicht ein und gibt nach 90 Sekunden alles zurück. 0 = nie.",
+          "evcc_site_url": "Optional: den Netzbezug aus evcc nehmen, zum Beispiel http://192.168.1.20:7070. Ihr eigener Sensor gilt immer zuerst. Zum Abwählen das Feld leeren.",
           "evcc_site_password": "Nur wenn evcc ein Passwort verlangt.",
           "evcc_backup": "Solange Ihr Sensor nichts Brauchbares liefert (fehlt oder zu alt), nimmt der Wächter evcc, statt alles zurückzugeben. Er wechselt von selbst zurück.",
           "grid_power": "Sensor mit der Leistung, die aus dem Netz bezogen wird (W oder kW). Negative Werte (Einspeisung) zählen als 0. Optional, wenn Sie evcc eintragen.",
@@ -456,7 +456,7 @@
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
@@ -483,7 +483,7 @@
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         }
@@ -526,7 +526,7 @@
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
@@ -554,7 +554,7 @@
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall wieder eingeschaltet.",
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
@@ -588,7 +588,7 @@
           },
           "data_description": {
             "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
@@ -608,7 +608,7 @@
           },
           "data_description": {
             "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         }
@@ -623,7 +623,7 @@
       "step": {
         "user": {
           "title": "Batterie",
-          "description": "Im Notfall wird die Batterie freigegeben, damit sie das Haus versorgt und den Netzbezug senkt. Tragen Sie die Einstellungen ein, die sie freigeben, und den Wert dafür; der Wächter merkt sich die vorherigen Werte und stellt sie wieder her.",
+          "description": "Im Notfall gibt der Wächter die Batterie frei, damit sie das Haus versorgt. Tragen Sie die Einstellungen und den Wert dafür ein. Die vorherigen Werte stellt er wieder her.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -659,13 +659,13 @@
             "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
             "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
             "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
-            "battery_power_entity": "Sensor der Leistung in den Akku oder aus dem Akku (W oder kW, Vorzeichen egal). Nur für den Geräte-Check: daraus und aus dem Ladestand misst der Wächter, wie viel der Akku noch speichert."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
+            "battery_power_entity": "Leistung in den oder aus dem Akku (W oder kW, Vorzeichen egal). Nur für den Geräte-Check: Daraus misst der Wächter, wie viel der Akku noch speichert."
           }
         },
         "reconfigure": {
           "title": "Batterie",
-          "description": "Im Notfall wird die Batterie freigegeben, damit sie das Haus versorgt und den Netzbezug senkt. Tragen Sie die Einstellungen ein, die sie freigeben, und den Wert dafür; der Wächter merkt sich die vorherigen Werte und stellt sie wieder her.",
+          "description": "Im Notfall gibt der Wächter die Batterie frei, damit sie das Haus versorgt. Tragen Sie die Einstellungen und den Wert dafür ein. Die vorherigen Werte stellt er wieder her.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -701,8 +701,8 @@
             "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
             "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
             "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
-            "battery_power_entity": "Sensor der Leistung in den Akku oder aus dem Akku (W oder kW, Vorzeichen egal). Nur für den Geräte-Check: daraus und aus dem Ladestand misst der Wächter, wie viel der Akku noch speichert."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
+            "battery_power_entity": "Leistung in den oder aus dem Akku (W oder kW, Vorzeichen egal). Nur für den Geräte-Check: Daraus misst der Wächter, wie viel der Akku noch speichert."
           }
         }
       },
@@ -723,7 +723,7 @@
       "step": {
         "user": {
           "title": "Einstellung ändern",
-          "description": "Ändert eine oder zwei Einstellungen, um den Verbrauch zu senken, und stellt sie später zurück, z. B. den Sperrkontakt (SG-Ready / EVU-Sperre) oder den Betriebsmodus einer Wärmepumpe. Tragen Sie die Einstellung und den Wert dafür ein.",
+          "description": "Ändert eine oder zwei Einstellungen, um den Verbrauch zu senken, und stellt sie später zurück, zum Beispiel den Sperrkontakt einer Wärmepumpe.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -756,13 +756,13 @@
             "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
         "reconfigure": {
           "title": "Einstellung ändern",
-          "description": "Ändert eine oder zwei Einstellungen, um den Verbrauch zu senken, und stellt sie später zurück, z. B. den Sperrkontakt (SG-Ready / EVU-Sperre) oder den Betriebsmodus einer Wärmepumpe. Tragen Sie die Einstellung und den Wert dafür ein.",
+          "description": "Ändert eine oder zwei Einstellungen, um den Verbrauch zu senken, und stellt sie später zurück, zum Beispiel den Sperrkontakt einer Wärmepumpe.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -795,7 +795,7 @@
             "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         }
@@ -819,7 +819,7 @@
       "step": {
         "user": {
           "title": "Leistung drosseln",
-          "description": "Senkt eine Zahl (Wärmepumpen-Leistung in Prozent, Heizstab-Watt, Ladeleistung …) schrittweise zwischen einem Mindestwert und dem Normalwert und gibt sie schrittweise zurück, wie beim Ladestrom einer Wallbox.",
+          "description": "Senkt eine Zahl (zum Beispiel die Leistung einer Wärmepumpe in Prozent) schrittweise bis zu einem Mindestwert und gibt sie schrittweise zurück.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -853,14 +853,14 @@
             "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
         "reconfigure": {
           "title": "Leistung drosseln",
-          "description": "Senkt eine Zahl (Wärmepumpen-Leistung in Prozent, Heizstab-Watt, Ladeleistung …) schrittweise zwischen einem Mindestwert und dem Normalwert und gibt sie schrittweise zurück, wie beim Ladestrom einer Wallbox.",
+          "description": "Senkt eine Zahl (zum Beispiel die Leistung einer Wärmepumpe in Prozent) schrittweise bis zu einem Mindestwert und gibt sie schrittweise zurück.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -894,7 +894,7 @@
             "pause_min": "Nach dem Zurücknehmen so lange warten, bevor wieder eingegriffen wird – schützt einen Verdichter vor kurzen Zyklen.",
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
             "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
@@ -920,7 +920,7 @@
       "step": {
         "user": {
           "title": "Fahrzeug und Ladeplan",
-          "description": "Plant, wann das Auto laden soll, damit es bis zur nächsten Abfahrt sein Ziel erreicht: zuerst mit Sonne (wenn im Energie-Dashboard eine Solarprognose eingerichtet ist), dann in den ruhigsten Viertelstunden, die die Spitzengrenze erlaubt. Der Plan ist ein Vorschlag; das Ausführen ist ein eigener Schalter (standardmäßig aus) und braucht die Start- und Stopp-Befehle unten.",
+          "description": "Plant, wann das Auto laden soll, damit es zur Abfahrt sein Ziel erreicht: zuerst mit Sonne, dann in den ruhigsten Viertelstunden. Der Plan ist ein Vorschlag. Das Ausführen ist ein eigener Schalter (Standard aus).",
           "data": {
             "name": "Name",
             "soc_entity": "Ladestand des Autos",
@@ -957,7 +957,7 @@
         },
         "reconfigure": {
           "title": "Fahrzeug und Ladeplan",
-          "description": "Plant, wann das Auto laden soll, damit es bis zur nächsten Abfahrt sein Ziel erreicht: zuerst mit Sonne (wenn im Energie-Dashboard eine Solarprognose eingerichtet ist), dann in den ruhigsten Viertelstunden, die die Spitzengrenze erlaubt. Der Plan ist ein Vorschlag; das Ausführen ist ein eigener Schalter (standardmäßig aus) und braucht die Start- und Stopp-Befehle unten.",
+          "description": "Plant, wann das Auto laden soll, damit es zur Abfahrt sein Ziel erreicht: zuerst mit Sonne, dann in den ruhigsten Viertelstunden. Der Plan ist ein Vorschlag. Das Ausführen ist ein eigener Schalter (Standard aus).",
           "data": {
             "name": "Name",
             "soc_entity": "Ladestand des Autos",
@@ -1011,7 +1011,7 @@
       "step": {
         "user": {
           "title": "evcc-Ladepunkt",
-          "description": "Der Wächter setzt den maximalen Ladestrom von evcc (eine Obergrenze, darunter regelt evcc weiter) und gibt ihn zurück. Das Laden wird nie gestoppt. Es wird keine andere Integration gebraucht, die Adresse von evcc genügt.",
+          "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nie gestoppt. Die Adresse von evcc genügt.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -1035,13 +1035,13 @@
             "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
             "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
         "reconfigure": {
           "title": "evcc-Ladepunkt",
-          "description": "Der Wächter setzt den maximalen Ladestrom von evcc (eine Obergrenze, darunter regelt evcc weiter) und gibt ihn zurück. Das Laden wird nie gestoppt. Es wird keine andere Integration gebraucht, die Adresse von evcc genügt.",
+          "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nie gestoppt. Die Adresse von evcc genügt.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -1065,7 +1065,7 @@
             "evcc_one_phase": "Geht nur, wenn die Wallbox die Phasen umschalten kann. Aus = nur drosseln.",
             "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
           }
         },
@@ -1094,7 +1094,7 @@
   "services": {
     "create_dashboard": {
       "name": "Dashboard erstellen",
-      "description": "Baut ein fertiges Dashboard (Übersicht, Statistik und Prognose) mit den Entitäten dieser Installation. Das YAML wird zurückgegeben und als Benachrichtigung angezeigt; fügen Sie es in ein neues Dashboard ein (drei Punkte > Bearbeiten > Roher Konfigurationseditor). Der Dienst schreibt nie in ein bestehendes Dashboard. Nur für Administratoren."
+      "description": "Baut ein fertiges Dashboard mit den Entitäten dieser Installation und gibt es als YAML zurück, zum Einfügen in ein neues Dashboard. Ein bestehendes Dashboard wird nie verändert. Nur für Administratoren."
     },
     "import_history": {
       "name": "Verlauf importieren",
@@ -1168,7 +1168,7 @@
     },
     "send_feedback": {
       "name": "Rückmeldung senden",
-      "description": "Schickt Ihre Rückmeldung an den Autor des Viertelstunden-Wächters (aiwhatelse.eu). Mit „Einrichtung mitsenden“ geht eine Übersicht mit: welche Gerätearten und aus welchen Integrationen, keine Namen, Entitäts-IDs oder Messwerte.",
+      "description": "Schickt Ihre Rückmeldung an den Autor. Mit „Einrichtung mitsenden“ geht eine Übersicht der Gerätearten mit, ohne Namen, Entitäts-IDs oder Messwerte.",
       "fields": {
         "text": {
           "name": "Text",
@@ -1192,7 +1192,7 @@
         "step": {
           "confirm": {
             "title": "Anonyme Daten teilen, mehr zurückbekommen",
-            "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Der Wächter prüft dann einmal am Tag Ihre Geräte (Wallbox, Hausakku, Pumpen, Wärmepumpe, Boiler) und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst; ohne Teilen gibt es keinen Geräte-Check, alles andere am Wächter läuft unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten), einmal am Tag die Messwerte der Geräte für die Prüfung (Leistung der Ladungen, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell) und anonyme Tageswerte für den Vergleich mit gleichen Geräten anderer. **Nie** Namen, Orte, Datum, Uhrzeiten oder Kennwörter; die Messwerte ohne jede Kennung. Gespeichert werden nur die anonymen Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+            "description": "Wer anonyme Daten teilt, bekommt den Geräte-Check: Der Wächter prüft einmal am Tag Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst. Ohne Teilen läuft alles andere unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\n**Gesendet wird:** eine Nutzungsstatistik (Versionen, Land, Gerätearten) und einmal am Tag Messwerte der Geräte (Leistung, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell).\n**Nie:** Namen, Orte, Datum, Uhrzeiten oder Kennwörter. Gespeichert werden nur anonyme Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar.",
             "data": {
               "share_usage": "Ja, ich bin einverstanden"
             }
@@ -1202,7 +1202,7 @@
     },
     "device_check": {
       "title": "Geräte-Check: {name}",
-      "description": "{detail}\n\nDer Wächter schaltet deswegen nichts, er sagt es nur. Die Meldung verschwindet von selbst, sobald das Gerät wieder wie gewohnt arbeitet. Mehr auf der Karte Geräte-Check im Dashboard."
+      "description": "{detail}\n\nDer Wächter schaltet deswegen nichts. Die Meldung verschwindet von selbst, sobald das Gerät wieder wie gewohnt arbeitet."
     },
     "share_usage_check": {
       "title": "Geräte-Check: einmal bestätigen",
@@ -1210,7 +1210,7 @@
         "step": {
           "confirm": {
             "title": "Neu: der Geräte-Check",
-            "description": "Du teilst schon anonyme Daten, danke dafür. Neu in 0.15 prüft der Geräte-Check einmal am Tag, ob Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler noch wie gewohnt arbeiten. Dafür schickt der Wächter Messwerte der Geräte an unseren Dienst (Leistung beim Laden, Hübe des Akkus, Laufzeiten, Tagesverbrauch und Außentemperatur, ohne Datum und ohne Kennung). Gespeichert werden nur anonyme Tageswerte.\n\nBis du hier bestätigst, läuft die Statistik wie bisher, der Geräte-Check sendet noch nichts. Lässt du den Schalter an und drückst Senden, startet er. Schaltest du ihn aus, wird das Teilen ganz abgeschaltet.",
+            "description": "Sie teilen schon anonyme Daten, danke. Neu in 0.15: Der Geräte-Check prüft einmal am Tag, ob Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler noch wie gewohnt arbeiten. Dafür gehen Messwerte der Geräte an unseren Dienst (Leistung, Akku-Hübe, Laufzeiten, Tagesverbrauch, Außentemperatur), ohne Datum und ohne Kennung. Gespeichert werden nur anonyme Tageswerte.\n\nSchalter an und Senden: Der Geräte-Check startet. Schalter aus: Das Teilen wird ganz abgeschaltet. Bis dahin sendet der Geräte-Check nichts.",
             "data": {
               "share_usage": "Weiter teilen, mit Geräte-Check"
             }

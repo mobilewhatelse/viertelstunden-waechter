@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Set-up 1 of 4: grid import",
-        "description": "Keeps the mean grid import of every quarter hour below a limit (demand charge). **Needed:** where the grid import comes from, a power sensor of your meter or evcc with a grid meter (or both). **Recommended:** the import counter. Everything else can follow later.",
+        "description": "Keeps every quarter hour of grid import below your limit. **Needed:** a power sensor of your meter, or evcc with a grid meter. **Recommended:** the import counter. Everything else can follow later.",
         "data": {
           "name": "Name",
           "grid_power": "Grid import power",
@@ -19,14 +19,14 @@
           "grid_energy": "Optional but recommended: the meter's import counter. Makes the quarter-hour energy exact after restarts.",
           "limit_kw": "The quarter-hour average that must not be exceeded.",
           "margin_kw": "The guard aims at limit minus margin.",
-          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins. If evcc runs on the same machine as Home Assistant (add-on), the address is suggested; clear the field if you do not want it.",
+          "evcc_site_url": "Optional: take the grid import from evcc, for example http://192.168.1.20:7070. Your own sensor always comes first. Clear the field to deselect.",
           "evcc_site_password": "Only if evcc asks for a password.",
           "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself."
         }
       },
       "grid_check": {
         "title": "Set-up 2 of 4: is the sign right?",
-        "description": "Sensor **{entity}**, now: **{now}**.\n\nThere is not enough night-time history yet to check. Rule of thumb: import from the grid must be positive, export negative.\n\nIf your meter shows import as negative, tick the box: no template sensor needed.",
+        "description": "Sensor **{entity}**, now: **{now}**.\n\nThere is not enough night-time history yet to check. Import from the grid must be positive. If your meter shows it as negative, tick the box.",
         "data": {
           "grid_invert": "Turn the sign round"
         },
@@ -64,7 +64,7 @@
       },
       "evcc_device": {
         "title": "evcc loadpoint",
-        "description": "The guard sets evcc's maximum charging current (a ceiling, evcc keeps regulating below it) and takes it back. Charging is never stopped. No other integration is needed, the address of evcc is enough.",
+        "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is never stopped. The address of evcc is enough.",
         "data": {
           "name": "Name",
           "priority": "Priority",
@@ -88,7 +88,7 @@
           "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
           "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
           "allow_entity": "Optional. Only while this entity is on.",
-          "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+          "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
           "power_invert": "On = the power sensor counts consumption as negative."
         }
       },
@@ -115,13 +115,13 @@
           "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
           "phases_entity": "Optional sensor with the number of phases currently used.",
           "allow_entity": "Optional. Only while this entity is on.",
-          "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+          "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
           "power_invert": "On = the power sensor counts consumption as negative."
         }
       },
       "grid_check_invert": {
         "title": "Set-up 2 of 4: is the sign right?",
-        "description": "Sensor **{entity}**, now: **{now}**.\n\nAt night (0 to 5 o'clock, no sun) the sensor shows **{night} kW** on average, i.e. negative. Your meter seems to count import as negative, so “turn the sign round” is ticked.",
+        "description": "Sensor **{entity}**, now: **{now}**.\n\nAt night the sensor shows **{night} kW** on average, i.e. negative. That is why “turn the sign round” is ticked.",
         "data": {
           "grid_invert": "Turn the sign round"
         },
@@ -153,7 +153,7 @@
       },
       "finish": {
         "title": "Share anonymous data, get more back",
-        "description": "Whoever shares anonymous data gets more back: the guard then checks your devices once a day (wallbox, home battery, pumps, heat pump, water heater) and tells you when something is not right any more. The check is done by our service; without sharing there is no device check, everything else of the guard keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices), once a day the measured values of the devices for the check (power of the charges, battery swings, running times, daily energy, outdoor temperature, maker and model) and anonymous daily values for the comparison with the same devices of others. **Never** names, places, dates, times of day or passwords; the measured values without any id. Only the anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time. Thank you!",
+        "description": "Whoever shares anonymous data gets the device check: once a day the guard checks wallbox, home battery, pumps, heat pump and water heater and tells you when something is not right any more. The check is done by our service. Without sharing everything else keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\n**Sent:** a usage statistic (versions, country, kinds of devices) and once a day measured values of the devices (power, battery swings, running times, daily energy, outdoor temperature, maker and model).\n**Never:** names, places, dates, times of day or passwords. Only anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time.",
         "data": {
           "share_usage": "Yes, I agree"
         }
@@ -202,7 +202,7 @@
           "grid_invert": "Turn the sign round"
         },
         "data_description": {
-          "condition_entity": "Optional. The guard only intervenes while this entity is on (e.g. a template that is on when the car may charge from the grid). Off: everything is given back.",
+          "condition_entity": "Optional. The guard only intervenes while this entity is on. When it is off, everything is released.",
           "lock_entity": "Optional. While this is on, active mode is refused and the guard only observes (e.g. an older guard that is still running).",
           "notify_services": "Optional, comma-separated, e.g. notify.mobile_app_phone. Used when the limit cannot be held.",
           "startup_mode": "Restore = the mode it had before the restart.",
@@ -211,9 +211,9 @@
           "weather_entity": "Optional: a weather entity. With it the load forecast follows the expected outdoor temperature (heating in winter, air conditioning in summer). Without it nothing changes.",
           "outdoor_temp_entity": "Optional: an outdoor temperature sensor. More exact than the weather entity for learning, and its history lets the correction start at once instead of after some weeks.",
           "charge_plan_entities": "Only for another source: charge plan sensors by hand (attributes windows and departure). Not needed when you chose the car planner.",
-          "planner_entry": "Choose the car planner (for example Plugwhen) and the guard finds the charge plans of all its vehicles by itself, also vehicles added later. Until the departure the forecast then knows when each car really charges instead of using the learned wallbox pattern. Without it nothing changes. Suggested automatically if exactly one is installed.",
-          "max_reading_age_s": "A grid reading that was not written for longer than this counts as missing: no interventions, everything is given back after 90 seconds. Protects against stale values (a sensor that only updates every few minutes cannot be used for control). 0 = never.",
-          "evcc_site_url": "Optional: take the grid import from evcc (for example http://192.168.1.20:7070). Your own sensor above always wins. If evcc runs on the same machine as Home Assistant (add-on), the address is suggested; clear the field if you do not want it.",
+          "planner_entry": "Optional. With a car planner (for example Plugwhen) the forecast knows when each car will really charge. Suggested when exactly one is installed.",
+          "max_reading_age_s": "An older reading counts as missing: the guard does not intervene and gives everything back after 90 seconds. 0 = never.",
+          "evcc_site_url": "Optional: take the grid import from evcc, for example http://192.168.1.20:7070. Your own sensor always comes first. Clear the field to deselect.",
           "evcc_site_password": "Only if evcc asks for a password.",
           "evcc_backup": "While your sensor has no usable value (missing or too old) the guard uses evcc instead of giving everything back. It changes back by itself.",
           "grid_power": "Sensor with the power drawn from the grid (W or kW). Negative values (export) count as 0. Optional if you enter evcc.",
@@ -456,7 +456,7 @@
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
@@ -483,7 +483,7 @@
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative."
           }
         }
@@ -526,7 +526,7 @@
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
@@ -554,7 +554,7 @@
             "max_off_min": "0 = no limit. After this time the device is switched on again in any case.",
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
@@ -588,7 +588,7 @@
           },
           "data_description": {
             "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
@@ -608,7 +608,7 @@
           },
           "data_description": {
             "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         }
@@ -623,7 +623,7 @@
       "step": {
         "user": {
           "title": "Battery",
-          "description": "In an emergency the battery is released so that it feeds the house and lowers the grid import. Enter the settings that release it and the value that does so; the guard remembers the previous values and puts them back.",
+          "description": "In an emergency the guard releases the battery so it feeds the house. Enter the settings and the value for it. The guard puts the previous values back.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -659,13 +659,13 @@
             "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
             "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
             "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
-            "battery_power_entity": "Sensor of the power into or out of the battery (W or kW, either sign). Only for the device check: from it and the state of charge the guard measures how much the battery still stores."
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
+            "battery_power_entity": "Power into or out of the battery (W or kW, either sign). Only for the device check: from it the guard measures how much the battery still stores."
           }
         },
         "reconfigure": {
           "title": "Battery",
-          "description": "In an emergency the battery is released so that it feeds the house and lowers the grid import. Enter the settings that release it and the value that does so; the guard remembers the previous values and puts them back.",
+          "description": "In an emergency the guard releases the battery so it feeds the house. Enter the settings and the value for it. The guard puts the previous values back.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -701,8 +701,8 @@
             "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
             "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
             "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
-            "battery_power_entity": "Sensor of the power into or out of the battery (W or kW, either sign). Only for the device check: from it and the state of charge the guard measures how much the battery still stores."
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
+            "battery_power_entity": "Power into or out of the battery (W or kW, either sign). Only for the device check: from it the guard measures how much the battery still stores."
           }
         }
       },
@@ -723,7 +723,7 @@
       "step": {
         "user": {
           "title": "Change settings",
-          "description": "Changes one or two settings to lower the consumption and puts them back later, e.g. the block contact (SG-Ready / utility block) or the operating mode of a heat pump. Enter the setting and the value that does it.",
+          "description": "Changes one or two settings to lower the consumption and puts them back later, for example the block contact of a heat pump.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -756,13 +756,13 @@
             "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
         "reconfigure": {
           "title": "Change settings",
-          "description": "Changes one or two settings to lower the consumption and puts them back later, e.g. the block contact (SG-Ready / utility block) or the operating mode of a heat pump. Enter the setting and the value that does it.",
+          "description": "Changes one or two settings to lower the consumption and puts them back later, for example the block contact of a heat pump.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -795,7 +795,7 @@
             "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         }
@@ -819,7 +819,7 @@
       "step": {
         "user": {
           "title": "Throttle power",
-          "description": "Lowers a number (heat pump power in percent, heating element watts, charging power ...) stepwise between a minimum and its normal value and gives it back stepwise, like a wallbox current.",
+          "description": "Lowers a number (for example the power of a heat pump in percent) step by step down to a minimum and gives it back step by step.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -853,14 +853,14 @@
             "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
         "reconfigure": {
           "title": "Throttle power",
-          "description": "Lowers a number (heat pump power in percent, heating element watts, charging power ...) stepwise between a minimum and its normal value and gives it back stepwise, like a wallbox current.",
+          "description": "Lowers a number (for example the power of a heat pump in percent) step by step down to a minimum and gives it back step by step.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -894,7 +894,7 @@
             "pause_min": "After taking back, wait this long before the next intervention - protects a compressor from short cycles.",
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative.",
             "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
@@ -920,7 +920,7 @@
       "step": {
         "user": {
           "title": "Vehicle and charge plan",
-          "description": "Plans when the car should charge so that it reaches its target by the next departure: first from the sun (if a solar forecast is set up in the Energy dashboard), then in the quietest quarter hours that the peak limit allows. The plan is advice; carrying it out is a separate switch (off by default) and needs the start and stop commands below.",
+          "description": "Plans when the car should charge to reach its target by departure: the sun first, then the quietest quarter hours. The plan is a suggestion. Carrying it out is a separate switch (off by default).",
           "data": {
             "name": "Name",
             "soc_entity": "Car state of charge",
@@ -957,7 +957,7 @@
         },
         "reconfigure": {
           "title": "Vehicle and charge plan",
-          "description": "Plans when the car should charge so that it reaches its target by the next departure: first from the sun (if a solar forecast is set up in the Energy dashboard), then in the quietest quarter hours that the peak limit allows. The plan is advice; carrying it out is a separate switch (off by default) and needs the start and stop commands below.",
+          "description": "Plans when the car should charge to reach its target by departure: the sun first, then the quietest quarter hours. The plan is a suggestion. Carrying it out is a separate switch (off by default).",
           "data": {
             "name": "Name",
             "soc_entity": "Car state of charge",
@@ -1011,7 +1011,7 @@
       "step": {
         "user": {
           "title": "evcc loadpoint",
-          "description": "The guard sets evcc's maximum charging current (a ceiling, evcc keeps regulating below it) and takes it back. Charging is never stopped. No other integration is needed, the address of evcc is enough.",
+          "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is never stopped. The address of evcc is enough.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -1035,13 +1035,13 @@
             "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
             "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
         "reconfigure": {
           "title": "evcc loadpoint",
-          "description": "The guard sets evcc's maximum charging current (a ceiling, evcc keeps regulating below it) and takes it back. Charging is never stopped. No other integration is needed, the address of evcc is enough.",
+          "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is never stopped. The address of evcc is enough.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -1065,7 +1065,7 @@
             "evcc_one_phase": "Only works if the charger can switch phases. Off = only throttled.",
             "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
             "power_invert": "On = the power sensor counts consumption as negative."
           }
         },
@@ -1094,7 +1094,7 @@
   "services": {
     "create_dashboard": {
       "name": "Create dashboard",
-      "description": "Builds a ready-made dashboard (overview, statistics and forecast) with this installation's entities. The YAML is returned and shown as a notification; paste it into a new dashboard (three dots > Edit > Raw configuration editor). The service never writes into an existing dashboard. Administrators only."
+      "description": "Builds a ready-made dashboard with the entities of this installation and returns it as YAML, to paste into a new dashboard. An existing dashboard is never changed. Administrators only."
     },
     "import_history": {
       "name": "Import history",
@@ -1168,7 +1168,7 @@
     },
     "send_feedback": {
       "name": "Send feedback",
-      "description": "Sends your feedback to the author of the Viertelstunden-Wächter (aiwhatelse.eu). With 'include setup' an overview goes along: which kinds of devices and from which integrations, no names, entity ids or values.",
+      "description": "Sends your feedback to the author. With 'include setup' an overview of the kinds of devices goes along, without names, entity ids or values.",
       "fields": {
         "text": {
           "name": "Text",
@@ -1192,7 +1192,7 @@
         "step": {
           "confirm": {
             "title": "Share anonymous data, get more back",
-            "description": "Whoever shares anonymous data gets more back: the guard then checks your devices once a day (wallbox, home battery, pumps, heat pump, water heater) and tells you when something is not right any more. The check is done by our service; without sharing there is no device check, everything else of the guard keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices), once a day the measured values of the devices for the check (power of the charges, battery swings, running times, daily energy, outdoor temperature, maker and model) and anonymous daily values for the comparison with the same devices of others. **Never** names, places, dates, times of day or passwords; the measured values without any id. Only the anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time. Thank you!",
+            "description": "Whoever shares anonymous data gets the device check: once a day the guard checks wallbox, home battery, pumps, heat pump and water heater and tells you when something is not right any more. The check is done by our service. Without sharing everything else keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\n**Sent:** a usage statistic (versions, country, kinds of devices) and once a day measured values of the devices (power, battery swings, running times, daily energy, outdoor temperature, maker and model).\n**Never:** names, places, dates, times of day or passwords. Only anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time.",
             "data": {
               "share_usage": "Yes, I agree"
             }
@@ -1202,7 +1202,7 @@
     },
     "device_check": {
       "title": "Device check: {name}",
-      "description": "{detail}\n\nThe guard does not switch anything because of this; it only tells you. The message goes away by itself once the device works as usual again. More on the card Device check in the dashboard."
+      "description": "{detail}\n\nThe guard switches nothing because of this. The message disappears by itself once the device works as usual again."
     },
     "share_usage_check": {
       "title": "Device check: confirm once",
@@ -1210,7 +1210,7 @@
         "step": {
           "confirm": {
             "title": "New: the device check",
-            "description": "You already share anonymous data, thank you. New in 0.15, the device check looks once a day at whether the wallbox, home battery, pumps, heat pump and water heater still work as usual. For this the guard sends measured values of the devices to our service (power while charging, battery swings, run times, daily use and outside temperature, without a date and without an ID). Only anonymous daily values are stored.\n\nUntil you confirm here, the statistics carry on as before and the device check sends nothing. Leave the switch on and press Submit to start it. Switch it off to stop sharing altogether.",
+            "description": "You already share anonymous data, thank you. New in 0.15: the device check looks once a day at whether the wallbox, home battery, pumps, heat pump and water heater still work as usual. For this, measured values of the devices go to our service (power, battery swings, run times, daily use, outdoor temperature), without a date and without an id. Only anonymous daily values are stored.\n\nSwitch on and Submit: the device check starts. Switch off: sharing is switched off altogether. Until then the device check sends nothing.",
             "data": {
               "share_usage": "Keep sharing, with the device check"
             }
