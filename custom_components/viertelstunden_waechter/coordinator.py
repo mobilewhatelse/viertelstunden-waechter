@@ -59,6 +59,7 @@ def _same_value(state: str, wanted: str) -> bool:
 LOG_KEEP = 200
 DAYS_KEEP = 400
 QUARTERS_KEEP = 120 * 96   # quarter-hour history for the export: 120 days
+MODEL_VERSION = 2          # 2: the house model is filled without the wallboxes (rebuilt once from 0.14.1)
 AI_CALLS_PER_DAY = 4
 EXPLAIN_AT_HOUR = 21
 CALL_TIMEOUT_S = 15
@@ -169,6 +170,7 @@ class Waechter:
         self._bootstrapped = False
         self._bootstrapping = False
         self._bootstrap_failed = False
+        self._rebuild = False            # 0.14.1: fill the house model once again without the wallboxes
         self._model_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.model")
         self._store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self._unsub = None
@@ -209,6 +211,10 @@ class Waechter:
         if self._reserve:
             await self._end_reserve_all(self.t("r_restart"))  # restarted while a battery was held: give it back first
         self._bootstrapped = bool(model_data.get("bootstrapped"))
+        # 0.14.1: a house model from before took the charging of the car into the first fill; build it once again, wallboxes taken off
+        if (self._bootstrapped and int(model_data.get("model_version") or 1) < MODEL_VERSION and self._has_wallbox()
+                and self.cfg.get(CONF_GRID_ENERGY)):
+            self._bootstrapped, self._rebuild = False, True
         if data.get("executing") and data.get("interventions"):
             # Home Assistant restarted while the guard had changed devices: give them back first
             self.guard.load({"interventions": data["interventions"]})
@@ -598,6 +604,7 @@ class Waechter:
 
     def _model_data(self) -> dict[str, Any]:
         return {**self.model.to_dict(), "wallbox": self.wb_model.to_dict(), "bootstrapped": self._bootstrapped,
+                "model_version": 1 if self._rebuild else MODEL_VERSION,
                 "days": {k: [round(x, 3) for x in v] for k, v in self.days.items()}, "days_bootstrapped": self._days_bootstrapped}
 
     # ---------- weather correction ----------
@@ -738,6 +745,9 @@ class Waechter:
             "peak": max(highs) if highs else None,
             "windows": risk_windows(series, target),
             "hours": hourly(series),
+            # the house alone (no wallbox, no running charge, no car plan): for a charge planner such as Plugwhen, which must not
+            # count the car it plans as load in its own way
+            "hours_house": hourly(self.model.horizon(now, 24, **self._wx_args())),
             "profile": weekly_profile(self._view_all()),
             "vehicle_included": car or (unplugged and "after_1h"),
             "car_plan": {
@@ -956,6 +966,24 @@ class Waechter:
             stats = await recorder.async_add_executor_job(
                 statistics_during_period, self.hass, start, end, {eid}, "hour", None, {"change"}
             )
+            # the wallboxes are taken off the grid import hour by hour (their mean power), so that the house model does not learn
+            # the charging of the car as house load; without a power sensor with statistics nothing can be taken off
+            wb_hour: dict[float, float] = {}
+            wb_src: dict[str, tuple[float, float]] = {}
+            for d in self.raw_devices.values():
+                pid = d.get(D_POWER)
+                if d.get(D_KIND) in WALLBOX_KINDS and pid and pid not in wb_src:
+                    pst = self.hass.states.get(pid)
+                    punit = ((pst.attributes.get("unit_of_measurement") if pst else None) or "W").strip()
+                    wb_src[pid] = ({"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(punit, 0.001), -1.0 if d.get(D_POWER_INVERT) else 1.0)
+            if wb_src:
+                wstats = await recorder.async_add_executor_job(
+                    statistics_during_period, self.hass, start, end, set(wb_src), "hour", None, {"mean"}
+                )
+                for pid, (pf, sign) in wb_src.items():
+                    for row in wstats.get(pid, []):
+                        if row.get("mean") is not None:
+                            wb_hour[row["start"]] = wb_hour.get(row["start"], 0.0) + max(0.0, sign * float(row["mean"]) * pf)
             temps: dict[float, float | None] = {}
             outdoor = self.cfg.get(CONF_OUTDOOR_TEMP)
             if outdoor and self.weather_enabled:
@@ -972,6 +1000,7 @@ class Waechter:
                 if row.get("change") is None:
                     continue
                 kw = float(row["change"]) * factor
+                kw = max(0.0, kw - wb_hour.get(row["start"], 0.0)) if 0.0 <= kw <= MAX_PLAUSIBLE_KW else kw
                 t = temps.get(row["start"])
                 local = dt_util.as_local(dt_util.utc_from_timestamp(row["start"]))
                 if need_model:
@@ -983,7 +1012,22 @@ class Waechter:
                     if t is not None:
                         d[2] += t * 4
                         d[3] += 4
-            if need_model:
+            if need_model and self._rebuild:
+                # rebuild (0.14.1): the old model may hold charging from the first fill; the quarter hours measured here say
+                # how much of each was the wallbox, so they come on top in their order instead of the old samples
+                for row in sorted(self.quarters, key=lambda r: r[0]):
+                    try:
+                        q = dt_util.as_local(dt_util.parse_datetime(row[0]))
+                        house = max(0.0, float(row[1]) - float(row[3] or 0.0)) if len(row) > 3 else None
+                    except (TypeError, ValueError, IndexError):
+                        continue
+                    if q is None or house is None or (row[3] is None and self._has_wallbox()):
+                        continue
+                    dd = self.days.get(q.strftime("%Y-%m-%d")) or boot_days.get(q.strftime("%Y-%m-%d"))
+                    fresh.add(q, house, dd[2] / dd[3] if dd and dd[3] else None)
+                self.model = fresh
+                self._rebuild = False
+            elif need_model:
                 for slot, values in self.model.slots.items():  # samples measured meanwhile are newer: keep them last
                     fresh.slots.setdefault(slot, []).extend(values)
                     fresh.temps.setdefault(slot, []).extend(self.model.temps.get(slot) or [None] * len(values))

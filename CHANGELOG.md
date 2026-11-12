@@ -2,6 +2,24 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.14.1 - 2026-11-12
+
+- **House forecast without the car for charge planners:** the sensor *expected peak in 24 h* gets the attribute `hours_house`
+  (the house alone: no wallbox, no running charge, no car plan). `hours` stays as it is (the guard's own view with the expected charging).
+  A charge planner such as Plugwhen must not count the car it plans as load, otherwise it finds "no room" every night.
+- **First fill of the forecast without the wallboxes:** the hourly statistics of the grid import get the mean power of every wallbox
+  (and evcc loadpoint) with a power sensor taken off, so the house model no longer learns the charging of the car as house load.
+- **Rebuilt once:** a house model from an earlier version is filled again on the first start (statistics without the wallboxes, then
+  the quarter hours measured here, wallbox taken off). Nothing to do.
+- **Short README:** the README is down to the essentials; the full text is now the manual in `docs/MANUAL.md`.
+- **Question about sharing anonymous data, said more precisely:** from 0.15 the device check is done by our service, once a day and
+  only with *Share anonymous data*; without it there is no device check, everything else stays local. The text now lists what 0.15 will
+  send for the check, and the preview no longer says "runs locally, no cloud".
+
+*Deutsch:* Kurzes README, der volle Text steht jetzt als Handbuch in `docs/MANUAL.md`. Eigene Hausprognose ohne Auto (`hours_house`) für Lade-Planer wie Plugwhen; die Startbefüllung aus der Statistik zieht die
+Wallboxen ab; das Hausmodell wird beim ersten Start einmal neu aufgebaut. Die Frage zur Datenfreigabe sagt jetzt genau, dass der
+Geräte-Check ab 0.15 über unseren Dienst läuft und nur mit Datenfreigabe; die Vorschau sagt nicht mehr „läuft lokal, ohne Cloud“.
+
 ## 0.14.0 - 2026-11-12
 
 - **Share anonymous data, voluntary (default off), one switch:** asked in the last step of the set-up (and once under Repairs after
