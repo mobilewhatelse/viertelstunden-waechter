@@ -2,6 +2,7 @@
   "domain": "viertelstunden_waechter",
   "name": "Viertelstunden-Wächter",
   "after_dependencies": [
+    "http",
     "recorder",
     "lovelace",
     "persistent_notification",

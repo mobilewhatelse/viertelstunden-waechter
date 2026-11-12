@@ -152,8 +152,8 @@
         }
       },
       "finish": {
-        "title": "May I ask a favour?",
-        "description": "An anonymous usage statistic helps me keep developing and running the Viertelstunden-Wächter. Only versions, country and which devices are used are sent, **never** names, measurements or passwords.\n\nVoluntary, and you can switch it off any time. Thank you!",
+        "title": "Share anonymous data, get more back",
+        "description": "If you share anonymous data, you get more back: from version 0.15 the Wächter checks your devices (wallbox, home battery, heat pump) and compares them with the same devices of others.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices) and, from one of the next versions, anonymous daily values of the devices (energy, highest power, running time, outdoor temperature, manufacturer and model). **Never** names, places, times of day or passwords; the daily values without any id. Details: aiwhatelse.eu/datenschutz\n\nVoluntary, and you can switch it off any time. Thank you!",
         "data": {
           "share_usage": "Yes, I agree"
         }
@@ -391,7 +391,7 @@
         "name": "Weather correction of the forecast"
       },
       "share_usage": {
-        "name": "Share anonymous usage statistics"
+        "name": "Share anonymous data"
       }
     },
     "text": {
@@ -1147,12 +1147,12 @@
   },
   "issues": {
     "share_usage_question": {
-      "title": "Share anonymous usage statistics? (a request)",
+      "title": "Share anonymous data? (a request)",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "May I ask a favour?",
-            "description": "An anonymous usage statistic helps me keep developing and running the Viertelstunden-Wächter. Only versions, country and which devices are used are sent, **never** names, measurements or passwords.\n\nVoluntary, and you can switch it off any time. Thank you!",
+            "title": "Share anonymous data, get more back",
+            "description": "If you share anonymous data, you get more back: from version 0.15 the Wächter checks your devices (wallbox, home battery, heat pump) and compares them with the same devices of others.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices) and, from one of the next versions, anonymous daily values of the devices (energy, highest power, running time, outdoor temperature, manufacturer and model). **Never** names, places, times of day or passwords; the daily values without any id. Details: aiwhatelse.eu/datenschutz\n\nVoluntary, and you can switch it off any time. Thank you!",
             "data": {
               "share_usage": "Yes, I agree"
             }

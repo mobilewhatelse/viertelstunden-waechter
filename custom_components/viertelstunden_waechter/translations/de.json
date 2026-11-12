@@ -152,8 +152,8 @@
         }
       },
       "finish": {
-        "title": "Darf ich Sie um etwas bitten?",
-        "description": "Eine anonyme Nutzungsstatistik hilft mir, den Viertelstunden-Wächter weiterzuentwickeln und zu betreiben. Gesendet werden nur Versionen, Land und welche Geräte verwendet werden, **nie** Namen, Messwerte oder Kennwörter.\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+        "title": "Anonyme Daten teilen, mehr zurückbekommen",
+        "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Ab Version 0.15 prüft der Wächter Ihre Geräte (Wallbox, Hausakku, Wärmepumpe) und vergleicht sie mit gleichen Geräten anderer.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten) und, ab einer der nächsten Versionen, anonyme Tageswerte der Geräte (Energie, höchste Leistung, Laufzeit, Außentemperatur, Hersteller und Modell). **Nie** Namen, Orte, Uhrzeiten oder Kennwörter; die Tageswerte ohne jede Kennung. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
         "data": {
           "share_usage": "Ja, ich bin einverstanden"
         }
@@ -391,7 +391,7 @@
         "name": "Wetterkorrektur der Prognose"
       },
       "share_usage": {
-        "name": "Anonyme Nutzungsstatistik senden"
+        "name": "Anonyme Daten teilen"
       }
     },
     "text": {
@@ -1147,12 +1147,12 @@
   },
   "issues": {
     "share_usage_question": {
-      "title": "Anonyme Nutzungsstatistik senden? (eine Bitte)",
+      "title": "Anonyme Daten teilen? (eine Bitte)",
       "fix_flow": {
         "step": {
           "confirm": {
-            "title": "Darf ich Sie um etwas bitten?",
-            "description": "Eine anonyme Nutzungsstatistik hilft mir, den Viertelstunden-Wächter weiterzuentwickeln und zu betreiben. Gesendet werden nur Versionen, Land und welche Geräte verwendet werden, **nie** Namen, Messwerte oder Kennwörter.\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+            "title": "Anonyme Daten teilen, mehr zurückbekommen",
+            "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Ab Version 0.15 prüft der Wächter Ihre Geräte (Wallbox, Hausakku, Wärmepumpe) und vergleicht sie mit gleichen Geräten anderer.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten) und, ab einer der nächsten Versionen, anonyme Tageswerte der Geräte (Energie, höchste Leistung, Laufzeit, Außentemperatur, Hersteller und Modell). **Nie** Namen, Orte, Uhrzeiten oder Kennwörter; die Tageswerte ohne jede Kennung. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
             "data": {
               "share_usage": "Ja, ich bin einverstanden"
             }
