@@ -3,7 +3,8 @@
 Home Assistant integration that keeps the **average grid import of every quarter hour** below a limit, by
 throttling the wallbox and switching flexible loads only as far as needed.
 
-> Status: **0.13.2, in the Marketplace (HACS default list), in daily use on one installation** (see `docs/COMPATIBILITY.md` for what was tried on real hardware).
+> Status: **0.14.0, in the Marketplace (HACS default list), 40+ installations** (counted from those that share anonymous usage data;
+> see `docs/COMPATIBILITY.md` for what was tried on real hardware).
 > Start in observe mode. Use at your own risk.
 
 ## What is this for?
@@ -302,7 +303,7 @@ The order is a proposal, not a promise.
 
 **Planned**
 
-1. **Feedback from other installations:** the integration is public and in the Marketplace (HACS default list, 0.13.2). The
+1. **Feedback from other installations:** the integration is public and in the Marketplace (HACS default list, 0.14.0). The
    installation test on a fresh Home Assistant 2026.10.3 (Docker, `tests/install`) passed - config flow from scratch,
    devices, observe and active mode, release, services, restart - and hassfest and the HACS validation pass. What is
    still missing are real-world reports from other installations (see *Support and feedback*).
