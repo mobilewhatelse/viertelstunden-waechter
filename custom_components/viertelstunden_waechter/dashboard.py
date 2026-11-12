@@ -47,8 +47,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "predictive": "Vorausschauend drosseln nach Prognose (Standard aus)", "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
         "check_title": "Geräte-Check", "check_state": "Geräte-Check", "check_share": "Anonyme Daten teilen",
-        "check_off": "Der Geräte-Check prüft Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler einmal am Tag und meldet, wenn etwas "
-                     "nicht mehr stimmt. Er läuft nur mit eingeschaltetem *Anonyme Daten teilen*.",
+        "check_off": "**Geräte-Check ist aus.** Ihnen entgeht eine Meldung, wenn die Wallbox plötzlich nur noch mit 2 Phasen lädt, "
+                     "der Akku weniger speichert oder die Wärmepumpe mehr Strom braucht als sonst.\n\n"
+                     "Einschalten: Schalter *Anonyme Daten teilen*. Gesendet werden nur Messwerte, nie Namen oder Passwörter.",
         "check_ok": "alles gut", "check_learning": "lernt noch", "check_none": "kein Check (zu unterschiedlich oder nichts zu prüfen)",
         "check_wait": "Die erste Prüfung kommt im Lauf der nächsten Stunde.", "check_last": "Zuletzt geprüft",
         "check_confirm": "Neu in 0.15: Der Geräte-Check sendet dafür einmal am Tag Messwerte der Geräte. Bitte einmal bestätigen.",
@@ -117,8 +118,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "predictive": "Throttle ahead using the forecast (default off)", "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
         "check_title": "Device check", "check_state": "Device check", "check_share": "Share anonymous data",
-        "check_off": "The device check looks at the wallbox, home battery, pumps, heat pump and water heater once a day and tells you "
-                     "when something is not right any more. It runs only with *Share anonymous data* switched on.",
+        "check_off": "**Device check is off.** You miss a message when the wallbox suddenly charges on 2 phases only, "
+                     "the battery stores less or the heat pump needs more power than usual.\n\n"
+                     "To switch it on: *Share anonymous data*. Only measurements are sent, never names or passwords.",
         "check_ok": "all fine", "check_learning": "still learning", "check_none": "no check (too uneven or nothing to check)",
         "check_wait": "The first check comes within the next hour.", "check_last": "Last checked",
         "check_confirm": "New in 0.15: for this the device check sends measured values of the devices once a day. Please confirm once.",
