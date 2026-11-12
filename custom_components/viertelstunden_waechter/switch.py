@@ -82,3 +82,8 @@ class ShareSwitch(FeatureSwitch):
         last = await self.async_get_last_state()
         if last is not None:
             self.waechter.share_usage = last.state == "on"
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Switched on from 0.15 on (the card next to it says what the device check sends): that is the consent to it."""
+        self.waechter.confirm_check(True)
+        await super().async_turn_on(**kwargs)

@@ -86,6 +86,8 @@ D_OFF_SCRIPT = "off_script"
 D_RESERVE_ENTITY = "reserve_entity"     # battery: setting that keeps the charge (battery reserve before a peak) ...
 D_RESERVE_VALUE = "reserve_value"       # ... and the value that does so
 D_RESERVE_LEAD = "reserve_lead_min"     # battery: start holding this long before a forecast risk window
+D_BATTERY_POWER = "battery_power_entity"  # battery: optional power into/out of the battery (device check: usable capacity)
+D_ART = "device_type"                     # optional: heat pump, water heater, pump, other (device check)
 
 MODE_OFF = "off"
 MODE_OBSERVE = "observe"

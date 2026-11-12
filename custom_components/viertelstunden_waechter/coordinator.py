@@ -26,6 +26,8 @@ from .const import (
     CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
+from .const import D_ART, D_BATTERY_POWER, D_MAX_CURRENT
+from . import geraete_check as gc
 from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, choose_grid, parse_grid_kw, parse_loadpoint, sources_differ, target_ceiling,
                    virtual_current)
 from .explain import build_instructions, extract_text, plain_summary
@@ -171,6 +173,15 @@ class Waechter:
         self._bootstrapping = False
         self._bootstrap_failed = False
         self._rebuild = False            # 0.14.1: fill the house model once again without the wallboxes
+        # device check (0.15): says when a connected device is not right any more; nothing is switched by it
+        self.check = gc.DeviceCheck(float(self.cfg.get(CONF_VOLTAGE, 230.0)))
+        self._check_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.geraete")
+        self._check_busy = False
+        self._check_asked = False        # the note under Repairs for those who shared before 0.15 is shown
+        self._check_saved: datetime | None = None
+        # the first check after a start comes 5 to 60 minutes later (spreads the requests of all installations)
+        import random
+        self._check_next: datetime = dt_util.now() + timedelta(minutes=random.uniform(5, 60))
         self._model_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.model")
         self._store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self._unsub = None
@@ -203,6 +214,9 @@ class Waechter:
         self.days = {k: [float(x) for x in v] for k, v in (model_data.get("days") or {}).items() if isinstance(v, list) and len(v) == 4}
         self._days_bootstrapped = bool(model_data.get("days_bootstrapped"))
         self.quarters = (await self._quarters_store.async_load() or {}).get("rows", [])
+        self.check = gc.DeviceCheck.from_dict(await self._check_store.async_load(), float(self.cfg.get(CONF_VOLTAGE, 230.0)))
+        self.check.forget(set(self.raw_devices))
+        self._sync_check_issues()
         self.explanation = data.get("explanation", {})
         self._ai_calls = data.get("ai_calls", {})
         self._usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
@@ -241,6 +255,7 @@ class Waechter:
         # delay lost the last quarter hours of the export, while the last quarter-hour value (saved above) was kept
         await self._quarters_store.async_save({"rows": self.quarters})
         await self._model_store.async_save(self._model_data())
+        await self._check_store.async_save(self.check.to_dict())
 
     async def async_set_mode(self, mode: str) -> None:
         self.mode = mode
@@ -354,6 +369,154 @@ class Waechter:
         st = self._state(eid)
         return unknown if st is None else st.state == "on"
 
+    # ---------- device check (0.15) ----------
+
+    def _check_samples(self, readings: dict[str, Reading]) -> dict[str, gc.Sample]:
+        """What the device check sees of every device in this cycle (from the readings the guard has anyway)."""
+        out: dict[str, gc.Sample] = {}
+        v = self._vehicle()
+        car_soc = self._float(v.get(D_SOC)) if v else None
+        for dev_id, r in readings.items():
+            d = self.raw_devices.get(dev_id, {})
+            kind = d.get(D_KIND)
+            bw = self._power_kw(d.get(D_BATTERY_POWER)) if kind == KIND_BATTERY else None
+            max_a = d.get(D_MAX_CURRENT)
+            out[dev_id] = gc.Sample(
+                kind=str(kind), art=d.get(D_ART) or None, power_w=r.power_w, current_a=r.current_a, phases=r.phases,
+                max_current=float(max_a) if isinstance(max_a, (int, float)) else None, is_on=r.is_on,
+                soc=car_soc if kind in WALLBOX_KINDS else r.soc, battery_w=bw * 1000.0 if bw is not None else None,
+                intervened=self.executing and dev_id in self.guard.interventions)
+        return out
+
+    def _check_info(self) -> dict[str, dict[str, Any]]:
+        """Maker and model per device, from the device registry of its power entity (for the comparison with the same devices)."""
+        from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+        ents, devs = er.async_get(self.hass), dr.async_get(self.hass)
+        out: dict[str, dict[str, Any]] = {}
+        for dev_id, d in self.raw_devices.items():
+            for key in (D_POWER, D_SWITCH, D_CURRENT, D_SOC, D_VALUE):
+                e = ents.async_get(d.get(key) or "")
+                dev = devs.async_get(e.device_id) if e and e.device_id else None
+                if dev and (dev.manufacturer or dev.model):
+                    out[dev_id] = {"hersteller": dev.manufacturer, "modell": dev.model}
+                    break
+        return out
+
+    def check_devices(self) -> list[dict[str, Any]]:
+        """Per device: name, status, what was found (as sentences), what is still being learned, what was measured."""
+        out = []
+        measured = self.check.measured()
+        for dev_id, d in self.raw_devices.items():
+            if d.get(D_KIND) == KIND_VEHICLE:
+                continue
+            r = self.check.result.get(dev_id, {}) if self.share_usage and self.check_consent() else {}
+            found = [{"level": b["level"], "text": self._finding_text({"device_id": dev_id, **b})} for b in r.get("befunde", [])]
+            out.append({"name": d.get(D_NAME, dev_id), "kind": d.get(D_KIND), "status": r.get("status", "none"), "found": found,
+                        "learning": r.get("lernt"), "values": r.get("werte") or {}, "measured": measured.get(dev_id, {})})
+        return out
+
+    def check_state(self) -> str:
+        """Sensor state: without *Share anonymous data* there is no check."""
+        if not self.share_usage:
+            return "sharing_off"
+        return self.check.state() if self.check_consent() else "confirm"
+
+    def _ask_check_consent(self) -> None:
+        """Shared already before 0.15: one quiet note under Repairs (no message, no pop-up). Until it is confirmed the usage
+        statistics go on as before, but no measured values are sent for the device check."""
+        from homeassistant.helpers import issue_registry as ir
+
+        want = self.share_usage and not self.check_consent()
+        if want == self._check_asked:
+            return
+        self._check_asked = want
+        if want:
+            ir.async_create_issue(self.hass, DOMAIN, "share_usage_check", is_fixable=True, is_persistent=False,
+                                  severity=ir.IssueSeverity.WARNING, translation_key="share_usage_check")
+        else:
+            ir.async_delete_issue(self.hass, DOMAIN, "share_usage_check")
+
+    async def _check_step(self, now: datetime, readings: dict[str, Reading]) -> None:
+        try:
+            self.check.step(now, self._check_samples(readings), self._temp_at(now))
+        except Exception:  # noqa: BLE001 - the device check must never stop the guard
+            _LOGGER.exception("Device check: measuring failed")
+            return
+        if self._check_saved is None or now - self._check_saved > timedelta(minutes=10):
+            self._check_saved = now
+            self._check_store.async_delay_save(self.check.to_dict, 5)
+        self._ask_check_consent()
+        if not self.share_usage or not self.check_consent():
+            if self.check.result:   # switched off: no check any more, findings and repairs go away
+                self.check.clear()
+                self._sync_check_issues()
+                async_dispatcher_send(self.hass, self.signal)
+            return
+        last = None
+        try:
+            last = datetime.fromisoformat(self.check.checked_at) if self.check.checked_at else None
+        except ValueError:
+            pass
+        due = last is None or now - last >= timedelta(hours=gc.CHECK_EVERY_H)
+        if due and now >= self._check_next and not self._check_busy:
+            self._check_busy = True
+            self._check_next = now + timedelta(hours=gc.RETRY_H)
+            self.entry.async_create_background_task(self.hass, self._check_send(now), f"{DOMAIN} device check")
+
+    async def _check_send(self, now: datetime) -> None:
+        try:
+            v, _ = self._version()
+            body = self.check.request(now, self._check_info(), v)
+            async with asyncio.timeout(15):
+                async with async_get_clientsession(self.hass).post(
+                        gc.SERVICE_URL, json=body, headers={"User-Agent": f"{DOMAIN}/{v}"}) as r:
+                    if r.status != 200:
+                        _LOGGER.debug("Device check: service answered %s", r.status)
+                        return
+                    answer = await r.json(content_type=None)
+            before = set(self.check.findings())
+            self.check.apply(now, answer)
+            await self._check_store.async_save(self.check.to_dict())
+            await self._announce_findings(before)
+            self._sync_check_issues()
+            async_dispatcher_send(self.hass, self.signal)
+        except Exception as err:  # noqa: BLE001 - not reachable: the last result stays, the next try in some hours
+            _LOGGER.debug("Device check not done: %s", err)
+        finally:
+            self._check_busy = False
+
+    def _finding_text(self, f: dict[str, Any]) -> str:
+        name = self.raw_devices.get(f["device_id"], {}).get(D_NAME, f["device_id"])
+        return gc.text(self.hass.config.language, f["key"], str(name), f.get("werte") or {})
+
+    async def _announce_findings(self, before: set[str]) -> None:
+        """A new finding is written to the log; a new warning also goes out as a message (if messages are set up)."""
+        for k, f in self.check.findings().items():
+            if k in before:
+                continue
+            txt = ("⚠ " if f["level"] == "warn" else "") + self._finding_text(f)
+            self._log(Action("", "log", None, txt, False), False)
+            if f["level"] == "warn" and self.notify_intervention:
+                await self._exec(Action("", "notify", None, txt))
+
+    def _sync_check_issues(self) -> None:
+        """One repair per warning (with "ignore"); repairs of findings that ended are removed."""
+        from homeassistant.helpers import issue_registry as ir
+
+        prefix = f"device_check_{self.entry.entry_id}_"
+        want = {}
+        for k, f in self.check.findings().items():
+            if f["level"] == "warn":
+                want[prefix + k.replace(":", "_")] = f
+        for (domain, issue_id) in list(ir.async_get(self.hass).issues):
+            if domain == DOMAIN and issue_id.startswith(prefix) and issue_id not in want:
+                ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+        for issue_id, f in want.items():
+            name = self.raw_devices.get(f["device_id"], {}).get(D_NAME, f["device_id"])
+            ir.async_create_issue(self.hass, DOMAIN, issue_id, is_fixable=False, is_persistent=False, severity=ir.IssueSeverity.WARNING,
+                                  translation_key="device_check", translation_placeholders={"name": str(name), "detail": self._finding_text(f)})
+
     def _readings(self) -> dict[str, Reading]:
         out: dict[str, Reading] = {}
         for dev_id, d in self.raw_devices.items():
@@ -417,6 +580,7 @@ class Waechter:
                 self.executing = execute
             self._wb_accumulate(now, readings)
             self._watch_wallbox_twice(now, readings)
+            await self._check_step(now, readings)
             needed = self._is_on(self.cfg.get(CONF_CONDITION), True)
             grid = self._grid_reading(now)
             self.guard.real_effect = execute
@@ -851,9 +1015,25 @@ class Waechter:
         ir.async_create_issue(self.hass, DOMAIN, "share_usage_question", is_fixable=True, is_persistent=False,
                               severity=ir.IssueSeverity.WARNING, translation_key="share_usage_question")
 
+    def check_consent(self) -> bool:
+        """Was the consent given with the text of 0.15 (the device check sends measured values)? Set up or asked from 0.15 on,
+        the switch turned on from 0.15 on, or the note under Repairs confirmed."""
+        return bool(self._usage.get("check_ok") or self.entry.options.get("share_check"))
+
+    def confirm_check(self, share: bool) -> None:
+        """Answer to the note under Repairs: keep sharing (with the device check) or switch sharing off."""
+        if share:
+            self._usage["check_ok"] = True
+            self._store.async_delay_save(self._data, 1)
+            async_dispatcher_send(self.hass, self.signal)
+        else:
+            self.answer_usage(False)
+
     def answer_usage(self, share: bool) -> None:
         self.share_usage = bool(share)
         self._usage["gefragt"] = True
+        if share:
+            self._usage["check_ok"] = True   # the question of 0.15 describes the device check
         self._store.async_delay_save(self._data, 1)
         from homeassistant.helpers.dispatcher import async_dispatcher_send
 

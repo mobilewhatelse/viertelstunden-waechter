@@ -2,6 +2,29 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.15.0 - unreleased
+
+- **Device check (only with *Share anonymous data*):** once a day the guard asks our service whether the connected devices still work
+  as usual. Wallbox: charging power against set current and phases (drop in power, a missing phase, a slow trend); home battery:
+  usable capacity from full swings of at least 40 points; switches, pumps, water heaters: power while running ("needs more than
+  usual", "draws nothing although on"); heat pump: daily energy against outdoor temperature; water heater: daily energy against its
+  own mean. The guard only measures; the thresholds and the judging live on the service, so they can improve without an update.
+  The request carries "days ago" instead of dates, device numbers valid only within one request, no names, entity ids or id of the
+  installation; the service answers and keeps only anonymous rows of finished days. Nothing is switched, the check only tells.
+- **How it shows:** a sensor *Device check* (ok, hint, warn, learning, none, sharing off, confirm) with the result per device as an
+  attribute, a card in the statistics view of the dashboard, a warning once under Repairs and, if *Notify on intervention* is on, as a
+  notification.
+- **New optional fields per device:** *Power of the battery* (home battery, needed for the capacity) and *Kind of device* (heat pump,
+  water heater/heating rod, pump, other) for switches, settings, throttle and scripts. Manufacturer and model come from the device list
+  of Home Assistant.
+- **Shared before 0.15?** One quiet entry under Repairs asks to confirm the device check once (preset to keep sharing). Until then the
+  weekly statistics go on as before and the device check sends nothing. Switching *Share anonymous data* on, or choosing it in the
+  set-up, counts as the consent.
+
+*Deutsch:* Geräte-Check einmal am Tag (nur mit *Anonyme Daten teilen*): Wallbox, Hausakku, schaltbare Geräte, Wärmepumpe und Boiler;
+der Wächter misst nur, beurteilt wird auf unserem Dienst. Sensor, Karte, Reparatur-Meldung; neue Felder *Leistung des Akkus* und
+*Art des Geräts*. Wer schon geteilt hat, bestätigt den Geräte-Check einmal unter Reparaturen; bis dahin sendet er nichts.
+
 ## 0.14.1 - unreleased
 
 - **House forecast without the car for charge planners:** the sensor *expected peak in 24 h* gets the attribute `hours_house`

@@ -153,7 +153,7 @@
       },
       "finish": {
         "title": "Share anonymous data, get more back",
-        "description": "If you share anonymous data, you get more back: from version 0.15 the Wächter checks your devices (wallbox, home battery, heat pump) and compares them with the same devices of others.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices) and, from one of the next versions, anonymous daily values of the devices (energy, highest power, running time, outdoor temperature, manufacturer and model). **Never** names, places, times of day or passwords; the daily values without any id. Details: aiwhatelse.eu/datenschutz\n\nVoluntary, and you can switch it off any time. Thank you!",
+        "description": "Whoever shares anonymous data gets more back: the guard then checks your devices once a day (wallbox, home battery, pumps, heat pump, water heater) and tells you when something is not right any more. The check is done by our service; without sharing there is no device check, everything else of the guard keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices), once a day the measured values of the devices for the check (power of the charges, battery swings, running times, daily energy, outdoor temperature, maker and model) and anonymous daily values for the comparison with the same devices of others. **Never** names, places, dates, times of day or passwords; the measured values without any id. Only the anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time. Thank you!",
         "data": {
           "share_usage": "Yes, I agree"
         }
@@ -237,6 +237,14 @@
         "observe": "Observe",
         "active": "Active",
         "off": "Off"
+      }
+    },
+    "device_type": {
+      "options": {
+        "heat_pump": "Heat pump",
+        "water_heater": "Water heater / heating rod",
+        "pump": "Pump",
+        "other": "Other"
       }
     }
   },
@@ -351,6 +359,18 @@
       },
       "ai_explanation": {
         "name": "Explanation of the day"
+      },
+      "device_check": {
+        "name": "Device check",
+        "state": {
+          "ok": "All fine",
+          "hint": "Hint",
+          "warn": "Warning",
+          "learning": "Still learning",
+          "none": "No check yet",
+          "sharing_off": "Needs data sharing",
+          "confirm": "Please confirm under Repairs"
+        }
       }
     },
     "switch": {
@@ -498,7 +518,8 @@
             "allow_entity": "Intervention only while",
             "pause_min": "Pause after taking back",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -506,7 +527,8 @@
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
             "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
         "reconfigure": {
@@ -524,7 +546,8 @@
             "allow_entity": "Intervention only while",
             "pause_min": "Pause after taking back",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -532,7 +555,8 @@
             "restore_entity": "Optional, e.g. a template that is on while the device's own schedule wants it on.",
             "pause_min": "After switching on again, wait this long before the next switch-off (compressor protection).",
             "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         }
       },
@@ -559,11 +583,13 @@
             "power_w": "Expected reduction",
             "max_off_min": "Maximum duration",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
         "reconfigure": {
@@ -577,11 +603,13 @@
             "power_w": "Expected reduction",
             "max_off_min": "Maximum duration",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "allow_entity": "Optional, e.g. a template that is on while the battery is above its minimum charge.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         }
       }
@@ -613,7 +641,8 @@
             "reserve_entity": "Setting that keeps the charge",
             "reserve_value": "Value that keeps the charge",
             "reserve_lead_min": "Start before a risk window",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "battery_power_entity": "Power of the battery (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
@@ -630,7 +659,8 @@
             "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
             "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
             "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "battery_power_entity": "Sensor of the power into or out of the battery (W or kW, either sign). Only for the device check: from it and the state of charge the guard measures how much the battery still stores."
           }
         },
         "reconfigure": {
@@ -653,7 +683,8 @@
             "reserve_entity": "Setting that keeps the charge",
             "reserve_value": "Value that keeps the charge",
             "reserve_lead_min": "Start before a risk window",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "battery_power_entity": "Power of the battery (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps (default 10: battery last).",
@@ -670,7 +701,8 @@
             "reserve_entity": "Optional, battery reserve: e.g. maximum output power (a low value) or a mode (standby) that stops discharging for self-consumption.",
             "reserve_value": "The number, option or on/off that keeps the battery charged. The previous value is put back afterwards.",
             "reserve_lead_min": "How many minutes before a forecast risk window the battery is held. Needs the switch Battery reserve before a peak.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "battery_power_entity": "Sensor of the power into or out of the battery (W or kW, either sign). Only for the device check: from it and the state of charge the guard measures how much the battery still stores."
           }
         }
       },
@@ -708,7 +740,8 @@
             "restore_original": "Put the previous values back",
             "off_script": "Script after taking back",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -723,7 +756,8 @@
             "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
         "reconfigure": {
@@ -745,7 +779,8 @@
             "restore_original": "Put the previous values back",
             "off_script": "Script after taking back",
             "allow_entity": "Intervention only while",
-            "observe_only": "Observe only"
+            "observe_only": "Observe only",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -760,7 +795,8 @@
             "restore_original": "On: the values from before are put back - only those still holding the changed value. Off: use the script instead.",
             "off_script": "Optional script that runs after taking back.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         }
       },
@@ -800,7 +836,8 @@
             "max_off_min": "Maximum duration",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -817,7 +854,8 @@
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         },
         "reconfigure": {
@@ -839,7 +877,8 @@
             "max_off_min": "Maximum duration",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "device_type": "Type of device (optional)"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -856,7 +895,8 @@
             "max_off_min": "0 = no limit. After this time the device is taken back in any case.",
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
           }
         }
       },
@@ -1152,9 +1192,27 @@
         "step": {
           "confirm": {
             "title": "Share anonymous data, get more back",
-            "description": "If you share anonymous data, you get more back: from version 0.15 the Wächter checks your devices (wallbox, home battery, heat pump) and compares them with the same devices of others.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices) and, from one of the next versions, anonymous daily values of the devices (energy, highest power, running time, outdoor temperature, manufacturer and model). **Never** names, places, times of day or passwords; the daily values without any id. Details: aiwhatelse.eu/datenschutz\n\nVoluntary, and you can switch it off any time. Thank you!",
+            "description": "Whoever shares anonymous data gets more back: the guard then checks your devices once a day (wallbox, home battery, pumps, heat pump, water heater) and tells you when something is not right any more. The check is done by our service; without sharing there is no device check, everything else of the guard keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\nSent are an anonymous usage statistic (versions, country, which kinds of devices), once a day the measured values of the devices for the check (power of the charges, battery swings, running times, daily energy, outdoor temperature, maker and model) and anonymous daily values for the comparison with the same devices of others. **Never** names, places, dates, times of day or passwords; the measured values without any id. Only the anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time. Thank you!",
             "data": {
               "share_usage": "Yes, I agree"
+            }
+          }
+        }
+      }
+    },
+    "device_check": {
+      "title": "Device check: {name}",
+      "description": "{detail}\n\nThe guard does not switch anything because of this; it only tells you. The message goes away by itself once the device works as usual again. More on the card Device check in the dashboard."
+    },
+    "share_usage_check": {
+      "title": "Device check: confirm once",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "New: the device check",
+            "description": "You already share anonymous data, thank you. New in 0.15, the device check looks once a day at whether the wallbox, home battery, pumps, heat pump and water heater still work as usual. For this the guard sends measured values of the devices to our service (power while charging, battery swings, run times, daily use and outside temperature, without a date and without an ID). Only anonymous daily values are stored.\n\nUntil you confirm here, the statistics carry on as before and the device check sends nothing. Leave the switch on and press Submit to start it. Switch it off to stop sharing altogether.",
+            "data": {
+              "share_usage": "Keep sharing, with the device check"
             }
           }
         }

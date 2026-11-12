@@ -31,7 +31,9 @@ from .const import (
     D_COMFORT, D_COMFORT_MIN, D_HOLD, D_OBSERVE, D_MAX_VALUE, D_MIN_SOC, D_MIN_VALUE, D_PAUSE, D_REL1, D_REL1_VALUE, D_REL2,
     D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_STEP, D_VALUE,
 )
+from .const import D_ART, D_BATTERY_POWER
 from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
+from .geraete_check import ARTS
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
 from .evcc import EvccAuthError, EvccClient, EvccError, parse_grid_kw, parse_loadpoint
 from .inputs import grid_sign_hint, loadpoint_choices, loadpoint_prefill, looks_inverted, quarter_peak, unit_errors
@@ -279,6 +281,11 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_OFF_SCRIPT, d)] = _ent("script")
         s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 800))] = _num(10, 20000, 10, "W")
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
+    # device check (0.15): optional, only for what the check needs
+    if kind == KIND_BATTERY:
+        s[_opt(D_BATTERY_POWER, d)] = _ent("sensor")
+    elif kind in (KIND_SWITCH, KIND_SETTING, KIND_THROTTLE, KIND_SCRIPT):
+        s[_opt(D_ART, d)] = SelectSelector(SelectSelectorConfig(options=list(ARTS), translation_key=D_ART))
     s[_opt(D_ALLOW, d)] = _ent(ON_OFF_DOMAINS)
     if kind != KIND_VEHICLE:
         s[vol.Required(D_OBSERVE, default=bool(d.get(D_OBSERVE, False)))] = BooleanSelector()
@@ -439,6 +446,8 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(step_id="finish", data_schema=vol.Schema(
                 {vol.Required("share_usage", default=False): BooleanSelector()}))
         self._options["share_usage"] = bool(user_input.get("share_usage"))
+        if self._options["share_usage"]:
+            self._options["share_check"] = True   # agreed with the text of 0.15, which describes the device check
         subentries = [{"subentry_type": d[D_KIND], "title": device_title(d), "data": d, "unique_id": None} for d in self._devices]
         return self.async_create_entry(title=getattr(self, "_name", "Viertelstunden-Wächter"), data=self._data, options=self._options,
                                        subentries=subentries)

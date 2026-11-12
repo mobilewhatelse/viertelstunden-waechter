@@ -37,7 +37,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         InterventionsTodaySensor(w),
         WeeklyReportSensor(w),
         ExplanationSensor(w),
+        DeviceCheckSensor(w),
     ])
+
+
+class DeviceCheckSensor(WaechterEntity, SensorEntity):
+    """Device check (0.15): ok / hint / warning / learning / no check / sharing off; per device what was found."""
+
+    _unrecorded_attributes = frozenset({"devices", "checked_at"})
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["ok", "hint", "warn", "learning", "none", "sharing_off", "confirm"]
+    _attr_icon = "mdi:stethoscope"
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "device_check")
+
+    @property
+    def native_value(self) -> str:
+        return self.waechter.check_state()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"checked_at": self.waechter.check.checked_at, "devices": self.waechter.check_devices()}
 
 
 class StatusSensor(WaechterEntity, SensorEntity):

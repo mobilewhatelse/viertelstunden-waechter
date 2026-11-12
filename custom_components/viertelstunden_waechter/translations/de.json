@@ -153,7 +153,7 @@
       },
       "finish": {
         "title": "Anonyme Daten teilen, mehr zurückbekommen",
-        "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Ab Version 0.15 prüft der Wächter Ihre Geräte (Wallbox, Hausakku, Wärmepumpe) und vergleicht sie mit gleichen Geräten anderer.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten) und, ab einer der nächsten Versionen, anonyme Tageswerte der Geräte (Energie, höchste Leistung, Laufzeit, Außentemperatur, Hersteller und Modell). **Nie** Namen, Orte, Uhrzeiten oder Kennwörter; die Tageswerte ohne jede Kennung. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+        "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Der Wächter prüft dann einmal am Tag Ihre Geräte (Wallbox, Hausakku, Pumpen, Wärmepumpe, Boiler) und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst; ohne Teilen gibt es keinen Geräte-Check, alles andere am Wächter läuft unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten), einmal am Tag die Messwerte der Geräte für die Prüfung (Leistung der Ladungen, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell) und anonyme Tageswerte für den Vergleich mit gleichen Geräten anderer. **Nie** Namen, Orte, Datum, Uhrzeiten oder Kennwörter; die Messwerte ohne jede Kennung. Gespeichert werden nur die anonymen Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
         "data": {
           "share_usage": "Ja, ich bin einverstanden"
         }
@@ -237,6 +237,14 @@
         "observe": "Beobachten",
         "active": "Aktiv",
         "off": "Aus"
+      }
+    },
+    "device_type": {
+      "options": {
+        "heat_pump": "Wärmepumpe",
+        "water_heater": "Boiler / Heizstab",
+        "pump": "Pumpe",
+        "other": "Sonstiges"
       }
     }
   },
@@ -351,6 +359,18 @@
       },
       "ai_explanation": {
         "name": "Erklärung des Tages"
+      },
+      "device_check": {
+        "name": "Geräte-Check",
+        "state": {
+          "ok": "Alles gut",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "learning": "Lernt noch",
+          "none": "Noch keine Prüfung",
+          "sharing_off": "Braucht Datenfreigabe",
+          "confirm": "Bitte unter Reparaturen bestätigen"
+        }
       }
     },
     "switch": {
@@ -498,7 +518,8 @@
             "allow_entity": "Eingriff nur, solange",
             "pause_min": "Pause nach dem Zurücknehmen",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -506,7 +527,8 @@
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
         "reconfigure": {
@@ -524,7 +546,8 @@
             "allow_entity": "Eingriff nur, solange",
             "pause_min": "Pause nach dem Zurücknehmen",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -532,7 +555,8 @@
             "restore_entity": "Optional, z. B. eine Vorlage, die an ist, solange der eigene Zeitplan des Geräts es an haben will.",
             "pause_min": "Nach dem Wiedereinschalten so lange warten, bevor wieder ausgeschaltet wird (Verdichterschutz).",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         }
       },
@@ -559,11 +583,13 @@
             "power_w": "Erwartete Entlastung",
             "max_off_min": "Höchste Dauer",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
         "reconfigure": {
@@ -577,11 +603,13 @@
             "power_w": "Erwartete Entlastung",
             "max_off_min": "Höchste Dauer",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "allow_entity": "Optional, z. B. eine Vorlage, die an ist, solange der Akku über seiner Mindestladung liegt.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         }
       }
@@ -613,7 +641,8 @@
             "reserve_entity": "Einstellung, die die Ladung hält",
             "reserve_value": "Wert, der die Ladung hält",
             "reserve_lead_min": "Beginn vor einem Risikofenster",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "battery_power_entity": "Leistung des Akkus (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
@@ -630,7 +659,8 @@
             "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
             "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
             "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "battery_power_entity": "Sensor der Leistung in den Akku oder aus dem Akku (W oder kW, Vorzeichen egal). Nur für den Geräte-Check: daraus und aus dem Ladestand misst der Wächter, wie viel der Akku noch speichert."
           }
         },
         "reconfigure": {
@@ -653,7 +683,8 @@
             "reserve_entity": "Einstellung, die die Ladung hält",
             "reserve_value": "Wert, der die Ladung hält",
             "reserve_lead_min": "Beginn vor einem Risikofenster",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "battery_power_entity": "Leistung des Akkus (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft (Standard 10: Batterie zuletzt).",
@@ -670,7 +701,8 @@
             "reserve_entity": "Optional, Akku-Reserve: z. B. maximale Ausgangsleistung (ein niedriger Wert) oder ein Modus (Standby), der das Entladen für den Eigenverbrauch stoppt.",
             "reserve_value": "Die Zahl, Auswahl oder an/aus, mit der der Akku seine Ladung hält. Danach wird der vorherige Wert zurückgestellt.",
             "reserve_lead_min": "So viele Minuten vor einem Risikofenster laut Prognose wird der Akku gehalten. Braucht den Schalter Akku-Reserve vor einer Spitze.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "battery_power_entity": "Sensor der Leistung in den Akku oder aus dem Akku (W oder kW, Vorzeichen egal). Nur für den Geräte-Check: daraus und aus dem Ladestand misst der Wächter, wie viel der Akku noch speichert."
           }
         }
       },
@@ -708,7 +740,8 @@
             "restore_original": "Vorherige Werte wiederherstellen",
             "off_script": "Skript nach dem Zurücknehmen",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -723,7 +756,8 @@
             "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
         "reconfigure": {
@@ -745,7 +779,8 @@
             "restore_original": "Vorherige Werte wiederherstellen",
             "off_script": "Skript nach dem Zurücknehmen",
             "allow_entity": "Eingriff nur, solange",
-            "observe_only": "Nur beobachten"
+            "observe_only": "Nur beobachten",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -760,7 +795,8 @@
             "restore_original": "An: Die Werte von vorher werden wiederhergestellt – nur die, die noch den geänderten Wert haben. Aus: das Skript verwenden.",
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         }
       },
@@ -800,7 +836,8 @@
             "max_off_min": "Höchste Dauer",
             "allow_entity": "Eingriff nur, solange",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -817,7 +854,8 @@
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         },
         "reconfigure": {
@@ -839,7 +877,8 @@
             "max_off_min": "Höchste Dauer",
             "allow_entity": "Eingriff nur, solange",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "device_type": "Art des Geräts (optional)"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -856,7 +895,8 @@
             "max_off_min": "0 = ohne Grenze. Danach wird das Gerät auf jeden Fall zurückgenommen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
           }
         }
       },
@@ -1152,9 +1192,27 @@
         "step": {
           "confirm": {
             "title": "Anonyme Daten teilen, mehr zurückbekommen",
-            "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Ab Version 0.15 prüft der Wächter Ihre Geräte (Wallbox, Hausakku, Wärmepumpe) und vergleicht sie mit gleichen Geräten anderer.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten) und, ab einer der nächsten Versionen, anonyme Tageswerte der Geräte (Energie, höchste Leistung, Laufzeit, Außentemperatur, Hersteller und Modell). **Nie** Namen, Orte, Uhrzeiten oder Kennwörter; die Tageswerte ohne jede Kennung. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
+            "description": "Wer anonyme Daten teilt, bekommt mehr zurück: Der Wächter prüft dann einmal am Tag Ihre Geräte (Wallbox, Hausakku, Pumpen, Wärmepumpe, Boiler) und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst; ohne Teilen gibt es keinen Geräte-Check, alles andere am Wächter läuft unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\nGesendet werden eine anonyme Nutzungsstatistik (Versionen, Land, welche Gerätearten), einmal am Tag die Messwerte der Geräte für die Prüfung (Leistung der Ladungen, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell) und anonyme Tageswerte für den Vergleich mit gleichen Geräten anderer. **Nie** Namen, Orte, Datum, Uhrzeiten oder Kennwörter; die Messwerte ohne jede Kennung. Gespeichert werden nur die anonymen Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar. Danke!",
             "data": {
               "share_usage": "Ja, ich bin einverstanden"
+            }
+          }
+        }
+      }
+    },
+    "device_check": {
+      "title": "Geräte-Check: {name}",
+      "description": "{detail}\n\nDer Wächter schaltet deswegen nichts, er sagt es nur. Die Meldung verschwindet von selbst, sobald das Gerät wieder wie gewohnt arbeitet. Mehr auf der Karte Geräte-Check im Dashboard."
+    },
+    "share_usage_check": {
+      "title": "Geräte-Check: einmal bestätigen",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Neu: der Geräte-Check",
+            "description": "Du teilst schon anonyme Daten, danke dafür. Neu in 0.15 prüft der Geräte-Check einmal am Tag, ob Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler noch wie gewohnt arbeiten. Dafür schickt der Wächter Messwerte der Geräte an unseren Dienst (Leistung beim Laden, Hübe des Akkus, Laufzeiten, Tagesverbrauch und Außentemperatur, ohne Datum und ohne Kennung). Gespeichert werden nur anonyme Tageswerte.\n\nBis du hier bestätigst, läuft die Statistik wie bisher, der Geräte-Check sendet noch nichts. Lässt du den Schalter an und drückst Senden, startet er. Schaltest du ihn aus, wird das Teilen ganz abgeschaltet.",
+            "data": {
+              "share_usage": "Weiter teilen, mit Geräte-Check"
             }
           }
         }

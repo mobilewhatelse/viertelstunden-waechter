@@ -46,6 +46,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "expl_from": "Erklärung vom", "expl_next": "Die Erklärung für heute kommt abends um 21 Uhr.", "expl_error": "Die Erklärung konnte nicht erstellt werden",
         "predictive": "Vorausschauend drosseln nach Prognose (Standard aus)", "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
+        "check_title": "Geräte-Check", "check_state": "Geräte-Check", "check_share": "Anonyme Daten teilen",
+        "check_off": "Der Geräte-Check prüft Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler einmal am Tag und meldet, wenn etwas "
+                     "nicht mehr stimmt. Er läuft nur mit eingeschaltetem *Anonyme Daten teilen*.",
+        "check_ok": "alles gut", "check_learning": "lernt noch", "check_none": "kein Check (zu unterschiedlich oder nichts zu prüfen)",
+        "check_wait": "Die erste Prüfung kommt im Lauf der nächsten Stunde.", "check_last": "Zuletzt geprüft",
+        "check_confirm": "Neu in 0.15: Der Geräte-Check sendet dafür einmal am Tag Messwerte der Geräte. Bitte einmal bestätigen.",
+        "check_repairs": "Zu den Reparaturen",
         "view_today": "Heute", "now_title": "Jetzt", "now_of": "Prognose dieser Viertelstunde / Ziel", "legend_now": "Weißer Strich = Ziel, roter gestrichelter Strich = Grenze. Grün = sicher darunter, gelb = knapp, rot = über der Grenze.", "quarters_title": "Die Viertelstunden von heute", "legend_quarters": "Jeder Balken eine abgeschlossene Viertelstunde, rot = über der Grenze.", "last_iv": "Letzte Eingriffe", "no_iv_today": "Heute noch keine Eingriffe.", "mode_title": "Betriebsart",
         "today": "Heute", "no_decisions": "Noch keine Entscheidungen heute.", "devices": "Geräte und Prioritäten",
         "measure": "Messung", "grid": "Netzbezug", "counter": "Bezugszähler", "lock": "Sperre „Aktiv“",
@@ -109,6 +116,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "expl_from": "Explanation of", "expl_next": "The explanation for today follows in the evening at 21:00.", "expl_error": "The explanation could not be created",
         "predictive": "Throttle ahead using the forecast (default off)", "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
+        "check_title": "Device check", "check_state": "Device check", "check_share": "Share anonymous data",
+        "check_off": "The device check looks at the wallbox, home battery, pumps, heat pump and water heater once a day and tells you "
+                     "when something is not right any more. It runs only with *Share anonymous data* switched on.",
+        "check_ok": "all fine", "check_learning": "still learning", "check_none": "no check (too uneven or nothing to check)",
+        "check_wait": "The first check comes within the next hour.", "check_last": "Last checked",
+        "check_confirm": "New in 0.15: for this the device check sends measured values of the devices once a day. Please confirm once.",
+        "check_repairs": "Go to Repairs",
         "view_today": "Today", "now_title": "Now", "now_of": "Forecast of this quarter hour / target", "legend_now": "White mark = target, red dashed mark = limit. Green = safely below, yellow = close, red = above the limit.", "quarters_title": "Today's quarter hours", "legend_quarters": "Each bar one finished quarter hour, red = above the limit.", "last_iv": "Latest interventions", "no_iv_today": "No interventions yet today.", "mode_title": "Mode",
         "today": "Today", "no_decisions": "No decisions yet today.", "devices": "Devices and priorities",
         "measure": "Measurement", "grid": "Grid import", "counter": "Import counter", "lock": "Lock for \"Active\"",
@@ -188,6 +202,24 @@ def _explanation_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% else %}*" + x["expl_from"] + " {{ d[8:10] }}.{{ d[5:7] }}.:* {{ r }}\n\n" + x["expl_next"] + "{% endif %}"
         "{% elif state_attr(s, 'error') %}\u26a0\ufe0f " + x["expl_error"] + ": {{ state_attr(s, 'error') }}"
         "{% else %}" + x["ai_none"] + "{% endif %}"
+    )
+
+
+def _check_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """Device check: per device what was found, what is still being learned; without sharing, what it would do."""
+    s = ids["device_check"]
+    return (
+        "{% set s = '" + s + "' %}{% set st = states(s) %}"
+        "{% if st == 'sharing_off' or st in ['unknown', 'unavailable'] %}" + x["check_off"] + ""
+        "{% elif st == 'confirm' %}" + x["check_confirm"] + " [" + x["check_repairs"] + "](/config/repairs)"
+        "{% elif not state_attr(s, 'checked_at') %}" + x["check_wait"] + ""
+        "{% else %}{% for d in state_attr(s, 'devices') or [] %}- **{{ d['name'] }}**: "
+        "{% if d['found'] %}{% for f in d['found'] %}{{ '⚠️' if f['level'] == 'warn' else 'ℹ️' }} {{ f['text'] }} {% endfor %}"
+        "{% elif d['status'] == 'learning' and d['learning'] %}" + x["check_learning"] + " ({{ d['learning'][0] }}/{{ d['learning'][1] }})"
+        "{% elif d['status'] == 'ok' %}✅ " + x["check_ok"] + ""
+        "{% else %}" + x["check_none"] + "{% endif %}\n"
+        "{% endfor %}{% set t = state_attr(s, 'checked_at') %}\n*" + x["check_last"] + ": {{ t[8:10] }}.{{ t[5:7] }}. {{ t[11:16] }}*"
+        "{% endif %}"
     )
 
 
@@ -459,6 +491,12 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
             ]},
             _plan_section(ids, x, planners),
             {"type": "grid", "cards": [
+                {"type": "heading", "heading": x["check_title"], "icon": "mdi:stethoscope"},
+                _tile(ids["device_check"], x["check_state"]),
+                {"type": "markdown", "content": _check_markdown(ids, x)},
+                {"type": "entities", "entities": [{"entity": ids["share_usage"], "name": x["check_share"]}]},
+            ]},
+            {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["profile"], "icon": "mdi:calendar-week"},
                 {"type": "markdown", "content": charts.profile(ids, x["days"], x["hour_label"], x["legend_profile"], x["no_forecast"])},
             ]},
@@ -486,7 +524,7 @@ ENTITY_KEYS: dict[str, str] = {
     "cost_without": "sensor", "savings_month": "sensor", "savings_year": "sensor", "saved_now": "sensor",
     "forecast_now": "sensor", "forecast_peak": "sensor", "next_risk": "sensor",
     "charge_plan": "sensor", "charge_plan_enabled": "switch", "charge_plan_execute": "switch",
-    "feedback_text": "text", "feedback_send": "button", "share_usage": "switch",
+    "feedback_text": "text", "feedback_send": "button", "share_usage": "switch", "device_check": "sensor",
 }
 
 

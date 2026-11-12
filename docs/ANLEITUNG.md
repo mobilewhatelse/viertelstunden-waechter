@@ -800,7 +800,7 @@ Statistik (siehe Lastprognose).
 ## Anonyme Nutzungsstatistik (freiwillig) und Rückmeldung
 
 **Nutzungsstatistik, aus, solange Sie sie nicht einschalten.** Der letzte Schritt der Einrichtung fragt danach; danach der
-Schalter *Anonyme Nutzungsstatistik senden* am Gerät der Integration. Solange er an ist, geht einmal pro Woche an
+Schalter *Anonyme Daten teilen* am Gerät der Integration. Solange er an ist, geht einmal pro Woche an
 `aiwhatelse.eu`:
 
 | Gesendet | Nie gesendet |
@@ -813,6 +813,33 @@ Schalter *Anonyme Nutzungsstatistik senden* am Gerät der Integration. Solange e
 
 Es wird keine IP-Adresse gespeichert. Beim Ausschalten wird einmal das Löschen der Daten dieser Kennung angefordert. Wozu: um zu
 sehen, welche Wallboxen, Zähler und Autos verwendet werden, damit diese zuerst getestet werden.
+
+### Geräte-Check (ab 0.15, nur mit *Anonyme Daten teilen*)
+
+Einmal am Tag fragt der Wächter unseren Dienst, ob die angebundenen Geräte noch wie gewohnt arbeiten. Der Wächter **misst nur**,
+beurteilt wird auf dem Dienst. So können die Schwellen besser werden, ohne dass Sie etwas aktualisieren müssen. Geschaltet wird
+dabei nichts, der Check sagt nur etwas.
+
+| Gerät | Was geprüft wird | Was dafür gebraucht wird |
+|---|---|---|
+| Wallbox | Leistung beim Laden im Vergleich zu eingestelltem Strom × Phasen × 230 V: Leistungsabfall, fehlende Phase, langsamer Rückgang | Leistungssensor; gemessen wird nur, wenn die Vorgabe 10 min gleich war, weder Wächter noch evcc gedrosselt haben, das Auto unter 85 % war und es nicht unter 0 °C hatte |
+| Hausakku | nutzbare Kapazität aus vollen Hüben (mindestens 40 Prozentpunkte) | Ladestand und das neue Feld *Leistung des Akkus* |
+| Schalter, Pumpen, Heizstab | „braucht mehr als sonst“, „zieht nichts, obwohl an“ | Leistungssensor; nur bei gleichmäßigen Geräten (ein Stecker mit wechselnden Geräten bekommt „kein Check“) |
+| Wärmepumpe | Tagesenergie gegen die Außentemperatur | Feld *Art des Geräts* = Wärmepumpe, eine Außentemperatur (Wetter) |
+| Boiler | Tagesenergie gegen das eigene Mittel | Feld *Art des Geräts* = Boiler/Heizstab |
+
+Am Anfang lernt der Check (die Karte zeigt z. B. „lernt noch, 3 von 10“). Zu sehen ist das Ergebnis am Sensor *Geräte-Check* und
+auf der Karte *Geräte-Check* in der Ansicht Statistik. Eine Warnung erscheint einmal unter **Reparaturen** und, wenn *Meldung bei
+Eingriff* an ist, als Meldung.
+
+**Was gesendet wird:** je Gerät Art, Hersteller und Modell (aus der Geräteliste von Home Assistant) und gerundete Messwerte der
+höchstens letzten 120 Tage. Statt eines Datums steht nur „vor so vielen Tagen“. Keine Namen, keine Entitäts-IDs, keine Kennung der
+Installation; die Gerätenummern gelten nur in dieser einen Anfrage. Der Dienst speichert die Anfrage nicht, er behält nur anonyme
+Werte abgeschlossener Tage ohne Datum.
+
+**Wer schon vor 0.15 geteilt hat**, findet unter Reparaturen einmal den Eintrag *Geräte-Check: einmal bestätigen*. Der Schalter
+dort steht auf „weiter teilen“; *Senden* startet den Check. Bis dahin läuft die Wochenstatistik wie bisher und der Geräte-Check
+sendet nichts.
 
 **Rückmeldung.** In das Textfeld *Rückmeldung* am Gerät der Integration schreiben und *Rückmeldung senden* drücken, oder die
 Aktion `send_feedback` (längere Texte, optional eine Kontaktadresse, mit oder ohne die Übersicht der Einrichtung oben). Sie geht
