@@ -33,7 +33,7 @@ Every decision is logged with its reason. [How it decides, in detail](docs/MANUA
 - Recommended: the grid import **energy counter**.
 
 A solar plant is not needed. [More on the measurement](docs/MANUAL.md#grid-measurement-what-the-guard-needs) ·
-[tested devices](docs/COMPATIBILITY.md).
+[tested devices and what others use](docs/COMPATIBILITY.md).
 
 ## Installation
 

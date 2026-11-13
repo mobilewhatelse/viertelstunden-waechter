@@ -19,6 +19,20 @@ observed, on real hardware, reported with the version number. So far only the Wa
 (by the authors, 2026-10-25); the other device types - throttle power, change settings, battery release - have not.
 Please be the first - see "How to report a test" below.
 
+## In use by others (from the voluntary statistic)
+
+Users who switched on *Share anonymous data* send which integrations their grid sensors and devices come from
+(only the name of the integration, nothing else). As of 2026-11-13, from 36 installations, these are in use with
+the guard. **In use does not mean tested:** we do not know whether the guard intervened there, only that it was set up.
+
+- **Inverters and meters:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus, Kostal Plenticore, Victron GX, HomeWizard, Tibber
+- **Wallboxes:** Fronius Wattpilot, go-e Charger (`goecharger_api2`), Charge Amps, and any wallbox through **evcc** (the most used way)
+- **Home batteries:** sonnenBatterie, Anker Solix
+- **Cars:** FordPass
+
+General building blocks (template, MQTT, utility meter, integration, min/max) are left out. Running the guard with
+one of these? A short report in the issues helps everyone, see "How to report a test" below.
+
 ## Wallboxes (device type *Wallbox*)
 
 Needs a charging power sensor and a settable charging current (`number`, A).
