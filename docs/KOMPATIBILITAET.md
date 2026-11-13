@@ -19,6 +19,20 @@ echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher h
 erreicht (durch die Autoren, 25.10.2026); die anderen Gerätetypen – Leistung drosseln, Einstellung ändern, Batterie-Freigabe – noch nicht.
 Seien Sie der Erste – siehe „So melden Sie einen Test“.
 
+## Bei anderen im Einsatz (aus der freiwilligen Statistik)
+
+Wer *Anonyme Daten teilen* eingeschaltet hat, sendet, aus welchen Integrationen seine Netzsensoren und Geräte kommen
+(nur der Name der Integration, sonst nichts). Stand 13.11.2026, aus 36 Installationen, sind diese mit dem Wächter im
+Einsatz. **Im Einsatz heißt nicht getestet:** Wir wissen nicht, ob der Wächter dort eingegriffen hat, nur dass er eingerichtet ist.
+
+- **Wechselrichter und Zähler:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus, Kostal Plenticore, Victron GX, HomeWizard, Tibber
+- **Wallboxen:** Fronius Wattpilot, go-e Charger (`goecharger_api2`), Charge Amps und jede Wallbox über **evcc** (der häufigste Weg)
+- **Hausakkus:** sonnenBatterie, Anker Solix
+- **Autos:** FordPass
+
+Allgemeine Bausteine (Template, MQTT, Verbrauchszähler, Integral, Min/Max) sind weggelassen. Sie nutzen den Wächter
+mit einem dieser Geräte? Ein kurzer Bericht in den Issues hilft allen, siehe „So melden Sie einen Test“ unten.
+
 ## Wallboxen (Gerätetyp *Wallbox*)
 
 Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
