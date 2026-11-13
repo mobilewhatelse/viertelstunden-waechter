@@ -153,7 +153,7 @@
       },
       "finish": {
         "title": "Anonyme Daten teilen, mehr zurückbekommen",
-        "description": "Wer anonyme Daten teilt, bekommt den Geräte-Check: Der Wächter prüft einmal am Tag Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst. Ohne Teilen läuft alles andere unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\n**Gesendet wird:** eine Nutzungsstatistik (Versionen, Land, Gerätearten) und einmal am Tag Messwerte der Geräte (Leistung, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell).\n**Nie:** Namen, Orte, Datum, Uhrzeiten oder Kennwörter. Gespeichert werden nur anonyme Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar.",
+        "description": "Wer anonyme Daten teilt, bekommt den Geräte-Check: Der Wächter prüft einmal am Tag Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst. Ohne Teilen läuft alles andere unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\n**Gesendet wird:** eine Nutzungsstatistik (Versionen, Land, Gerätearten) und einmal am Tag Messwerte der Geräte (Leistung, Akku-Hübe und Alter des Akkus, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell).\n**Nie:** Namen, Orte, Datum, Uhrzeiten oder Kennwörter. Gespeichert werden nur anonyme Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar.",
         "data": {
           "share_usage": "Ja, ich bin einverstanden"
         }
@@ -1192,7 +1192,7 @@
         "step": {
           "confirm": {
             "title": "Anonyme Daten teilen, mehr zurückbekommen",
-            "description": "Wer anonyme Daten teilt, bekommt den Geräte-Check: Der Wächter prüft einmal am Tag Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst. Ohne Teilen läuft alles andere unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\n**Gesendet wird:** eine Nutzungsstatistik (Versionen, Land, Gerätearten) und einmal am Tag Messwerte der Geräte (Leistung, Akku-Hübe, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell).\n**Nie:** Namen, Orte, Datum, Uhrzeiten oder Kennwörter. Gespeichert werden nur anonyme Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar.",
+            "description": "Wer anonyme Daten teilt, bekommt den Geräte-Check: Der Wächter prüft einmal am Tag Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler und meldet, wenn etwas nicht mehr stimmt. Die Prüfung macht unser Dienst. Ohne Teilen läuft alles andere unverändert lokal.\n\n![Vorschau: Geräte-Check](/viertelstunden_waechter/vorschau/geraete-check-de.webp)\n\n**Gesendet wird:** eine Nutzungsstatistik (Versionen, Land, Gerätearten) und einmal am Tag Messwerte der Geräte (Leistung, Akku-Hübe und Alter des Akkus, Laufzeiten, Tagesenergie, Außentemperatur, Hersteller und Modell).\n**Nie:** Namen, Orte, Datum, Uhrzeiten oder Kennwörter. Gespeichert werden nur anonyme Tageswerte. Mehr: aiwhatelse.eu/datenschutz\n\nFreiwillig und jederzeit abschaltbar.",
             "data": {
               "share_usage": "Ja, ich bin einverstanden"
             }
@@ -1210,7 +1210,7 @@
         "step": {
           "confirm": {
             "title": "Neu: der Geräte-Check",
-            "description": "Sie teilen schon anonyme Daten, danke. Neu in 0.15: Der Geräte-Check prüft einmal am Tag, ob Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler noch wie gewohnt arbeiten. Dafür gehen Messwerte der Geräte an unseren Dienst (Leistung, Akku-Hübe, Laufzeiten, Tagesverbrauch, Außentemperatur), ohne Datum und ohne Kennung. Gespeichert werden nur anonyme Tageswerte.\n\nSchalter an und Senden: Der Geräte-Check startet. Schalter aus: Das Teilen wird ganz abgeschaltet. Bis dahin sendet der Geräte-Check nichts.",
+            "description": "Sie teilen schon anonyme Daten, danke. Neu in 0.15: Der Geräte-Check prüft einmal am Tag, ob Wallbox, Hausakku, Pumpen, Wärmepumpe und Boiler noch wie gewohnt arbeiten. Dafür gehen Messwerte der Geräte an unseren Dienst (Leistung, Akku-Hübe und Alter des Akkus, Laufzeiten, Tagesverbrauch, Außentemperatur), ohne Datum und ohne Kennung. Gespeichert werden nur anonyme Tageswerte.\n\nSchalter an und Senden: Der Geräte-Check startet. Schalter aus: Das Teilen wird ganz abgeschaltet. Bis dahin sendet der Geräte-Check nichts.",
             "data": {
               "share_usage": "Weiter teilen, mit Geräte-Check"
             }

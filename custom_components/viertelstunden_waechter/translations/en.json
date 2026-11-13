@@ -153,7 +153,7 @@
       },
       "finish": {
         "title": "Share anonymous data, get more back",
-        "description": "Whoever shares anonymous data gets the device check: once a day the guard checks wallbox, home battery, pumps, heat pump and water heater and tells you when something is not right any more. The check is done by our service. Without sharing everything else keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\n**Sent:** a usage statistic (versions, country, kinds of devices) and once a day measured values of the devices (power, battery swings, running times, daily energy, outdoor temperature, maker and model).\n**Never:** names, places, dates, times of day or passwords. Only anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time.",
+        "description": "Whoever shares anonymous data gets the device check: once a day the guard checks wallbox, home battery, pumps, heat pump and water heater and tells you when something is not right any more. The check is done by our service. Without sharing everything else keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\n**Sent:** a usage statistic (versions, country, kinds of devices) and once a day measured values of the devices (power, battery swings and battery age, running times, daily energy, outdoor temperature, maker and model).\n**Never:** names, places, dates, times of day or passwords. Only anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time.",
         "data": {
           "share_usage": "Yes, I agree"
         }
@@ -1192,7 +1192,7 @@
         "step": {
           "confirm": {
             "title": "Share anonymous data, get more back",
-            "description": "Whoever shares anonymous data gets the device check: once a day the guard checks wallbox, home battery, pumps, heat pump and water heater and tells you when something is not right any more. The check is done by our service. Without sharing everything else keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\n**Sent:** a usage statistic (versions, country, kinds of devices) and once a day measured values of the devices (power, battery swings, running times, daily energy, outdoor temperature, maker and model).\n**Never:** names, places, dates, times of day or passwords. Only anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time.",
+            "description": "Whoever shares anonymous data gets the device check: once a day the guard checks wallbox, home battery, pumps, heat pump and water heater and tells you when something is not right any more. The check is done by our service. Without sharing everything else keeps running locally as before.\n\n![Preview: device check](/viertelstunden_waechter/vorschau/geraete-check-en.webp)\n\n**Sent:** a usage statistic (versions, country, kinds of devices) and once a day measured values of the devices (power, battery swings and battery age, running times, daily energy, outdoor temperature, maker and model).\n**Never:** names, places, dates, times of day or passwords. Only anonymous daily values are kept. More: aiwhatelse.eu/datenschutz\n\nVoluntary and can be switched off at any time.",
             "data": {
               "share_usage": "Yes, I agree"
             }
@@ -1210,7 +1210,7 @@
         "step": {
           "confirm": {
             "title": "New: the device check",
-            "description": "You already share anonymous data, thank you. New in 0.15: the device check looks once a day at whether the wallbox, home battery, pumps, heat pump and water heater still work as usual. For this, measured values of the devices go to our service (power, battery swings, run times, daily use, outdoor temperature), without a date and without an id. Only anonymous daily values are stored.\n\nSwitch on and Submit: the device check starts. Switch off: sharing is switched off altogether. Until then the device check sends nothing.",
+            "description": "You already share anonymous data, thank you. New in 0.15: the device check looks once a day at whether the wallbox, home battery, pumps, heat pump and water heater still work as usual. For this, measured values of the devices go to our service (power, battery swings and battery age, run times, daily use, outdoor temperature), without a date and without an id. Only anonymous daily values are stored.\n\nSwitch on and Submit: the device check starts. Switch off: sharing is switched off altogether. Until then the device check sends nothing.",
             "data": {
               "share_usage": "Keep sharing, with the device check"
             }
