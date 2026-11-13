@@ -11,6 +11,10 @@ Format: newest first. German version below each English block is a short summary
   own mean. The guard only measures; the thresholds and the judging live on the service, so they can improve without an update.
   The request carries "days ago" instead of dates, device numbers valid only within one request, no names, entity ids or id of the
   installation; the service answers and keeps only anonymous rows of finished days. Nothing is switched, the check only tells.
+- **Comparable with the same devices of others (for later):** the anonymous rows also carry values that do not depend on the size
+  of the house: a home battery's capacity in percent of its own base value, its rated capacity and age in half years; a heat
+  pump's day against its own curve at the same outdoor temperature and the shape of that curve (0 against 10 deg C); a water
+  heater's day against its own mean.
 - **How it shows:** a sensor *Device check* (ok, hint, warn, learning, none, sharing off, confirm) with the result per device as an
   attribute, a card in the statistics view of the dashboard, a warning once under Repairs and, if *Notify on intervention* is on, as a
   notification.
@@ -24,6 +28,8 @@ Format: newest first. German version below each English block is a short summary
 *Deutsch:* Geräte-Check einmal am Tag (nur mit *Anonyme Daten teilen*): Wallbox, Hausakku, schaltbare Geräte, Wärmepumpe und Boiler;
 der Wächter misst nur, beurteilt wird auf unserem Dienst. Sensor, Karte, Reparatur-Meldung; neue Felder *Leistung des Akkus* und
 *Art des Geräts*. Wer schon geteilt hat, bestätigt den Geräte-Check einmal unter Reparaturen; bis dahin sendet er nichts.
+Für den späteren Vergleich mit gleichen Geräten zusätzlich Werte, die nicht von der Hausgröße abhängen (Akku in Prozent vom
+Anfangswert, Nennkapazität, Alter; Wärmepumpe und Boiler gegen den eigenen üblichen Wert).
 
 ## 0.14.2 - 2026-11-13
 

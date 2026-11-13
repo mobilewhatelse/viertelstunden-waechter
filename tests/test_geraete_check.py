@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
-from geraete_check import ART_WATER_HEATER, DeviceCheck, Sample, text
+from geraete_check import ART_HEAT_PUMP, ART_WATER_HEATER, DeviceCheck, Sample, text
 
 TZ = timezone(timedelta(hours=1))
 T0 = datetime(2027, 1, 4, 8, 0, tzinfo=TZ)
@@ -151,6 +151,56 @@ def days(c: DeviceCheck, start: datetime, values: list[tuple[float, float]], dev
             t += STEP
     c.step(t, {dev: Sample("switch", art=ART_WATER_HEATER, power_w=0.0, is_on=True)}, 0.0)
     return t
+
+
+def days_fast(c: DeviceCheck, start: datetime, values: list[tuple[float, float]], dev: str, art: str) -> datetime:
+    """Whole days with constant power, one step every 2 minutes (the longest step that is still integrated)."""
+    t, step = start, timedelta(minutes=2)
+    for kwh, temp in values:
+        for _ in range(720):
+            c.step(t, {dev: Sample("switch", art=art, power_w=kwh / 24 * 1000, is_on=True)}, temp)
+            t += step
+    c.step(t, {dev: Sample("switch", art=art, power_w=0.0, is_on=True)}, 0.0)
+    return t
+
+
+class ComparableValuesTests(unittest.TestCase):
+    """Values that do not depend on the size of the house, for the comparison with the same devices of others."""
+
+    def test_battery_percent_of_base_and_age(self):
+        c, t, soc, up = DeviceCheck(), T0, 10.0, True
+        for _ in range(14):
+            to = 90.0 if up else 10.0
+            t = swing(c, t, soc, to, 1.5 * 0.8)
+            soc, up = to, not up
+        c.step(t + timedelta(days=1), {"bat": Sample("battery", soc=soc, battery_w=0.0)}, 5.0)
+        rows = [d for d in c.new_days if "kapazitaet_pct" in d]
+        self.assertTrue(rows)
+        self.assertAlmostEqual(rows[-1]["kapazitaet_pct"], 100.0, delta=3)
+        self.assertEqual(c.request(T0 + timedelta(days=3), {}, "x")["geraete"][0]["alter_halbjahre"], 0)
+        self.assertEqual(c.request(T0 + timedelta(days=400), {}, "x")["geraete"][0]["alter_halbjahre"], 2)
+
+    def test_heat_pump_against_own_curve_and_shape(self):
+        c = DeviceCheck()
+        temps = [0, 3, 6, 9, 12, 2, 5, 8, 11, 1, 4, 7, 10, 0, 6, 12, 3, 9, 2, 8, 5, 11, 4]
+        values = [(30 - 1.5 * x, float(x)) for x in temps] + [(1.3 * (30 - 1.5 * 5), 5.0)]
+        days_fast(c, datetime(2027, 1, 1, tzinfo=TZ), values, "wp", ART_HEAT_PUMP)
+        last = [d for d in c.new_days if d["dev"] == "wp"][-1]
+        self.assertAlmostEqual(last["rel_kurve"], 1.3, delta=0.03)
+        g = c.request(datetime(2027, 2, 1, tzinfo=TZ), {}, "x")["geraete"][0]
+        self.assertAlmostEqual(g["form_kalt_mild"], 2.0, delta=0.1)   # 30 kWh at 0 deg C against 15 kWh at 10 deg C
+
+    def test_heat_pump_too_few_days_no_value(self):
+        c = DeviceCheck()
+        days_fast(c, datetime(2027, 1, 1, tzinfo=TZ), [(20.0, float(x)) for x in range(10)], "wp", ART_HEAT_PUMP)
+        self.assertFalse(any("rel_kurve" in d for d in c.new_days))
+        self.assertNotIn("form_kalt_mild", c.request(datetime(2027, 2, 1, tzinfo=TZ), {}, "x")["geraete"][0])
+
+    def test_water_heater_against_own_mean(self):
+        c = DeviceCheck()
+        days_fast(c, datetime(2027, 1, 1, tzinfo=TZ), [(3.0, 5.0)] * 15 + [(6.0, 5.0)], "boiler", ART_WATER_HEATER)
+        last = [d for d in c.new_days if d["dev"] == "boiler"][-1]
+        self.assertAlmostEqual(last["rel_kurve"], 2.0, delta=0.05)
 
 
 class DayAndPrivacyTests(unittest.TestCase):

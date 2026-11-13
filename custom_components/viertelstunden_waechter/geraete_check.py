@@ -13,6 +13,9 @@ Measured here:
 - switchable devices: the mean power of every run of at least 10 minutes, the share of the on-time in which it drew, and how long
   it has been switched on without drawing
 - every device: energy, highest power and running time per day, with the mean outdoor temperature
+- for the comparison with the same devices of others, values that do not depend on the size of the house: a home battery's
+  capacity as a share of its own base value and its age in half years; a heat pump's day against its own curve at the same
+  outdoor temperature and the shape of that curve (cold against mild); a water heater's day against its own mean
 """
 
 from __future__ import annotations
@@ -40,6 +43,10 @@ KEEP_RUNS = 80
 KEEP_SWINGS = 40
 KEEP_DAYS = 400
 SEND_DAYS = 120                # days per device in a check request
+CURVE_DAYS = 21                # a heat pump needs this many days with temperature for its own curve
+CURVE_SPAN_K = 8.0             # ... over at least this many kelvin for the shape cold/mild
+MEAN_DAYS = 14                 # a water heater needs this many days for its own mean
+BASE_FOR_PCT = 3               # swings of the base value before a battery's capacity is given in percent of it
 MAX_STEP_S = 120               # a gap longer than this is not integrated
 
 ART_HEAT_PUMP = "heat_pump"
@@ -113,6 +120,26 @@ class Sample:
 
 def _mean(xs: list[float]) -> float | None:
     return sum(xs) / len(xs) if xs else None
+
+
+def _fit(days: list) -> tuple[float, float] | None:
+    """Straight line kWh per day over the outdoor temperature (rows [date, kwh, max_kw, hours, temp]), from days with energy and
+    temperature; None with fewer than CURVE_DAYS of them or no spread of the temperature."""
+    pts = [(float(r[4]), float(r[1])) for r in days if r[4] is not None and r[1] and r[1] > 0]
+    if len(pts) < CURVE_DAYS:
+        return None
+    mt = sum(p[0] for p in pts) / len(pts)
+    mk = sum(p[1] for p in pts) / len(pts)
+    var = sum((p[0] - mt) ** 2 for p in pts)
+    if var <= 0:
+        return None
+    slope = sum((p[0] - mt) * (p[1] - mk) for p in pts) / var
+    return mk - slope * mt, slope
+
+
+def _span(days: list) -> float:
+    temps = [float(r[4]) for r in days if r[4] is not None and r[1] and r[1] > 0]
+    return max(temps) - min(temps) if temps else 0.0
 
 
 def _days_between(a: str, b: str) -> int:
@@ -208,9 +235,38 @@ class DeviceCheck:
             shared["anteil_vorgabe"] = round(st["day_share"], 3)
         if st.get("kind") in BATTERY_KINDS and st.get("day_cap") is not None:
             shared["kapazitaet_kwh"] = round(st["day_cap"], 2)
+            base = (st.get("bat") or {}).get("base") or []
+            if len(base) >= BASE_FOR_PCT:
+                ref = sum(x[0] for x in base) / len(base)
+                if ref > 0:
+                    shared["kapazitaet_pct"] = round(st["day_cap"] / ref * 100.0, 1)
+        rel = self._relative(st, row)
+        if rel is not None:
+            shared["rel_kurve"] = rel
         st["day_share"] = st["day_cap"] = None
         self.new_days.append(shared)
         del self.new_days[:-KEEP_DAYS]
+
+    @staticmethod
+    def _relative(st: dict[str, Any], row: list) -> float | None:
+        """The finished day against the device's own past (without this day): a heat pump against its curve at the same outdoor
+        temperature, a water heater against its mean. Size of the house and of the tank drop out."""
+        before = st.get("days", [])[:-1]
+        if not row[1] or row[1] <= 0:
+            return None
+        if st.get("art") == ART_HEAT_PUMP and row[4] is not None:
+            fit = _fit(before[-SEND_DAYS:])
+            if fit is None:
+                return None
+            expected = fit[0] + fit[1] * float(row[4])
+            return round(row[1] / expected, 3) if expected > 0.1 else None
+        if st.get("art") == ART_WATER_HEATER:
+            ks = [float(r[1]) for r in before[-30:] if r[1] and r[1] > 0]
+            if len(ks) < MEAN_DAYS:
+                return None
+            mean = sum(ks) / len(ks)
+            return round(row[1] / mean, 3) if mean > 0.05 else None
+        return None
 
     def _wallbox(self, st: dict[str, Any], now: datetime, s: Sample, temp_c: float | None) -> None:
         w = st.setdefault("wb", {"sessions": [], "win": None, "sess": None, "last_charge": None})
@@ -281,6 +337,7 @@ class DeviceCheck:
                 base = b.setdefault("base", [])
                 if len(base) < BASE_SWINGS:
                     base.append(sw)
+                    b.setdefault("seit", now.strftime("%Y-%m-%d"))   # first swing: the age counts from here
                 else:
                     b["swings"].append(sw)
                     del b["swings"][:-KEEP_SWINGS]
@@ -342,12 +399,20 @@ class DeviceCheck:
                 g["huebe"] = [list(x) for x in (st.get("bat") or {}).get("swings", [])]
                 if i.get("nennkapazitaet_kwh"):
                     g["nennkapazitaet_kwh"] = i["nennkapazitaet_kwh"]
+                seit = (st.get("bat") or {}).get("seit")
+                if seit:
+                    g["alter_halbjahre"] = max(0, _days_between(seit, today)) // 182
             elif st.get("kind") in SWITCH_KINDS:
                 w = st.get("sw") or {}
                 g["laeufe"] = list(w.get("runs", []))
                 g["zog_wenn_an"] = w.get("drew_before") if w.get("quiet_since") else (
                     round(w["draw_s"] / w["on_s"], 3) if w.get("on_s") else None)
                 g["an_ohne_strom_min"] = round((now.timestamp() - w["quiet_since"]) / 60) if w.get("quiet_since") else 0
+            if st.get("art") == ART_HEAT_PUMP:
+                recent = st.get("days", [])[-SEND_DAYS:]
+                fit = _fit(recent)
+                if fit is not None and _span(recent) >= CURVE_SPAN_K and fit[0] + fit[1] * 10.0 > 0.1:
+                    g["form_kalt_mild"] = round((fit[0]) / (fit[0] + fit[1] * 10.0), 3)   # kWh at 0 deg C against 10 deg C
             g["tage"] = [[r[1], r[4]] for r in st.get("days", [])[-SEND_DAYS:]]
             out.append(g)
         nr = {dev_id: i for i, dev_id in enumerate(self._ids)}
