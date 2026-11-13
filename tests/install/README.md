@@ -57,3 +57,16 @@ docker run -d --name evcc-ha-test -p 18126:8123 -v "${cfg}:/config" -e TZ=Europe
 python tests\install\itest_evcc.py          # takes about 20 to 30 minutes (real quarter hours)
 docker rm -f evcc-ha-test
 ```
+
+## Update test (before every release)
+
+An update replaces the code completely, but the stored settings, devices, entity ids and learned values stay. `itest_upgrade.py`
+sets up a test HA with each of the **last three releases** in turn (taken from the git tags), sets up a wallbox and the mode
+*Active*, then puts the working copy in place and restarts. It checks that the guard loads, that mode, devices and entities are
+still there, that nothing errors in the log, and the repair hint for devices on *Observe only*. Rule: no release without this
+test passing. It creates and removes its own container (`vw-upgrade`, port 18128).
+
+```powershell
+python tests\install\itest_upgrade.py            # last three releases
+python tests\install\itest_upgrade.py v0.13.3    # or named ones
+```

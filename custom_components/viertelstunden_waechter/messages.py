@@ -12,10 +12,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "de": {
         # decisions
         "ahead": "Vorausschauend ({why}): {text}",
-        "watch": "Nur beobachten: {name} würde um {kw:.1f} kW gesenkt ({excess:.1f} kW zu viel), es wurde nichts gesendet",
+        "watch": "Nur beobachten: {name} würde um {kw:.1f} kW gesenkt ({excess:.1f} kW zu viel), es wurde nichts gesendet (beim Gerät ist „Nur beobachten“ an)",
         "corrected": "Viertelstunde {start} korrigiert: {old:.2f} kW -> {new:.2f} kW (Wert vom Zähler)",
-        "watch_wb": "Nur beobachten: {name} würde von {cur} A auf {new} A begrenzt (−{kw:.1f} kW, {excess:.1f} kW zu viel), es wurde nichts gesendet",
-        "watch_wb1": "Nur beobachten: {name} würde auf 1 Phase mit {new} A umgeschaltet ({excess:.1f} kW zu viel), es wurde nichts gesendet",
+        "watch_wb": "Nur beobachten: {name} würde von {cur} A auf {new} A begrenzt (−{kw:.1f} kW, {excess:.1f} kW zu viel), es wurde nichts gesendet (beim Gerät ist „Nur beobachten“ an)",
+        "watch_wb1": "Nur beobachten: {name} würde auf 1 Phase mit {new} A umgeschaltet ({excess:.1f} kW zu viel), es wurde nichts gesendet (beim Gerät ist „Nur beobachten“ an)",
         "wb_twice": "Wallbox {a} und evcc-Ladepunkt {b} laden gleichzeitig mit fast gleicher Leistung ({kw:.1f} kW). Ist das dieselbe Wallbox? Bitte nur einmal eintragen.",
         "grid_differ": "Netzbezug: Ihr Sensor zeigt {a:.1f} kW, evcc zeigt {b:.1f} kW. Der Wächter regelt mit Ihrem Sensor.",
         "grid_backup_on": "Netzbezug: Ihr Sensor liefert nichts Brauchbares, der Wächter nimmt vorübergehend den Wert von evcc ({b:.1f} kW).",
@@ -84,10 +84,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     "en": {
         "ahead": "Ahead ({why}): {text}",
-        "watch": "Observe only: {name} would be lowered by {kw:.1f} kW ({excess:.1f} kW too much), nothing was sent",
+        "watch": "Observe only: {name} would be lowered by {kw:.1f} kW ({excess:.1f} kW too much), nothing was sent (Observe only is on at the device)",
         "corrected": "Quarter hour {start} corrected: {old:.2f} kW -> {new:.2f} kW (value from the meter)",
-        "watch_wb": "Observe only: {name} would be limited from {cur} A to {new} A (−{kw:.1f} kW, {excess:.1f} kW too much), nothing was sent",
-        "watch_wb1": "Observe only: {name} would be switched to 1 phase with {new} A ({excess:.1f} kW too much), nothing was sent",
+        "watch_wb": "Observe only: {name} would be limited from {cur} A to {new} A (−{kw:.1f} kW, {excess:.1f} kW too much), nothing was sent (Observe only is on at the device)",
+        "watch_wb1": "Observe only: {name} would be switched to 1 phase with {new} A ({excess:.1f} kW too much), nothing was sent (Observe only is on at the device)",
         "wb_twice": "Wallbox {a} and evcc loadpoint {b} charge at the same time with nearly the same power ({kw:.1f} kW). Is it the same wallbox? Please enter it only once.",
         "grid_differ": "Grid import: your sensor shows {a:.1f} kW, evcc shows {b:.1f} kW. The guard works with your sensor.",
         "grid_backup_on": "Grid import: your sensor has no usable value, the guard temporarily uses the value from evcc ({b:.1f} kW).",

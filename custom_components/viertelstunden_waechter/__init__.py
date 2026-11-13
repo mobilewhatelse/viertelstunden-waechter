@@ -226,4 +226,6 @@ async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
         {"title": entries[0].title, "notification_id": f"{DOMAIN}_dashboard",
          "message": "Paste this into a new dashboard (three dots > Edit > Raw configuration editor):\n\n```yaml\n" + text + "```"},
     )
-    return {"yaml": text, "config": config}
+    # the response is the dashboard itself: copied as a whole from the developer tools it pastes into the raw editor (before
+    # 0.14.2 it held 'yaml' and 'config', and copying all of it gave an error)
+    return config

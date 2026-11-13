@@ -207,6 +207,7 @@ class Waechter:
         self._ai_calls = data.get("ai_calls", {})
         self._usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
         self.ask_usage_once()
+        self.check_observe_only()
         self._reserve = data.get("reserve", {})
         if self._reserve:
             await self._end_reserve_all(self.t("r_restart"))  # restarted while a battery was held: give it back first
@@ -244,8 +245,26 @@ class Waechter:
 
     async def async_set_mode(self, mode: str) -> None:
         self.mode = mode
+        self.check_observe_only()
         if self._unsub is not None:
             await self._tick()
+
+    def observe_only_names(self) -> list[str]:
+        """Devices (not cars) that are set to 'observe only': the guard never acts on them, also in the mode 'active'."""
+        return [d.get(D_NAME, i) for i, d in self.raw_devices.items() if d.get(D_OBSERVE) and d[D_KIND] != KIND_VEHICLE]
+
+    def check_observe_only(self) -> None:
+        """Mode 'active' but a device still on 'observe only': say so under Settings > Repairs (fixable there). Two switches with
+        nearly the same name, so 'active' looked like it did not work (feedback 12.11.2026)."""
+        from homeassistant.helpers import issue_registry as ir
+
+        names = self.observe_only_names() if self.mode == MODE_ACTIVE else []
+        if names:
+            ir.async_create_issue(self.hass, DOMAIN, "observe_only_active", is_fixable=True, is_persistent=False,
+                                  severity=ir.IssueSeverity.WARNING, translation_key="observe_only_active",
+                                  translation_placeholders={"devices": ", ".join(names)})
+        else:
+            ir.async_delete_issue(self.hass, DOMAIN, "observe_only_active")
 
     async def async_refresh(self) -> None:
         if self._unsub is not None:

@@ -1159,6 +1159,17 @@
           }
         }
       }
+    },
+    "observe_only_active": {
+      "title": "Betriebsart Aktiv, aber bei {devices} ist „Nur beobachten“ an",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Wächter bei den Geräten eingreifen lassen",
+            "description": "*Nur beobachten* bei {devices} ausschalten? Dann drosselt der Wächter diese Geräte, wenn nötig.\n\nWer ein Gerät bewusst nur beobachten will, schließt dieses Fenster und wählt *Ignorieren*."
+          }
+        }
+      }
     }
   }
 }

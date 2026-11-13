@@ -338,8 +338,10 @@ def main():
 
     # ---------- Dienste ----------
     s, d = svc("viertelstunden_waechter", "create_dashboard", {}, resp=True)
-    yaml_text = (d.get("service_response") or {}).get("yaml", "") if isinstance(d, dict) else ""
-    log(s == 200 and "views:" in yaml_text and "viertelstunden_wachter_status" in yaml_text, "Dienst 'Dashboard erstellen' liefert YAML mit den eigenen Entitaeten", f"{len(yaml_text)} Zeichen")
+    resp_d = (d.get("service_response") or {}) if isinstance(d, dict) else {}
+    dash_text = json.dumps(resp_d)
+    log(s == 200 and list(resp_d) == ["views"] and "viertelstunden_wachter_status" in dash_text,
+        "Dienst 'Dashboard erstellen' antwortet mit dem Dashboard selbst (nur 'views', mit den eigenen Entitaeten)", f"{len(dash_text)} Zeichen")
     s, d = svc("viertelstunden_waechter", "send_week_report", {"current_week": True, "push": False}, resp=True)
     txt = (d.get("service_response") or {}).get("text", "") if isinstance(d, dict) else ""
     log(s == 200 and "Wochenbericht" in txt, "Dienst 'Wochenbericht senden' erzeugt den Bericht", txt.replace("\n", " | ")[:140])
@@ -369,7 +371,7 @@ def main():
         s, d = svc("viertelstunden_waechter", "create_dashboard", {"dashboard": "waechter-test"}, resp=True)
         log(s == 400 or s == 422, "Dienst 'Dashboard erstellen' nimmt kein Dashboard als Ziel mehr an (kein Schreibweg)", f"HTTP {s}")
         s, d = svc("viertelstunden_waechter", "create_dashboard", {}, resp=True)
-        gen = (d.get("service_response") or {}).get("config") if isinstance(d, dict) else None
+        gen = (d.get("service_response") or None) if isinstance(d, dict) else None
         log(s == 200 and bool(gen) and gen.get("views"), "Dienst 'Dashboard erstellen' liefert die Konfiguration", f"{len((gen or {}).get('views', []))} Ansichten")
         sv = call({"type": "lovelace/config/save", "url_path": "waechter-test", "config": gen})
         log(bool(sv) and sv[0].get("success"), "Konfiguration als Administrator in das Test-Dashboard gespeichert", str(sv[0].get("error")) if sv else "")
@@ -409,6 +411,33 @@ def main():
     log(val("switch.viertelstunden_wachter_wochenbericht") == "on" and val("switch.viertelstunden_wachter_vorwarnung_vor_einem_eingriff") == "off", "Schalter bleiben nach Neustart erhalten")
     log(val("switch.viertelstunden_wachter_ladeplan_auch_ausfuhren") == "off", "'Ladeplan auch ausfuehren' ist nach Neustart aus")
     log(val("switch.viertelstunden_wachter_ki_erklarer") == "off", "'KI-Erklaerer' ist nach Neustart aus")
+
+    # ---------- Aktiv, aber ein Geraet nur beobachten (0.14.2) ----------
+    call, ws = ws_session()
+    def wb_sub():
+        r = call({"type": "config_entries/subentries/list", "entry_id": entry_id})
+        return next((x for x in (r[0].get("result") or []) if x["subentry_type"] == "wallbox"), None) if r else None
+    def issue_open():
+        r = call({"type": "repairs/list_issues"})
+        return any(i["issue_id"] == "observe_only_active" and not i.get("dismissed_version") for i in ((r[0].get("result") or {}).get("issues", []) if r else []))
+    wb = wb_sub()
+    base = "/api/config/config_entries/subentries/flow"
+    s, d = api("POST", base, {"handler": [entry_id, "wallbox"], "source": "reconfigure", "subentry_id": wb["subentry_id"]})
+    vals = {f["name"]: (f.get("description") or {}).get("suggested_value", f.get("default")) for f in d.get("data_schema", [])}
+    vals = {k: v for k, v in vals.items() if v is not None}
+    vals["observe_only"] = True
+    s, d = api("POST", f"{base}/{d['flow_id']}", vals)
+    log(d.get("reason") == "reconfigure_successful", "Wallbox auf 'Nur beobachten' gestellt (Aenderungsdialog)", str(d.get("reason") or d.get("errors")))
+    ok = wait_for(lambda: issue_open(), 120, 5)
+    log(bool(ok), "Aktiv und ein Geraet nur beobachten: Hinweis unter Reparaturen", "")
+    s, d = api("POST", "/api/repairs/issues/fix", {"handler": "viertelstunden_waechter", "issue_id": "observe_only_active"})
+    ph = (d.get("description_placeholders") or {}).get("devices", "") if isinstance(d, dict) else ""
+    log(s == 200 and d.get("step_id") == "confirm" and "Wallbox" in ph, "Reparieren fragt nach und nennt das Geraet", ph)
+    s, d = api("POST", f"/api/repairs/issues/fix/{d.get('flow_id')}", {})
+    log(s == 200 and d.get("type") == "create_entry", "Reparieren bestaetigt", str(d.get("type")))
+    gone = wait_for(lambda: not issue_open() and "nur beobachten" not in (wb_sub() or {}).get("title", "x"), 120, 5)
+    log(bool(gone), "Danach: Wallbox greift wieder ein, Hinweis weg", str((wb_sub() or {}).get("title")))
+    ws.close()
 
     # ---------- Log ----------
     logs = subprocess.run(["docker", "logs", CONTAINER], capture_output=True, text=True).stdout
