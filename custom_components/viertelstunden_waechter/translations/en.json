@@ -1217,6 +1217,17 @@
           }
         }
       }
+    },
+    "observe_only_active": {
+      "title": "Mode active, but Observe only is on at {devices}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Let the guard act on the devices",
+            "description": "Switch *Observe only* off at {devices}? Then the guard lowers these devices when needed.\n\nIf you want to keep watching a device on purpose, close this and choose *Ignore*."
+          }
+        }
+      }
     }
   }
 }

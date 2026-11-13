@@ -36,6 +36,7 @@ class ModeSelect(WaechterEntity, SelectEntity, RestoreEntity):
         elif startup in MODES:
             mode = startup
         self.waechter.mode = mode
+        self.waechter.check_observe_only()   # the start checked before the mode was back: a restart must not hide the hint
 
     @property
     def current_option(self) -> str:

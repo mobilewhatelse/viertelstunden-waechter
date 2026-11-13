@@ -618,8 +618,8 @@ interventions per day, charge plan). Only standard cards are used. With a car pl
 charge plan card shows the planner's plan instead of the guard's own (see *The guard and a car planner together*); create the
 dashboard again after choosing or removing a planner.
 
-**How to use it** (administrators only): Developer tools → Actions → *Create dashboard*, run it, and copy the YAML from
-the response or from the notification it shows. Then Settings → Dashboards → Add dashboard, open it, three dots → Edit →
+**How to use it** (administrators only): Developer tools → Actions → *Create dashboard*, run it, and copy the whole
+response (or the YAML from the notification it shows). Then Settings → Dashboards → Add dashboard, open it, three dots → Edit →
 three dots → Raw configuration editor, paste, save. The service **never writes into an existing dashboard**; it only
 returns the YAML. All services of the integration (`create_dashboard`, `import_history`, `send_week_report`, `export_csv`,
 `explain_today`) can only be called by administrators (or by automations and scripts).

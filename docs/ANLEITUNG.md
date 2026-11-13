@@ -608,8 +608,8 @@ Monate, Eingriffe je Tag, Ladeplan). Es werden nur Standardkarten benutzt. Ist i
 gewählt, zeigt die Ladeplan-Karte dessen Plan statt des eigenen (siehe *Wächter und Auto-Planer zusammen*); nach dem Wählen oder
 Entfernen eines Planers das Dashboard neu erstellen.
 
-**So nutzen Sie ihn** (nur Administratoren): Entwicklerwerkzeuge → Aktionen → *Dashboard erstellen* ausführen und das YAML aus der
-Antwort oder aus der angezeigten Benachrichtigung kopieren. Dann Einstellungen → Dashboards → Dashboard hinzufügen, öffnen, drei
+**So nutzen Sie ihn** (nur Administratoren): Entwicklerwerkzeuge → Aktionen → *Dashboard erstellen* ausführen und die ganze
+Antwort kopieren (oder das YAML aus der angezeigten Benachrichtigung). Dann Einstellungen → Dashboards → Dashboard hinzufügen, öffnen, drei
 Punkte → Bearbeiten → drei Punkte → Roher Konfigurationseditor, einfügen, speichern. Der Dienst **schreibt nie in ein bestehendes
 Dashboard**, er liefert nur das YAML. Alle Dienste der Integration (`create_dashboard`, `import_history`, `send_week_report`,
 `export_csv`, `explain_today`) dürfen nur Administratoren aufrufen (oder Automationen und Skripte).

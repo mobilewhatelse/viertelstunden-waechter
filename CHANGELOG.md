@@ -25,6 +25,30 @@ Format: newest first. German version below each English block is a short summary
 der Wächter misst nur, beurteilt wird auf unserem Dienst. Sensor, Karte, Reparatur-Meldung; neue Felder *Leistung des Akkus* und
 *Art des Geräts*. Wer schon geteilt hat, bestätigt den Geräte-Check einmal unter Reparaturen; bis dahin sendet er nichts.
 
+## 0.14.2 - 2026-11-13
+
+**From feedback:** "Switched to *Active*, the guard says it would lower the Wattpilot, but nothing happens." The cause: besides the
+mode (*Observe only* / *Active*) every device has its own switch *Observe only*. With it on, the guard never touches that device,
+also in the mode *Active*; it only writes to the log what it would have done. Two switches with nearly the same name - easy to miss.
+
+- **New hint under Settings > Repairs:** with the mode *Active* and a device still on *Observe only*, the guard names the device.
+  *Fix* switches *Observe only* off there with one click; *Ignore* keeps it, for a device you want to watch on purpose.
+- **Clearer log line:** "... nothing was sent (Observe only is on at the device)".
+- **Dashboard from the developer tools:** the response of *Create dashboard* is now the dashboard itself. Copy all of it and paste it
+  into the raw configuration editor. Before, the response also held a `yaml:` part, and pasting all of it gave an error.
+- The switch in the dashboard is called *Share anonymous data*, as the entity.
+
+*Deutsch:* **Aus einer Rückmeldung:** „Auf *Aktiv* umgeschaltet, der Wächter sagt, er würde den Wattpilot drosseln, aber es passiert
+nichts.“ Der Grund: Neben der Betriebsart (*Nur beobachten* / *Aktiv*) hat jedes Gerät einen eigenen Schalter *Nur beobachten*. Ist
+er an, greift der Wächter bei diesem Gerät nie ein, auch nicht in der Betriebsart *Aktiv*; er schreibt nur ins Protokoll, was er tun
+würde. **So beheben Sie es (auch ohne Update):** Einstellungen > Geräte & Dienste > Viertelstunden-Wächter > beim Gerät (z. B.
+„Wallbox · … · nur beobachten“) die drei Punkte > *Neu konfigurieren* > *Nur beobachten* ausschalten > Absenden.
+Neu in 0.14.2: Steht die Betriebsart auf *Aktiv* und ein Gerät noch auf *Nur beobachten*, erscheint unter Einstellungen > Reparaturen
+ein Hinweis mit dem Gerätenamen; *Reparieren* schaltet *Nur beobachten* mit einem Klick aus. Die Protokollzeile sagt jetzt dazu „beim
+Gerät ist ‚Nur beobachten‘ an“. **Dashboard:** Die Antwort von *Dashboard erstellen* in den Entwicklerwerkzeugen ist jetzt das
+Dashboard selbst – alles kopieren und in den Rohkonfigurationseditor einfügen. Bisher stand darin zusätzlich ein Teil `yaml:`, und wer
+alles eingefügt hat, bekam einen Fehler. Der Schalter im Dashboard heißt jetzt *Anonyme Daten teilen*.
+
 ## 0.14.1 - 2026-11-12
 
 - **House forecast without the car for charge planners:** the sensor *expected peak in 24 h* gets the attribute `hours_house`

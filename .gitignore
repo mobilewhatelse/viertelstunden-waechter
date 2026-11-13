@@ -5,3 +5,5 @@ tests/install/run/
 tests/install/report.txt
 tests/install/run_evcc/
 tests/install/report_evcc.txt
+tests/install/run_dbg/
+tests/install/run_upgrade/

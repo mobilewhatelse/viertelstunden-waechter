@@ -175,7 +175,7 @@ def main():
     # the dashboard of the integration shows the card 'Sources compared' only with evcc, and it renders in Home Assistant
     res, err = options({"grid_power": "sensor.netzbezug", "evcc_site_url": EVCC_FROM_HA})
     s, d = it.api("POST", "/api/services/viertelstunden_waechter/create_dashboard?return_response", {})
-    dash = ((d or {}).get("service_response") or {}).get("config") or {}
+    dash = (d or {}).get("service_response") or {}
     cards = [c for v in dash.get("views", []) for sec in v.get("sections", []) for c in sec.get("cards", []) if c.get("type") == "markdown"]
     src = [c for c in cards if "Quellen im Vergleich" in c["content"] or "Sources compared" in c["content"]]
     sc, body = it.api("POST", "/api/template", {"template": src[0]["content"]}) if src else (0, "")
