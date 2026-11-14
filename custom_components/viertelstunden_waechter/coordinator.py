@@ -179,6 +179,7 @@ class Waechter:
         self._check_busy = False
         self._check_asked = False        # the note under Repairs for those who shared before 0.15 is shown
         self._check_saved: datetime | None = None
+        self._check_synced = False
         # the first check after a start comes 5 to 60 minutes later (spreads the requests of all installations)
         import random
         self._check_next: datetime = dt_util.now() + timedelta(minutes=random.uniform(5, 60))
@@ -216,7 +217,7 @@ class Waechter:
         self.quarters = (await self._quarters_store.async_load() or {}).get("rows", [])
         self.check = gc.DeviceCheck.from_dict(await self._check_store.async_load(), float(self.cfg.get(CONF_VOLTAGE, 230.0)))
         self.check.forget(set(self.raw_devices))
-        self._sync_check_issues()
+        self._check_synced = False   # the repairs of stored warnings only after the first cycle knows sharing and consent
         self.explanation = data.get("explanation", {})
         self._ai_calls = data.get("ai_calls", {})
         self._usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
@@ -414,6 +415,8 @@ class Waechter:
         out: dict[str, gc.Sample] = {}
         v = self._vehicle()
         car_soc = self._float(v.get(D_SOC)) if v else None
+        if sum(1 for d in self.raw_devices.values() if d.get(D_KIND) in WALLBOX_KINDS) != 1:
+            car_soc = None   # with several wallboxes it is not known which one charges the entered car
         for dev_id, r in readings.items():
             d = self.raw_devices.get(dev_id, {})
             kind = d.get(D_KIND)
@@ -476,6 +479,7 @@ class Waechter:
             ir.async_delete_issue(self.hass, DOMAIN, "share_usage_check")
 
     async def _check_step(self, now: datetime, readings: dict[str, Reading]) -> None:
+        self._ask_check_consent()   # also when measuring fails: the note does not depend on it
         try:
             self.check.step(now, self._check_samples(readings), self._temp_at(now))
         except Exception:  # noqa: BLE001 - the device check must never stop the guard
@@ -484,13 +488,16 @@ class Waechter:
         if self._check_saved is None or now - self._check_saved > timedelta(minutes=10):
             self._check_saved = now
             self._check_store.async_delay_save(self.check.to_dict, 5)
-        self._ask_check_consent()
         if not self.share_usage or not self.check_consent():
             if self.check.result:   # switched off: no check any more, findings and repairs go away
                 self.check.clear()
                 self._sync_check_issues()
                 async_dispatcher_send(self.hass, self.signal)
+            self._check_synced = True
             return
+        if not self._check_synced:   # first cycle with sharing and consent: the repairs of the stored warnings
+            self._check_synced = True
+            self._sync_check_issues()
         last = None
         try:
             last = datetime.fromisoformat(self.check.checked_at) if self.check.checked_at else None
@@ -1107,6 +1114,8 @@ class Waechter:
             return
         old = rm.zu_loeschen(self._usage, self.share_usage)
         if old:
+            if not rm.loeschen_faellig(self._usage, now):
+                return   # the last try failed a short while ago: no request on every cycle
             daten = rm.loeschen(DOMAIN, old)
         elif self.share_usage and rm.faellig(self._usage.get("gesendet"), now):
             v, ha = self._version()

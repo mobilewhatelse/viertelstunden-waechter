@@ -27,11 +27,21 @@ class MonthlyIdTest(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertEqual(len(u["kennungen"]), 1)
 
-    def test_new_id_each_month_and_only_two_kept(self):
+    def test_new_id_each_month_and_three_kept(self):
+        # the service keeps an id up to 60 days after its last report: the one from two months back must still be deletable
         u = {}
-        ids = [rm.kennung_fuer(u, at(2026, m)) for m in (9, 10, 11, 12)]
+        ids = [rm.kennung_fuer(u, at(2026, m)) for m in (8, 9, 10, 11)]
         self.assertEqual(len(set(ids)), 4)
-        self.assertEqual([k["k"] for k in u["kennungen"]], ids[-2:])
+        self.assertEqual([k["k"] for k in u["kennungen"]], ids[-3:])
+
+    def test_failed_delete_waits_before_the_next_try(self):
+        u = {}
+        self.assertTrue(rm.loeschen_faellig(u, at(2026, 11, 1)))
+        self.assertFalse(rm.loeschen_faellig(u, at(2026, 11, 1) + rm.ABSTAND_LOESCHEN / 2))
+        self.assertTrue(rm.loeschen_faellig(u, at(2026, 11, 1) + rm.ABSTAND_LOESCHEN))
+        u["kennungen"] = [{"k": "a", "monat": "2026-11"}]
+        rm.geloescht(u, "a")
+        self.assertNotIn("loeschversuch", u)
 
     def test_switch_over_deletes_the_old_fixed_id_first_even_while_sharing(self):
         u = {"kennung": "alt", "gesendet": "2026-11-10T10:00:00+00:00"}

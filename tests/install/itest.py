@@ -461,7 +461,7 @@ def main():
     ws.close()
 
     # ---------- Log ----------
-    logs = subprocess.run(["docker", "logs", CONTAINER], capture_output=True, text=True).stdout
+    logs = subprocess.run(["docker", "logs", CONTAINER], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace").stdout
     errs = [l for l in logs.splitlines() if ("viertelstunden" in l.lower() and ("ERROR" in l or "Traceback" in l or "Exception" in l))]
     log(not errs, "Keine Fehler der Integration im Protokoll", f"{len(errs)} Zeilen" if errs else "")
     for e in errs[:8]:

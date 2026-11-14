@@ -20,12 +20,13 @@ from typing import Any
 ZIEL_STATISTIK = "https://www.aiwhatelse.eu/statistik/v1/melden.php"
 ZIEL_RUECKMELDUNG = "https://www.aiwhatelse.eu/statistik/v1/rueckmeldung.php"
 ABSTAND = timedelta(days=7)
+ABSTAND_LOESCHEN = timedelta(hours=6)   # ein misslungenes Löschen frühestens dann wieder (kein Anfragen-Sturm, wenn der Dienst fehlt)
 MAX_TEXT = 4000
 MAX_KONTAKT = 200
 
 
 ZUSTIMMUNG = 2      # Version des Zustimmungstexts: 2 = Monatskennung, Zusatzwerte, alle Zwecke genannt
-MAX_KENNUNGEN = 2   # die des laufenden und die des vorigen Monats (der Dienst hält Daten höchstens 60 Tage)
+MAX_KENNUNGEN = 3   # laufender Monat und die zwei davor: der Dienst hält eine Kennung bis 60 Tage nach ihrer letzten Meldung
 SEIT_KLASSEN = ((1, "0-1"), (3, "1-3"), (6, "3-6"))   # Monate -> Klasse, darüber ">6"
 
 
@@ -64,10 +65,27 @@ def geloescht(usage: dict[str, Any], kennung: str) -> None:
     if usage.get("kennung") == kennung:
         usage.pop("kennung", None)
     usage["kennungen"] = [k for k in usage.get("kennungen") or [] if isinstance(k, dict) and k.get("k") != kennung]
+    usage.pop("loeschversuch", None)
     if not usage["kennungen"]:
         usage.pop("kennungen", None)
         if not usage.get("kennung"):
             usage.pop("gesendet", None)
+
+
+def loeschen_faellig(usage: dict[str, Any], now: datetime) -> bool:
+    """Darf das Löschen jetzt (wieder) versucht werden? Beim ersten Mal sofort, nach einem Fehlschlag erst nach ABSTAND_LOESCHEN.
+    Merkt sich den Versuch in `usage`."""
+    t = None
+    try:
+        t = datetime.fromisoformat(usage["loeschversuch"]) if usage.get("loeschversuch") else None
+    except ValueError:
+        t = None
+    if t is not None and t.tzinfo is None and now.tzinfo is not None:
+        t = t.replace(tzinfo=now.tzinfo)
+    if t is not None and now - t < ABSTAND_LOESCHEN:
+        return False
+    usage["loeschversuch"] = now.isoformat()
+    return True
 
 
 def laeuft_seit(seit: str | None, now: datetime) -> str | None:

@@ -204,7 +204,7 @@ def main():
     log(float(val("input_number.wb_strom")) == 16.0, "nothing is sent to the observed wallbox", f"{val('input_number.wb_strom')} A")
     it.svc("select", "select_option", {"entity_id": "select.viertelstunden_wachter_betriebsart", "option": "observe"})
 
-    logs = subprocess.run(["docker", "logs", it.CONTAINER], capture_output=True, text=True).stdout
+    logs = subprocess.run(["docker", "logs", it.CONTAINER], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace").stdout
     errs = [ln for ln in logs.splitlines() if "viertelstunden_waechter" in ln and (" ERROR " in ln or "Traceback" in ln)]
     log(not errs, "no errors of the integration in the log", "; ".join(errs[:3]))
     evcc_post("/api/loadpoints/1/maxcurrent/16")

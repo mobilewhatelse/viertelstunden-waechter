@@ -22,15 +22,16 @@ Please be the first - see "How to report a test" below.
 ## In use by others (from the voluntary statistic)
 
 Users who switched on *Share anonymous data* send which integrations their grid sensors and devices come from
-(only the name of the integration, nothing else). As of 2026-11-13, from 36 installations, these are in use with
+(only the name of the integration, nothing else). As of 2026-11-14, from 44 installations, these are in use with
 the guard. **In use does not mean tested:** we do not know whether the guard intervened there, only that it was set up.
 
-- **Inverters and meters:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus, Kostal Plenticore, Victron GX, HomeWizard, Tibber
-- **Wallboxes:** Fronius Wattpilot, go-e Charger (`goecharger_api2`), Charge Amps, and any wallbox through **evcc** (the most used way)
-- **Home batteries:** sonnenBatterie, Anker Solix
-- **Cars:** FordPass
+- **Inverters and meters:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus (also Multi), Kostal Plenticore, GoodWe, Victron GX, HomeWizard, Tibber
+- **Wallboxes:** Fronius Wattpilot, go-e Charger (`goecharger_api2` and `goecharger_mqtt`), Charge Amps, and any wallbox through **evcc** (the most used way, also with the evcc integration `evcc_intg`)
+- **Home batteries:** sonnenBatterie, Anker Solix, Jackery
+- **Cars:** FordPass, Mercedes (`mbapi2020`), MySkoda, VW group (`vag_connect`)
+- **Other:** ESPHome, Tuya Local
 
-General building blocks (template, MQTT, utility meter, integration, min/max) are left out. Running the guard with
+General building blocks (template, MQTT, utility meter, integration, min/max, group) are left out. Running the guard with
 one of these? A short report in the issues helps everyone, see "How to report a test" below.
 
 ## Wallboxes (device type *Wallbox*)

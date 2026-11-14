@@ -22,15 +22,16 @@ Seien Sie der Erste – siehe „So melden Sie einen Test“.
 ## Bei anderen im Einsatz (aus der freiwilligen Statistik)
 
 Wer *Anonyme Daten teilen* eingeschaltet hat, sendet, aus welchen Integrationen seine Netzsensoren und Geräte kommen
-(nur der Name der Integration, sonst nichts). Stand 13.11.2026, aus 36 Installationen, sind diese mit dem Wächter im
+(nur der Name der Integration, sonst nichts). Stand 14.11.2026, aus 44 Installationen, sind diese mit dem Wächter im
 Einsatz. **Im Einsatz heißt nicht getestet:** Wir wissen nicht, ob der Wächter dort eingegriffen hat, nur dass er eingerichtet ist.
 
-- **Wechselrichter und Zähler:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus, Kostal Plenticore, Victron GX, HomeWizard, Tibber
-- **Wallboxen:** Fronius Wattpilot, go-e Charger (`goecharger_api2`), Charge Amps und jede Wallbox über **evcc** (der häufigste Weg)
-- **Hausakkus:** sonnenBatterie, Anker Solix
-- **Autos:** FordPass
+- **Wechselrichter und Zähler:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus (auch Multi), Kostal Plenticore, GoodWe, Victron GX, HomeWizard, Tibber
+- **Wallboxen:** Fronius Wattpilot, go-e Charger (`goecharger_api2` und `goecharger_mqtt`), Charge Amps und jede Wallbox über **evcc** (der häufigste Weg, auch mit der evcc-Integration `evcc_intg`)
+- **Hausakkus:** sonnenBatterie, Anker Solix, Jackery
+- **Autos:** FordPass, Mercedes (`mbapi2020`), MySkoda, VW-Gruppe (`vag_connect`)
+- **Sonstige:** ESPHome, Tuya Local
 
-Allgemeine Bausteine (Template, MQTT, Verbrauchszähler, Integral, Min/Max) sind weggelassen. Sie nutzen den Wächter
+Allgemeine Bausteine (Template, MQTT, Verbrauchszähler, Integral, Min/Max, Gruppe) sind weggelassen. Sie nutzen den Wächter
 mit einem dieser Geräte? Ein kurzer Bericht in den Issues hilft allen, siehe „So melden Sie einen Test“ unten.
 
 ## Wallboxen (Gerätetyp *Wallbox*)

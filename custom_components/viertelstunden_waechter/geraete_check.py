@@ -416,6 +416,7 @@ class DeviceCheck:
             g["tage"] = [[r[1], r[4]] for r in st.get("days", [])[-SEND_DAYS:]]
             out.append(g)
         nr = {dev_id: i for i, dev_id in enumerate(self._ids)}
+        self._sent_days = len(self.new_days)   # apply() removes only these; days closed while the request waits stay
         days = [{"nr": nr[t["dev"]], **{k: v for k, v in t.items() if k != "dev"}} for t in self.new_days if t.get("dev") in nr]
         return {"schema": SCHEMA, "integration": "viertelstunden_waechter", "version": version, "geraete": out, "neue_tage": days}
 
@@ -435,8 +436,10 @@ class DeviceCheck:
                            "lernt": g.get("lernt") if isinstance(g.get("lernt"), list) else None}
         self.result = res
         self.checked_at = now.isoformat(timespec="minutes")
-        self.new_days = []
-        self.changed = False
+        sent = getattr(self, "_sent_days", len(self.new_days))
+        self.new_days = self.new_days[sent:]
+        self._sent_days = 0
+        self.changed = bool(self.new_days)
 
     def clear(self) -> None:
         """Sharing switched off: no check any more (the measured values stay local)."""

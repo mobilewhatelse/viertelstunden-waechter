@@ -225,6 +225,15 @@ class DayAndPrivacyTests(unittest.TestCase):
         c.apply(now, {"geraete": [{"nr": 0, "status": "learning", "befunde": [], "lernt": [2, 20]}]})
         self.assertEqual(c.request(now, {}, "x")["neue_tage"], [])
 
+    def test_a_day_closed_while_the_request_waits_is_kept(self):
+        c = DeviceCheck()
+        days(c, datetime(2027, 1, 1, tzinfo=TZ), [(3.0, 5.0)] * 2)
+        now = datetime(2027, 1, 3, 1, tzinfo=TZ)
+        self.assertEqual(len(c.request(now, {}, "x")["neue_tage"]), 2)
+        c.new_days.append({"dev": "d", "kwh": 1.0, "max_kw": 1.0, "laufzeit_h": 1.0, "temp_c": 3.0})   # closed meanwhile
+        c.apply(now, {"geraete": []})
+        self.assertEqual(len(c.new_days), 1)
+
 
 class AnswerTests(unittest.TestCase):
     def setUp(self):
