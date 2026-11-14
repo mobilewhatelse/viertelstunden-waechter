@@ -40,7 +40,20 @@ input_number:
     unit_of_measurement: A
     mode: box
 
+input_select:
+  anker_max_ev_ladestrom:
+    name: Max EV Ladestrom
+    options: ["6 A", "8 A", "10 A", "12 A", "14 A", "16 A"]
+    initial: "16 A"
+  auto_ziel_ladestand:
+    name: Ziel-Ladestand EV
+    options: ["50%", "60%", "70%", "80%", "90%", "100%"]
+    initial: "70%"
+
 input_boolean:
+  anker_laedt:
+    name: Anker laedt
+    initial: false
   auto_laedt:
     name: Auto laedt
     initial: false
@@ -62,6 +75,12 @@ template:
         device_class: power
         state_class: measurement
         state: "{{ (states('input_number.wb_strom') | float(6) * 690) if is_state('input_boolean.auto_laedt', 'on') else 0 }}"
+      - name: Anker Leistung
+        unique_id: anker_leistung
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: "{{ ((states('input_select.anker_max_ev_ladestrom') | regex_findall_index('[0-9]+') | float(6)) * 690) if is_state('input_boolean.anker_laedt', 'on') else 0 }}"
       - name: Pool Leistung
         unique_id: pool_leistung
         unit_of_measurement: W
@@ -72,7 +91,7 @@ template:
         unique_id: netzbezug
         unit_of_measurement: W
         state_class: measurement
-        state: "{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) + (now().minute % 2) }}"
+        state: "{{ states('input_number.hauslast_w') | float(0) + states('sensor.wallbox_leistung') | float(0) + states('sensor.pool_leistung') | float(0) + states('sensor.anker_leistung') | float(0) + (now().minute % 2) }}"
       - name: Netzbezug still
         unique_id: netzbezug_still
         unit_of_measurement: W

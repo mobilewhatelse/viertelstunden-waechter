@@ -209,11 +209,13 @@ def main():
     s, d = api("POST", "/api/config/config_entries/flow", {"handler": "viertelstunden_waechter"})
     log(s == 200 and d.get("type") == "abort", "Zweiter Eintrag wird abgelehnt (nur ein Waechter)", f"{d.get('type')} {d.get('reason')}")
 
+    # Abfahrt vor dem Auto setzen: der Ladeplan wird hoechstens alle 5 min neu gerechnet (coordinator._update_plan)
+    svc("input_datetime", "set_datetime", {"entity_id": "input_datetime.abfahrt", "timestamp": int(time.time()) + 10 * 3600})
     subs = [
         ("wallbox", {"name": "Wallbox", "priority": 1, "power_entity": "sensor.wallbox_leistung", "current_entity": "input_number.wb_strom", "min_current": 6, "max_current": 16}),
         ("switch", {"name": "Poolpumpe", "priority": 2, "switch_entity": "input_boolean.pool_pumpe", "power_entity": "sensor.pool_leistung", "min_power_w": 150, "power_w": 750, "max_off_min": 0, "pause_min": 0}),
         ("battery", {"name": "Akku", "priority": 10, "soc_entity": "sensor.akku_ladestand", "min_soc": 30, "release_entity_1": "input_number.akku_ausgang_w", "release_value_1": "2000", "power_w": 800, "max_off_min": 0, "restore_original": True, "reserve_entity": "input_number.akku_ausgang_w", "reserve_value": "50", "reserve_lead_min": 60}),
-        ("vehicle", {"name": "Auto", "soc_entity": "sensor.auto_ladestand", "target_soc": 80, "capacity_kwh": 60, "departure_entity": "input_datetime.abfahrt", "charge_kw_max": 11, "charge_kw_min": 1.4, "house_base_kw": 0.5, "charge_efficiency": 90}),
+        ("vehicle", {"name": "Auto", "soc_entity": "sensor.auto_ladestand", "target_soc": 80, "target_soc_entity": "input_select.auto_ziel_ladestand", "capacity_kwh": 60, "departure_entity": "input_datetime.abfahrt", "charge_kw_max": 11, "charge_kw_min": 1.4, "house_base_kw": 0.5, "charge_efficiency": 90}),
     ]
     for kind, data in subs:
         res, err = flow_finish("/api/config/config_entries/subentries/flow", {"handler": [entry_id, kind]}, data)
@@ -409,6 +411,11 @@ def main():
         log(False, "Dashboard-Pruefung", f"{type(err).__name__}: {err}")
     cp = state("sensor.viertelstunden_wachter_ladeplan")
     log(cp is not None, "Ladeplan-Sensor vorhanden", str(cp["state"]) if cp else "")
+    svc("input_datetime", "set_datetime", {"entity_id": "input_datetime.abfahrt", "timestamp": int(time.time()) + 10 * 3600})  # plan needs a departure
+    # der Plan wird hoechstens alle 5 min neu gerechnet: bis 6 min warten
+    tz = wait_for(lambda: (state("sensor.viertelstunden_wachter_ladeplan") or {}).get("attributes", {}).get("target_soc") == 70, 360)
+    log(bool(tz), "Ziel aus einer Auswahlliste ('70%', wie Fordpass) wird gelesen",
+        str((state("sensor.viertelstunden_wachter_ladeplan") or {}).get("attributes", {}).get("target_soc")))
 
     # ---------- Neustart: Zustand bleibt, Eingriffe werden freigegeben ----------
     svc("input_boolean", "turn_on", {"entity_id": "input_boolean.auto_laedt"})

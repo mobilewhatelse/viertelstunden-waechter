@@ -200,7 +200,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
     if kind == KIND_VEHICLE:
         s[vol.Required(D_SOC, default=d.get(D_SOC, vol.UNDEFINED))] = _ent("sensor")
         s[vol.Required(D_TARGET_SOC, default=d.get(D_TARGET_SOC, 80))] = _num(1, 100, 1, "%")
-        s[_opt(D_TARGET_ENTITY, d)] = _ent(["sensor", "number", "input_number"])
+        s[_opt(D_TARGET_ENTITY, d)] = _ent(["sensor", "number", "input_number", "select", "input_select"])
         s[vol.Required(D_CAPACITY, default=d.get(D_CAPACITY, 60))] = _num(5, 300, 0.5, "kWh")
         s[vol.Required(D_DEPARTURE, default=d.get(D_DEPARTURE, vol.UNDEFINED))] = _ent(TIME_DOMAINS)
         s[_opt(D_CONNECTED, d)] = _ent(ON_OFF_DOMAINS)
@@ -223,7 +223,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_ALLOW, d)] = _ent(ON_OFF_DOMAINS)
     elif kind == KIND_WALLBOX:
         s[vol.Required(D_POWER, default=d.get(D_POWER, vol.UNDEFINED))] = _ent("sensor")
-        s[vol.Required(D_CURRENT, default=d.get(D_CURRENT, vol.UNDEFINED))] = _ent(["number", "input_number"])
+        s[vol.Required(D_CURRENT, default=d.get(D_CURRENT, vol.UNDEFINED))] = _ent(["number", "input_number", "select", "input_select"])
         s[vol.Required(D_MIN_CURRENT, default=d.get(D_MIN_CURRENT, 6))] = _num(1, 32, 1, "A")
         s[vol.Required(D_MAX_CURRENT, default=d.get(D_MAX_CURRENT, 16))] = _num(1, 63, 1, "A")
         s[_opt(D_PHASE, d)] = _ent(["select", "input_select"])

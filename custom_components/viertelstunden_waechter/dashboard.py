@@ -56,7 +56,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "check_repairs": "Zu den Reparaturen",
         "view_today": "Heute", "now_title": "Jetzt", "now_of": "Prognose dieser Viertelstunde / Ziel", "legend_now": "Weißer Strich = Ziel, roter gestrichelter Strich = Grenze. Grün = sicher darunter, gelb = knapp, rot = über der Grenze.", "quarters_title": "Die Viertelstunden von heute", "legend_quarters": "Jeder Balken eine abgeschlossene Viertelstunde, rot = über der Grenze.", "last_iv": "Letzte Eingriffe", "no_iv_today": "Heute noch keine Eingriffe.", "mode_title": "Betriebsart",
         "today": "Heute", "no_decisions": "Noch keine Entscheidungen heute.", "devices": "Geräte und Prioritäten",
-        "measure": "Messung", "grid": "Netzbezug", "counter": "Bezugszähler", "lock": "Sperre „Aktiv“",
+        "measure": "Messung", "grid": "Netzbezug", "grid_now": "Netzbezug jetzt", "counter": "Bezugszähler", "lock": "Sperre „Aktiv“",
         "prio": "Prio", "device": "Gerät", "action": "Eingriff", "controls": "Steuert",
         "change": "Ändern: Konfigurieren", "loading": "Der Wächter lädt noch (oder ist nicht eingerichtet).",
         "estimate": "Die Ersparnis ist eine **Schätzung** und wird nur in der Betriebsart **Aktiv** gezählt.",
@@ -127,7 +127,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "check_repairs": "Go to Repairs",
         "view_today": "Today", "now_title": "Now", "now_of": "Forecast of this quarter hour / target", "legend_now": "White mark = target, red dashed mark = limit. Green = safely below, yellow = close, red = above the limit.", "quarters_title": "Today's quarter hours", "legend_quarters": "Each bar one finished quarter hour, red = above the limit.", "last_iv": "Latest interventions", "no_iv_today": "No interventions yet today.", "mode_title": "Mode",
         "today": "Today", "no_decisions": "No decisions yet today.", "devices": "Devices and priorities",
-        "measure": "Measurement", "grid": "Grid import", "counter": "Import counter", "lock": "Lock for \"Active\"",
+        "measure": "Measurement", "grid": "Grid import", "grid_now": "Grid import now", "counter": "Import counter", "lock": "Lock for \"Active\"",
         "prio": "Prio", "device": "Device", "action": "Action", "controls": "Controls",
         "change": "Change: Configure", "loading": "The guard is still loading (or not set up).",
         "estimate": "Savings are an **estimate** and are only counted in the mode **Active**.",
@@ -423,6 +423,11 @@ def _tile(entity: str, name: str) -> dict[str, Any]:
     return {"type": "tile", "entity": entity, "name": name}
 
 
+def _grid_now(ids: dict[str, str], x: dict[str, str]) -> list[dict[str, Any]]:
+    """The grid import at this moment (the measured sensor of the set-up), right below the status; asked for in the feedback."""
+    return [_tile(ids["grid_power_sensor"], x["grid_now"])] if ids.get("grid_power_sensor") else []
+
+
 def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, Any]] | None = None,
                 evcc: bool = False) -> list[dict[str, Any]]:
     """Three views: the daily overview, the compact view for the phone ("today") and statistics with forecast.
@@ -446,7 +451,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["now"], "icon": "mdi:timer-outline"},
-                _tile(ids["status"], x["status"]), _tile(ids["forecast"], x["prognosis"]),
+                _tile(ids["status"], x["status"]), *_grid_now(ids, x), _tile(ids["forecast"], x["prognosis"]),
                 _tile(ids["today_peak"], x["peak_today"]), _tile(ids["month_peak"], x["peak_month"]),
                 _tile(ids["interventions_today"], x["iv_today"]),
             ] + ([{"type": "markdown", "content": charts.sources(ids, x["src_title"], x["src_own"], x["src_evcc"], x["src_counts"],
@@ -464,7 +469,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
         "sections": [
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["now_title"], "icon": "mdi:shield-half-full"},
-                _tile(ids["status"], x["status"]),
+                _tile(ids["status"], x["status"]), *_grid_now(ids, x),
                 {"type": "markdown", "content": charts.now_bar(ids, x["now_of"], x["legend_now"])},
                 {"type": "entities", "entities": [{"entity": ids["mode"], "name": x["mode_title"]}]},
                 _tile(ids["today_peak"], x["peak_today"]), _tile(ids["month_peak"], x["peak_month"]),

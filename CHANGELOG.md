@@ -31,6 +31,32 @@ der Wächter misst nur, beurteilt wird auf unserem Dienst. Sensor, Karte, Repara
 Für den späteren Vergleich mit gleichen Geräten zusätzlich Werte, die nicht von der Hausgröße abhängen (Akku in Prozent vom
 Anfangswert, Nennkapazität, Alter; Wärmepumpe und Boiler gegen den eigenen üblichen Wert).
 
+## 0.14.3 - 2026-11-14
+
+Small things: wallboxes with the charging current as a list, the car's target from a list, and the current grid import in the dashboard.
+
+- **Grid import now (from feedback):** the dashboard shows the grid import at this moment as a tile right below the status, in the
+  overview and in the view *Today*. Create the dashboard again to get it (developer tools > actions > *Create dashboard*).
+- **Wallbox with a list of currents:** the field *Charging current setting* now also takes a `select`. The guard reads the amps from
+  the entries and picks the matching one, never a higher one; it lowers and raises step by step as with a number. If the list starts above the
+  minimum current you set (list from 8 A, minimum 6 A), its lowest entry counts as the minimum. Tested in the
+  simulator and in a test Home Assistant with a list like the Anker SOLIX V1, not on the real device (reports welcome).
+- **Target of the car from a list (from feedback):** the field *Target from a sensor* now also takes a `select`, e.g. the target
+  charge of Fordpass (shown as "80%"). Values like "80", "80%" or "80.0" are read; "Unsupported" counts as no value, then the fixed
+  target applies. Tested with such a list in a test Home Assistant, not with a real Ford (reports welcome).
+- **FAQ:** questions users really asked, with short answers: [docs/FAQ.md](docs/FAQ.md), German [docs/HAEUFIGE_FRAGEN.md](docs/HAEUFIGE_FRAGEN.md).
+  With two short videos: creating the dashboard, and adding a wallbox with a list.
+
+*Deutsch:* Kleine Dinge. **Netzbezug jetzt (aus einer Rückmeldung):** Das Dashboard zeigt den aktuellen Netzbezug als Kachel
+direkt unter dem Status, in der Übersicht und in der Ansicht *Heute*. Dafür das Dashboard neu erstellen. **Wallbox mit Auswahlliste**
+(„6 A“, „8 A“ …, z. B. Anker SOLIX V1): Das Feld *Einstellung Ladestrom* nimmt jetzt auch eine solche Liste; der Wächter wählt den
+passenden Eintrag, nie einen höheren, und drosselt stufenweise wie bei einer Zahl. Beginnt die Liste über dem
+eingestellten Mindeststrom (Liste ab 8 A, Mindeststrom 6 A), gilt ihr kleinster Eintrag als Mindeststrom. Getestet im Simulator und in einem Test-Home-Assistant
+mit einer Liste wie bei der Anker SOLIX V1, nicht am echten Gerät (Rückmeldungen willkommen). **Ziel des Autos aus einer Auswahlliste (aus einer Rückmeldung):** Das Feld *Ziel aus einem Sensor* nimmt jetzt auch eine Liste,
+z. B. den Ziel-Ladestand von Fordpass („80%“); „Unsupported“ zählt als kein Wert, dann gilt das feste Ziel. Getestet mit so einer
+Liste im Test-Home-Assistant, nicht mit einem echten Ford. Neu: **Häufige Fragen**
+([docs/HAEUFIGE_FRAGEN.md](docs/HAEUFIGE_FRAGEN.md)) mit zwei kurzen Videos: Dashboard anlegen und Wallbox mit Liste hinzufügen.
+
 ## 0.14.2 - 2026-11-13
 
 **From feedback:** "Switched to *Active*, the guard says it would lower the Wattpilot, but nothing happens." The cause: besides the

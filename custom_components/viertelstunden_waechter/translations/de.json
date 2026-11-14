@@ -115,8 +115,9 @@
           "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
           "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
           "allow_entity": "Optional. Nur solange diese Entität an ist.",
-          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-          "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+          "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+          "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+          "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren."
         }
       },
       "grid_check_invert": {
@@ -456,8 +457,9 @@
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren."
           }
         },
         "reconfigure": {
@@ -483,8 +485,9 @@
             "one_phase_option": "Genauer Text der Option für 1 Phase, z. B. 1 Phase.",
             "phases_entity": "Optional: Sensor mit der Zahl der gerade genutzten Phasen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
-            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren."
           }
         }
       },
@@ -941,7 +944,7 @@
           "data_description": {
             "soc_entity": "Sensor mit dem Ladestand des Autos in %.",
             "target_soc": "Wo das Auto bei der Abfahrt stehen soll (gilt, wenn unten kein Sensor eingetragen ist).",
-            "target_soc_entity": "Optional: ein Sensor oder eine Zahl mit dem Ziel (z. B. das Ladelimit des Autos); ersetzt den festen Wert.",
+            "target_soc_entity": "Optional: ein Sensor, eine Zahl oder eine Auswahlliste mit dem Ziel (z. B. das Ladelimit des Autos, auch „80%“ wie bei Fordpass); ersetzt den festen Wert.",
             "capacity_kwh": "Nutzbare Batteriekapazität in kWh.",
             "departure_entity": "Eine Uhrzeit-Entität (das nächste Auftreten wird genommen) oder eine Datum-Uhrzeit-Entität / input_datetime / Zeitstempel-Sensor.",
             "connected_entity": "Optional, an/aus: an = angesteckt. Der Plan wird nur ausgeführt, solange sie an ist.",
@@ -978,7 +981,7 @@
           "data_description": {
             "soc_entity": "Sensor mit dem Ladestand des Autos in %.",
             "target_soc": "Wo das Auto bei der Abfahrt stehen soll (gilt, wenn unten kein Sensor eingetragen ist).",
-            "target_soc_entity": "Optional: ein Sensor oder eine Zahl mit dem Ziel (z. B. das Ladelimit des Autos); ersetzt den festen Wert.",
+            "target_soc_entity": "Optional: ein Sensor, eine Zahl oder eine Auswahlliste mit dem Ziel (z. B. das Ladelimit des Autos, auch „80%“ wie bei Fordpass); ersetzt den festen Wert.",
             "capacity_kwh": "Nutzbare Batteriekapazität in kWh.",
             "departure_entity": "Eine Uhrzeit-Entität (das nächste Auftreten wird genommen) oder eine Datum-Uhrzeit-Entität / input_datetime / Zeitstempel-Sensor.",
             "connected_entity": "Optional, an/aus: an = angesteckt. Der Plan wird nur ausgeführt, solange sie an ist.",

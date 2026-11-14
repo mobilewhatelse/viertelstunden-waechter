@@ -115,8 +115,9 @@
           "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
           "phases_entity": "Optional sensor with the number of phases currently used.",
           "allow_entity": "Optional. Only while this entity is on.",
-          "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-          "power_invert": "On = the power sensor counts consumption as negative."
+          "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+          "power_invert": "On = the power sensor counts consumption as negative.",
+          "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one."
         }
       },
       "grid_check_invert": {
@@ -456,8 +457,9 @@
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one."
           }
         },
         "reconfigure": {
@@ -483,8 +485,9 @@
             "one_phase_option": "Exact option text of the phase selection for 1 phase, e.g. 1 Phase.",
             "phases_entity": "Optional sensor with the number of phases currently used.",
             "allow_entity": "Optional. Only while this entity is on.",
-            "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one."
           }
         }
       },
@@ -941,7 +944,7 @@
           "data_description": {
             "soc_entity": "Sensor with the car's state of charge in %.",
             "target_soc": "Where the car should be at departure (used if no sensor below).",
-            "target_soc_entity": "Optional: a sensor or number that holds the target (e.g. the car's charge limit); overrides the fixed value.",
+            "target_soc_entity": "Optional: a sensor, number or selection list that holds the target (e.g. the car's charge limit, also \"80%\" as with Fordpass); overrides the fixed value.",
             "capacity_kwh": "Usable battery capacity in kWh.",
             "departure_entity": "A time entity (next occurrence is used) or a date-time entity / input_datetime / timestamp sensor.",
             "connected_entity": "Optional on/off entity: on = plugged in. The plan is only carried out while it is on.",
@@ -978,7 +981,7 @@
           "data_description": {
             "soc_entity": "Sensor with the car's state of charge in %.",
             "target_soc": "Where the car should be at departure (used if no sensor below).",
-            "target_soc_entity": "Optional: a sensor or number that holds the target (e.g. the car's charge limit); overrides the fixed value.",
+            "target_soc_entity": "Optional: a sensor, number or selection list that holds the target (e.g. the car's charge limit, also \"80%\" as with Fordpass); overrides the fixed value.",
             "capacity_kwh": "Usable battery capacity in kWh.",
             "departure_entity": "A time entity (next occurrence is used) or a date-time entity / input_datetime / timestamp sensor.",
             "connected_entity": "Optional on/off entity: on = plugged in. The plan is only carried out while it is on.",

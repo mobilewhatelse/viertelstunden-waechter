@@ -39,6 +39,20 @@ class DashboardTests(unittest.TestCase):
         used = set(re.findall(r"\b(?:sensor|number|select|switch)\.[a-z0-9_]+", text))
         self.assertLessEqual(used, set(IDS.values()))
 
+    def test_grid_import_now_right_below_the_status_in_both_views(self):
+        """Feedback 13.11.2026: the current grid import was missing. With the measured sensor it is a tile after the status."""
+        for lang, name in (("de", "Netzbezug jetzt"), ("en", "Grid import now")):
+            views = build_views({**IDS, "grid_power_sensor": "sensor.netz"}, lang)
+            for path in ("waechter", "heute"):
+                cards = [c for v in views if v["path"] == path for sec in v["sections"] for c in sec["cards"]]
+                ents = [c.get("entity") for c in cards]
+                self.assertIn("sensor.netz", ents, path)
+                i = ents.index("sensor.netz")
+                self.assertEqual(ents[i - 1], IDS["status"], path)
+                self.assertEqual(cards[i]["name"], name)
+        without = json.dumps(build_views(IDS, "de"))
+        self.assertNotIn("Netzbezug jetzt", without)   # no sensor (only evcc): no empty tile
+
     def test_markdown_templates_parse(self):
         try:
             import jinja2

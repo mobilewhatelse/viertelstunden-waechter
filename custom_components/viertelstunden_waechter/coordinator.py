@@ -43,7 +43,7 @@ from .pricing import monthly_cost
 from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
-    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS,
+    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS, amps_of, percent_of, step_down,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -299,6 +299,22 @@ class Waechter:
             return float(st.state) if st else None
         except ValueError:
             return None
+
+    def _target(self, eid: str | None) -> float | None:
+        """Target state of charge from a sensor, a number or a list (select: '80' or '80%', e.g. Fordpass)."""
+        st = self._state(eid)
+        return percent_of(st.state) if st is not None else None
+
+    def _wallbox_current(self, eid: str | None) -> tuple[float | None, tuple[int, ...] | None]:
+        """Charging current of a wallbox and, for a list (select: '6 A', '8 A' ...), the amps it offers."""
+        if not eid or eid.split(".")[0] not in ("select", "input_select"):
+            return self._float(eid), None
+        st = self._state(eid)
+        if st is None:
+            return None, None
+        steps = tuple(sorted({a for a in map(amps_of, st.attributes.get("options") or []) if a is not None}))
+        cur = amps_of(st.state)
+        return (float(cur) if cur is not None else None), (steps or None)
 
     def _power_kw(self, eid: str | None, invert: bool = False) -> float | None:
         """Power in kW, the unit converted; `invert` turns the sign round (a sensor that counts import or consumption as negative)."""
@@ -556,7 +572,7 @@ class Waechter:
                     if d.get(D_EVCC_ONE_PHASE) and lp["phases_switchable"] and lp["phases_configured"] is not None:
                         r.phase_option = str(lp["phases_configured"])
             elif kind == KIND_WALLBOX:
-                r.current_a = self._float(d.get(D_CURRENT))
+                r.current_a, r.current_steps = self._wallbox_current(d.get(D_CURRENT))
                 r.available = r.current_a is not None
                 st = self._state(d.get(D_PHASE))
                 r.phase_option = st.state if st else None
@@ -965,7 +981,7 @@ class Waechter:
         if p < 1.0:
             return None
         v = self._vehicle() or {}
-        limit = self._float(v.get(D_TARGET_ENTITY))
+        limit = self._target(v.get(D_TARGET_ENTITY))
         hours = running_charge_hours(p, self._float(v.get(D_SOC)), limit, v.get(D_CAPACITY), v.get(D_EFFICIENCY))
         return (p, now + timedelta(hours=hours)) if hours > 0 else None
 
@@ -1279,7 +1295,7 @@ class Waechter:
         if v.get(D_CONNECTED) and not self._is_on(v.get(D_CONNECTED), True):
             return False
         soc = self._float(v.get(D_SOC))
-        target = self._float(v.get(D_TARGET_ENTITY))
+        target = self._target(v.get(D_TARGET_ENTITY))
         target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
         return soc is None or soc < target - 0.5
 
@@ -1289,7 +1305,7 @@ class Waechter:
         if v is None or not v.get(D_CONNECTED) or self._is_on(v.get(D_CONNECTED), True):
             return False
         soc = self._float(v.get(D_SOC))
-        target = self._float(v.get(D_TARGET_ENTITY))
+        target = self._target(v.get(D_TARGET_ENTITY))
         target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
         return soc is None or soc < target - 0.5
 
@@ -1516,7 +1532,7 @@ class Waechter:
         if departure is None:
             self.plan = {"status": "no_departure", "soc": soc}
             return
-        target = self._float(v.get(D_TARGET_ENTITY))
+        target = self._target(v.get(D_TARGET_ENTITY))
         target = target if target is not None else float(v.get(D_TARGET_SOC, 80))
         hours = max(2, min(48, int((departure - now).total_seconds() // 3600) + 2))
         series = self.model.horizon(now, hours, **self._wx_args())  # the house without the wallbox: the plan adds the car itself
@@ -1651,7 +1667,18 @@ class Waechter:
             await self._evcc_exec(a, d)
         elif a.kind == "set_current":
             eid = d[D_CURRENT]
-            await self._call(eid.split(".")[0], "set_value", {"entity_id": eid, "value": a.value})
+            domain = eid.split(".")[0]
+            if domain in ("select", "input_select"):   # a list of currents: the entry with the wanted amps (or the next lower one)
+                st = self._state(eid)
+                options = list(st.attributes.get("options") or []) if st else []
+                _cur, steps = self._wallbox_current(eid)
+                want = step_down(int(float(a.value)), steps)
+                option = next((o for o in options if amps_of(o) == want), None)
+                if option is None:
+                    raise ValueError(f"no entry with {want} A in {eid}")
+                await self._call(domain, "select_option", {"entity_id": eid, "option": option})
+            else:
+                await self._call(domain, "set_value", {"entity_id": eid, "value": a.value})
         elif a.kind == "set_phase":
             eid = d[D_PHASE]
             await self._call(eid.split(".")[0], "select_option", {"entity_id": eid, "option": a.value})
