@@ -14,6 +14,7 @@ Short peaks are fine as long as the quarter-hour average stays below the target.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from itertools import combinations
@@ -120,6 +121,7 @@ class Reading:
     soc: float | None = None      # battery: state of charge in %
     releasable: bool = True       # battery/setting: at least one setting differs from its release value
     value: float | None = None    # throttle: current value of the number
+    current_steps: tuple[int, ...] | None = None  # wallbox with a list of currents (select): the amps it offers, else any whole amp
 
 
 @dataclass
@@ -143,6 +145,31 @@ def _secs(t: datetime | None, now: datetime) -> float:
 
 def _clamp(v: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, v))
+
+
+def amps_of(option: Any) -> int | None:
+    """The current in a list entry of a wallbox: '8 A', '8A', '8', '8,0 A' -> 8; None when there is no number."""
+    m = re.search(r"\d+(?:[.,]\d+)?", str(option))
+    return int(float(m.group(0).replace(",", "."))) if m else None
+
+
+def percent_of(value: Any) -> float | None:
+    """A target state of charge: '80', '80.0', '80%', '80 %', '80,5' -> the number; None outside 1..100 or without a number
+    ('Unsupported' of Fordpass when the car has no target)."""
+    try:
+        val = float(str(value).replace("%", "").strip().replace(",", "."))
+    except ValueError:
+        return None
+    return val if 0 < val <= 100 else None
+
+
+def step_down(amps: int, steps: tuple[int, ...] | None) -> int:
+    """The highest current the wallbox offers that is not above `amps` (never more than wanted); below its lowest one the lowest.
+    Without a list (a number entity) every whole amp is possible."""
+    if not steps:
+        return amps
+    below = [s for s in steps if s <= amps]
+    return max(below) if below else min(steps)
 
 
 class Guard:
@@ -691,19 +718,27 @@ class Guard:
             return 0.0
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         t = self._wbt(dev.id)
+        lo = self._wb_min(dev, r)
         if self._phases(dev, r) == 3:
-            if cur > dev.min_current:
-                return max(0.0, p_wb - dev.min_current * self.v3 / 1000.0)
+            if cur > lo:
+                return max(0.0, p_wb - lo * self.v3 / 1000.0)
             if self._smooth:
                 return 0.0  # a forecast alone never switches to 1 phase (that pauses charging)
             if t["too_little"] is None:
                 t["too_little"] = now
             if dev.one_phase_option and _secs(t["too_little"], now) >= TO_ONE_PHASE_AFTER_S:
-                return max(0.0, p_wb - dev.min_current * self.v1 / 1000.0)
+                return max(0.0, p_wb - lo * self.v1 / 1000.0)
             return 0.0  # wait: maybe only the microwave; other devices may help meanwhile
-        if cur > dev.min_current:
-            return max(0.0, p_wb - dev.min_current * self.v1 / 1000.0)
+        if cur > lo:
+            return max(0.0, p_wb - lo * self.v1 / 1000.0)
         return 0.0
+
+    @staticmethod
+    def _wb_min(dev: DeviceConfig, r: Reading) -> int:
+        """The lowest current the guard may set: the configured minimum, or with a list of currents its entry for it - the
+        lowest entry when the list starts above the minimum (list from 8 A, minimum 6 A: 8). Without this the guard waited
+        for a step the wallbox does not have and neither switched to one phase nor let other devices help."""
+        return step_down(dev.min_current, r.current_steps)
 
     def _wb_would(self, dev: DeviceConfig, r: Reading, want_kw: float) -> tuple[int, int, bool]:
         """(current now, current the guard would set, switch to one phase) for a reduction of `want_kw` - the arithmetic of
@@ -711,16 +746,17 @@ class Guard:
         p_wb = (r.power_w or 0.0) / 1000.0
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         goal = p_wb - want_kw
+        lo, steps = self._wb_min(dev, r), r.current_steps
         if self._phases(dev, r) == 3:
             a = int(goal * 1000.0 / self.v3)
-            if a >= dev.min_current:
-                return cur, min(cur, a), False
-            if cur > dev.min_current:
-                return cur, dev.min_current, False
+            if a >= lo:
+                return cur, min(cur, max(step_down(a, steps), lo)), False
+            if cur > lo:
+                return cur, lo, False
             if dev.one_phase_option:
-                return cur, _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current), True
+                return cur, step_down(_clamp(int(goal * 1000.0 / self.v1), lo, dev.max_current), steps), True
             return cur, cur, False
-        return cur, min(cur, _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)), False
+        return cur, min(cur, step_down(_clamp(int(goal * 1000.0 / self.v1), lo, dev.max_current), steps)), False
 
     def _wb_reduce(self, dev: DeviceConfig, r: Reading, want_kw: float, now: datetime, excess: float) -> list[Action]:
         p_wb = (r.power_w or 0.0) / 1000.0
@@ -729,24 +765,25 @@ class Guard:
         t = self._wbt(dev.id)
         goal = p_wb - want_kw
         acts: list[Action] = []
+        lo = self._wb_min(dev, r)
         if phases == 3:
             a = int(goal * 1000.0 / self.v3)
-            if a >= dev.min_current:
+            if a >= lo:
+                a = max(step_down(a, r.current_steps), lo)
                 if a < cur:
                     acts = [Action(dev.id, "set_current", a, self.t("wb3_down", name=dev.name, cur=cur, new=a, excess=excess))]
-            elif cur > dev.min_current:
+            elif cur > lo:
                 t["too_little"] = now
-                acts = [Action(dev.id, "set_current", dev.min_current,
-                               self.t("wb3_down", name=dev.name, cur=cur, new=dev.min_current, excess=excess))]
+                acts = [Action(dev.id, "set_current", lo, self.t("wb3_down", name=dev.name, cur=cur, new=lo, excess=excess))]
             elif dev.one_phase_option:
-                a1 = _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)
+                a1 = step_down(_clamp(int(goal * 1000.0 / self.v1), lo, dev.max_current), r.current_steps)
                 acts = [Action(dev.id, "set_current", a1, ""),
                         Action(dev.id, "set_phase", dev.one_phase_option,
                                self.t("wb_to1", name=dev.name, a=a1, excess=excess))]
                 t["too_little"] = None
                 t["phase"] = now
         else:
-            a1 = _clamp(int(goal * 1000.0 / self.v1), dev.min_current, dev.max_current)
+            a1 = step_down(_clamp(int(goal * 1000.0 / self.v1), lo, dev.max_current), r.current_steps)
             if a1 < cur:
                 acts = [Action(dev.id, "set_current", a1, self.t("wb1_down", name=dev.name, cur=cur, new=a1))]
         if acts:
@@ -776,7 +813,8 @@ class Guard:
             return []
         if iv.get("one_phase"):
             p_wb = (r.power_w or 0.0) / 1000.0
-            if iv.get("switched") and iv.get("orig_phase") and room > (dev.min_current * self.v3 / 1000.0 - p_wb) + 0.5:
+            lo = self._wb_min(dev, r)
+            if iv.get("switched") and iv.get("orig_phase") and room > (lo * self.v3 / 1000.0 - p_wb) + 0.5:
                 if t["room3"] is None:
                     t["room3"] = now
                 if _secs(t["room3"], now) < TO_THREE_PHASE_AFTER_S:
@@ -784,13 +822,15 @@ class Guard:
                 t["room3"] = None
                 iv["one_phase"] = iv["switched"] = False
                 t["changed"] = t["phase"] = now
-                return [Action(dev.id, "set_current", dev.min_current, "", False),
+                return [Action(dev.id, "set_current", lo, "", False),
                         Action(dev.id, "set_phase", iv["orig_phase"],
-                               self.t("wb_to3", name=dev.name, a=dev.min_current), False)]
+                               self.t("wb_to3", name=dev.name, a=lo), False)]
             t["room3"] = None
             top = dev.max_current if iv.get("switched") else orig
             if cur < top and room > self.v1 / 1000.0 + 0.15:
-                new = min(top, cur + max(1, int((room - 0.15) * 1000.0 / self.v1)))
+                new = step_down(min(top, cur + max(1, int((room - 0.15) * 1000.0 / self.v1))), r.current_steps)
+                if new <= cur:   # the next step of the list does not fit yet
+                    return []
                 t["changed"] = now
                 acts = [Action(dev.id, "set_current", new, self.t("wb1_up", name=dev.name, cur=cur, new=new), False)]
                 if not iv.get("switched") and new >= orig:
@@ -798,7 +838,9 @@ class Guard:
                 return acts
             return []
         if room > self.v3 / 1000.0 + 0.15 and cur < orig:
-            new = min(orig, cur + max(1, int((room - 0.15) * 1000.0 / self.v3)))
+            new = step_down(min(orig, cur + max(1, int((room - 0.15) * 1000.0 / self.v3))), r.current_steps)
+            if new <= cur:   # the next step of the list does not fit yet
+                return []
             t["changed"] = now
             acts = [Action(dev.id, "set_current", new, self.t("wb3_up", name=dev.name, cur=cur, new=new), False)]
             if new >= orig:

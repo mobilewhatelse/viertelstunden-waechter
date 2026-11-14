@@ -45,6 +45,8 @@ class House:
         self.thr_value = 100.0
         self.comfort = comfort
         self.deaf_wb = False       # the wallbox accepts no commands (cloud problem, wrong entity ...)
+        self.wb_steps = None       # a wallbox with a list of currents (select, e.g. 6/8/10/.../16 A)
+        self.wb_commands: list[int] = []
 
     def _car_setpoint_kw(self) -> float:
         if not self.car_wants:
@@ -78,7 +80,7 @@ class House:
             extra["hp"] = R(power_w=self.thr_power_kw() * 1000, value=self.thr_value, soc=self.comfort)
         return {**extra,
             "wb": R(power_w=self.car_kw * 1000, current_a=self.current, phase_option=self.phase_option,
-                    phases=1 if self.phase_option == "1 Phase" else 3),
+                    phases=1 if self.phase_option == "1 Phase" else 3, current_steps=self.wb_steps),
             "pool": R(power_w=750.0 if self.pool_on else 0.0, is_on=self.pool_on),
             "heater": R(power_w=2000.0 if self.heater_on else 0.0, is_on=self.heater_on),
         }
@@ -88,6 +90,9 @@ class House:
             if self.deaf_wb:
                 return
             if a.kind == "set_current":
+                self.wb_commands.append(int(a.value))
+                if self.wb_steps and int(a.value) not in self.wb_steps:
+                    return  # a list only takes its own entries
                 self.current = int(a.value)
                 self.min_current_seen = min(self.min_current_seen, self.current)
             elif a.kind == "set_phase" and a.value != self.phase_option:

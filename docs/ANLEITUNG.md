@@ -121,7 +121,7 @@ Reihenfolge.
 | Feld | Beispiel | Bedeutung |
 |---|---|---|
 | Ladeleistung | `sensor.wallbox_ladeleistung` | W oder kW |
-| Einstellung Ladestrom | `number.wallbox_max_ladestrom` | die Zahl, mit der man den Strom setzt |
+| Einstellung Ladestrom | `number.wallbox_max_ladestrom` | die Zahl, mit der man den Strom setzt; seit 0.14.3 auch eine Auswahlliste („6 A“, „8 A“ …, z. B. Anker SOLIX V1): der Wächter wählt den passenden Eintrag, nie einen höheren |
 | Mindeststrom / Höchststrom | 6 / 16 A | darunter wird nie gestellt |
 | Phasenwahl (optional) | `select.wallbox_phasen` | ohne sie wird nur gedrosselt |
 | Option für 1 Phase | `1 Phase` | genauer Text der Auswahl |
@@ -286,7 +286,7 @@ bei dem, was Sie eingetragen haben.
 **Die vollständige Liste für Wallboxen, Batterien und Wärmepumpen mit dem Teststand jeder Integration (von uns getestet / Entitätstypen im Quelltext bestätigt / Hilfe gesucht): [KOMPATIBILITAET.md](KOMPATIBILITAET.md).** Für die neuen Gerätetypen ist noch nichts als „getestet“ eingetragen – Berichte sind willkommen (siehe Ende dieser Seite).
 
 Der Wächter braucht von der Wallbox-Integration einen **Leistungssensor** und einen **einstellbaren Ladestrom**
-(`number`, A). Geprüft im Quelltext der Integrationen am 25.10.2026, auf echter Hardware nur der Wattpilot.
+(`number`, A; seit 0.14.3 auch eine Auswahlliste wie „6 A“, „8 A“ …). Geprüft im Quelltext der Integrationen am 25.10.2026, auf echter Hardware nur der Wattpilot.
 Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installation nachsehen.
 
 | Integration | Ladestrom als `number` | Leistungssensor | Geht? |
@@ -546,8 +546,8 @@ nie. Dienst `viertelstunden_waechter.explain_today` (Feld `push`) fragt auf Wuns
 Gerätetyp **Fahrzeug (Ladeplan)**. Er plant, in welchen Viertelstunden das Auto laden soll, damit es bis zur nächsten
 Abfahrt sein Ziel erreicht, und zeigt den Plan an. **Das Ausführen ist ein eigener Schalter, standardmäßig aus.**
 
-**Was Sie eintragen:** Ladestand des Autos (Sensor, %), Ziel (fester Prozentwert, optional aus einem Sensor wie dem
-Ladelimit des Autos), Batteriekapazität (kWh), nächste Abfahrt (eine *Uhrzeit*-Entität – genommen wird das nächste
+**Was Sie eintragen:** Ladestand des Autos (Sensor, %), Ziel (fester Prozentwert, optional aus einem Sensor, einer Zahl oder seit 0.14.3 einer Auswahlliste wie dem
+Ladelimit des Autos, z. B. „80%“ bei Fordpass), Batteriekapazität (kWh), nächste Abfahrt (eine *Uhrzeit*-Entität – genommen wird das nächste
 Auftreten – oder eine Datum-Uhrzeit-Entität / `input_datetime` / Zeitstempel-Sensor), höchste und niedrigste
 Ladeleistung der Wallbox, Grundlast des Hauses und Ladewirkungsgrad, optional eine Entität „Auto angesteckt“ und optional die Befehle zum
 **Erlauben** und **Pausieren** des Ladens (Knopf, Schalter, Auswahl oder Zahl).
@@ -614,7 +614,7 @@ Punkte → Bearbeiten → drei Punkte → Roher Konfigurationseditor, einfügen,
 Dashboard**, er liefert nur das YAML. Alle Dienste der Integration (`create_dashboard`, `import_history`, `send_week_report`,
 `export_csv`, `explain_today`) dürfen nur Administratoren aufrufen (oder Automationen und Skripte).
 
-**Die Ansicht *Heute* (fürs Handy)** zeigt von oben nach unten: den Status des Wächters; einen Balken mit der Prognose der laufenden
+**Die Ansicht *Heute* (fürs Handy)** zeigt von oben nach unten: den Status des Wächters; den **Netzbezug jetzt** (seit 0.14.3); einen Balken mit der Prognose der laufenden
 Viertelstunde gegen das Ziel (weißer Strich = Ziel, roter gestrichelter Strich = Grenze; grün = sicher darunter, gelb = knapp, rot =
 über der Grenze); die Betriebsart (unterwegs zwischen *Aus*, *Nur beobachten* und *Aktiv* umschalten); Spitze heute, Spitze im Monat
 und Eingriffe heute; ein Diagramm aller abgeschlossenen Viertelstunden von heute (rot = über der Grenze); die letzten Zeilen des
@@ -819,6 +819,8 @@ Aktion `send_feedback` (längere Texte, optional eine Kontaktadresse, mit oder o
 an den Autor, sonst wird nichts gesendet.
 
 ## 8. Häufige Fragen
+
+Mehr Fragen, die Nutzer wirklich gestellt haben: [HAEUFIGE_FRAGEN.md](HAEUFIGE_FRAGEN.md).
 
 **Nur das Auto?** Nein – überwacht wird der gesamte Netzbezug. Eingreifen kann er bei allen eingetragenen
 Geräten.

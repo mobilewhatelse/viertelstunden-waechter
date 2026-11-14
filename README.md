@@ -3,7 +3,7 @@
 A Home Assistant integration that keeps the **highest quarter hour of your grid import** below a limit. It
 throttles the wallbox and pauses devices, only as long as needed.
 
-> **Deutsch:** [docs/ANLEITUNG.md](docs/ANLEITUNG.md) · **Full manual (English):** [docs/MANUAL.md](docs/MANUAL.md)
+> **Deutsch:** [docs/ANLEITUNG.md](docs/ANLEITUNG.md) · **Full manual (English):** [docs/MANUAL.md](docs/MANUAL.md) · **FAQ:** [English](docs/FAQ.md), [Deutsch](docs/HAEUFIGE_FRAGEN.md)
 
 ## What is this for?
 

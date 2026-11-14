@@ -136,7 +136,7 @@ The device types:
 
 | Device type | What the guard does | Needs |
 |---|---|---|
-| Wallbox | lowers the current (3-phase down to the minimum, then optionally 1-phase) | charging power sensor, current setting (`number`), optional phase selection (`select`) |
+| Wallbox | lowers the current (3-phase down to the minimum, then optionally 1-phase) | charging power sensor, current setting (`number`, or since 0.14.3 a list `select`), optional phase selection (`select`) |
 | Switchable device | switches off / on again | switch, optional power sensor |
 | Battery | releases the home battery so it feeds the house (settings and values you enter, previous values are put back) | state of charge sensor, one or two settings (`number` / `select` / switch) |
 | Change settings | changes one or two settings (block contact, operating mode ...) and puts them back | the settings (`switch`, `select`, `number`) and the value for "lowered" |
@@ -268,7 +268,7 @@ controls it).
 **Full list for wallboxes, batteries and heat pumps, with the test status of every integration (tested by us / entity types verified in the source / help wanted): [docs/COMPATIBILITY.md](COMPATIBILITY.md).** Nothing is marked "tested" for the new device types yet - reports are welcome (see the end of that page).
 
 What the guard needs from a wallbox integration: a **charging power sensor** and a **settable charging current**
-(`number`, A). Checked in the integrations' source code on 2026-10-25; only the Wattpilot was tried on real
+(`number`, A; since 0.14.3 also a list like "6 A", "8 A" …, e.g. Anker SOLIX V1). Checked in the integrations' source code on 2026-10-25; only the Wattpilot was tried on real
 hardware. Entity names change between versions - look for them in your own installation.
 
 | Integration | Charging current as `number` | Power sensor | Usable |
@@ -563,8 +563,8 @@ it only logs what it would do. Recommended: switch it on after a few days, once 
 Device type **Vehicle (charge plan)**. It plans in which quarter hours the car should charge so that it reaches its
 target by the next departure, and shows the plan. **Carrying it out is a separate switch, off by default.**
 
-**What you enter:** the car's state of charge (sensor, %), the target (fixed percentage, optionally from a sensor
-such as the car's charge limit), the battery capacity (kWh), the next departure (a *time* entity - the next
+**What you enter:** the car's state of charge (sensor, %), the target (fixed percentage, optionally from a sensor, a number or since 0.14.3 a list
+such as the car's charge limit, e.g. "80%" with Fordpass), the battery capacity (kWh), the next departure (a *time* entity - the next
 occurrence is used - or a date-time entity / `input_datetime` / timestamp sensor), the highest and lowest charging
 power of the wallbox, the house base load and charging efficiency, optionally a "car plugged in" entity, and optionally the commands to
 **allow** and **pause** charging (a button, switch, selection or number).
@@ -624,7 +624,7 @@ three dots → Raw configuration editor, paste, save. The service **never writes
 returns the YAML. All services of the integration (`create_dashboard`, `import_history`, `send_week_report`, `export_csv`,
 `explain_today`) can only be called by administrators (or by automations and scripts).
 
-**The view *Today* (for the phone)** shows, top to bottom: the status of the guard; one bar with the forecast of the
+**The view *Today* (for the phone)** shows, top to bottom: the status of the guard; the **grid import now** (since 0.14.3); one bar with the forecast of the
 running quarter hour against the target (white mark = target, red dashed mark = limit; green = safely below, yellow =
 close, red = above the limit); the mode (switch between *Off*, *Observe only* and *Active* on the go); peak today,
 peak this month and interventions today; a chart of every finished quarter hour of today (red above the limit); the
