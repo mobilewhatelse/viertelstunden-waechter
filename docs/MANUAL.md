@@ -722,14 +722,18 @@ usage statistics* on the integration's device. While it is on, once a week this 
 
 | Sent | Never sent |
 |---|---|
-| a random id of this installation (not traceable to you) | names, entity ids, addresses, location |
-| version of the integration and of Home Assistant, country and language of Home Assistant | measurements, consumption, peaks, trips |
+| a random id that changes every month (not traceable to you) | names, entity ids, addresses, location |
+| version of the integration and of Home Assistant, country and language of Home Assistant | exact measurements, consumption, peaks, trips |
+| roughly how long the guard has been running (0–1, 1–3, 3–6, more than 6 months) | |
+| from 0.15 with the new text: the peak of the last month with and without the guard and the interventions of the last 30 days, only as rough classes (e.g. "8-11" kW, "6-20") | |
 | which kinds of devices are set up and how many (e.g. 1 wallbox, 2 switches) | passwords, tokens, evcc address |
 | which integrations their entities come from (e.g. `shelly`, `fronius`) | |
 | which features are used (e.g. evcc, solar forecast, mode) | |
 
-No IP address is stored. Switching it off sends one request to delete the data of this id. Why: to see which wallboxes,
-meters and cars are used, so that they are tested first.
+No IP address is stored. Switching it off sends a request to delete the data of each id still remembered (this month and the
+one before); the service deletes it after 60 days anyway. The fixed id of older versions is deleted once after the update.
+Why: to see which wallboxes, meters and cars are used, so that they are tested first; published summaries and summaries passed
+on to research or partners, always from at least 10 installations, never single households.
 
 **Feedback.** Write into the text field *Feedback* on the integration's device and press *Send feedback*, or use the action
 `send_feedback` (longer texts, an optional contact address, with or without the setup overview above). It goes to the author,

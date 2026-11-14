@@ -220,6 +220,9 @@ class Waechter:
         self.explanation = data.get("explanation", {})
         self._ai_calls = data.get("ai_calls", {})
         self._usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
+        if not self._usage.get("seit"):   # only for the rough class "running since"; stays here, never sent as a date
+            created = getattr(self.entry, "created_at", None)
+            self._usage["seit"] = (created if isinstance(created, datetime) else dt_util.now()).isoformat()
         self.ask_usage_once()
         self.check_observe_only()
         self._reserve = data.get("reserve", {})
@@ -1074,18 +1077,43 @@ class Waechter:
 
         async_dispatcher_send(self.hass, self.signal)
 
+    def usage_classes(self, now: datetime) -> dict[str, Any] | None:
+        """Rough classes of the household (only with the text of 0.15): peak of the last complete month with and without the
+        guard, and interventions of the last 30 days. Never the values themselves."""
+        def kw_class(kw: float | None) -> str | None:
+            if kw is None or kw <= 0:
+                return None
+            for limit, name in ((5, "<5"), (8, "5-8"), (11, "8-11"), (15, "11-15")):
+                if kw < limit:
+                    return name
+            return ">15"
+
+        last = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+        m = self.months.get(last) or {}
+        since = (now - timedelta(days=30)).strftime("%Y-%m-%d")
+        n = sum(int(c.get("real", 0)) for d, c in self.counts.items() if d >= since and isinstance(c, dict))
+        out: dict[str, Any] = {}
+        if kw_class(m.get("kw")):
+            out["spitze_kw"] = kw_class(m.get("kw"))
+            out["spitze_ohne_kw"] = kw_class(max(float(m.get("ug") or 0.0), float(m.get("kw") or 0.0)))
+        if self.executing or n:
+            out["eingriffe_30_tage"] = "0" if n == 0 else "1-5" if n <= 5 else "6-20" if n <= 20 else ">20"
+        return {"klassen": out} if out else None
+
     def _usage_step(self, now: datetime) -> None:
-        """Weekly while the switch is on; once 'delete' after it was switched off. Runs in the background, never blocks."""
+        """Weekly while the switch is on; 'delete' for every id after it was switched off, and once for the fixed id of older
+        versions. Runs in the background, never blocks."""
         if self._usage_busy:
             return
-        if self.share_usage and rm.faellig(self._usage.get("gesendet"), now):
-            if not self._usage.get("kennung"):
-                self._usage["kennung"] = rm.neue_kennung()
+        old = rm.zu_loeschen(self._usage, self.share_usage)
+        if old:
+            daten = rm.loeschen(DOMAIN, old)
+        elif self.share_usage and rm.faellig(self._usage.get("gesendet"), now):
             v, ha = self._version()
-            daten = rm.statistik(DOMAIN, v, ha, self._usage["kennung"], self.hass.config.country, self.hass.config.language,
-                                 self.setup_overview())
-        elif not self.share_usage and self._usage.get("kennung"):
-            daten = rm.loeschen(DOMAIN, self._usage["kennung"])
+            daten = rm.statistik(DOMAIN, v, ha, rm.kennung_fuer(self._usage, now), self.hass.config.country,
+                                 self.hass.config.language, self.setup_overview(), rm.laeuft_seit(self._usage.get("seit"), now),
+                                 self.usage_classes(now) if self.check_consent() else None)
+            _LOGGER.debug("Viertelstunden-Waechter: usage statistics to send: %s", daten)
         else:
             return
         self._usage_busy = True
@@ -1098,7 +1126,7 @@ class Waechter:
             ok = await rm.senden(async_get_clientsession(self.hass), rm.ZIEL_STATISTIK, daten)
             if daten.get("loeschen"):
                 if ok:
-                    self._usage = {"gefragt": True} if self._usage.get("gefragt") else {}
+                    rm.geloescht(self._usage, daten["kennung"])
             else:
                 # sent or not: the next try comes in a week, never every cycle (an unreachable server must not cause traffic)
                 self._usage["gesendet"] = now.isoformat()

@@ -805,14 +805,19 @@ Schalter *Anonyme Daten teilen* am Gerät der Integration. Solange er an ist, ge
 
 | Gesendet | Nie gesendet |
 |---|---|
-| eine zufällige Kennung dieser Installation (nicht auf Sie zurückführbar) | Namen, Entitäts-IDs, Adressen, Standort |
-| Version der Integration und von Home Assistant, Land und Sprache von Home Assistant | Messwerte, Verbrauch, Spitzen, Fahrten |
+| eine zufällige Kennung, die jeden Monat wechselt (nicht auf Sie zurückführbar) | Namen, Entitäts-IDs, Adressen, Standort |
+| Version der Integration und von Home Assistant, Land und Sprache von Home Assistant | genaue Messwerte, Verbrauch, Spitzen, Fahrten |
+| grob, wie lange der Wächter schon läuft (0–1, 1–3, 3–6, mehr als 6 Monate) | |
+| ab 0.15 mit dem neuen Text: die Spitze des letzten Monats mit und ohne Wächter und die Eingriffe der letzten 30 Tage, nur als grobe Klassen (z. B. „8-11“ kW, „6-20“) | |
 | welche Gerätearten eingerichtet sind und wie viele (z. B. 1 Wallbox, 2 Schalter) | Kennwörter, Token, Adresse von evcc |
 | aus welchen Integrationen ihre Entitäten kommen (z. B. `shelly`, `fronius`) | |
 | welche Funktionen genutzt werden (z. B. evcc, Solarprognose, Betriebsart) | |
 
-Es wird keine IP-Adresse gespeichert. Beim Ausschalten wird einmal das Löschen der Daten dieser Kennung angefordert. Wozu: um zu
-sehen, welche Wallboxen, Zähler und Autos verwendet werden, damit diese zuerst getestet werden.
+Es wird keine IP-Adresse gespeichert. Beim Ausschalten wird das Löschen der Daten jeder noch gemerkten Kennung angefordert (dieser
+und voriger Monat); der Dienst löscht sie ohnehin nach 60 Tagen. Die feste Kennung früherer Versionen wird nach dem Update einmal
+gelöscht. Wozu: um zu sehen, welche Wallboxen, Zähler und Autos verwendet werden, damit diese zuerst getestet werden;
+veröffentlichte Zusammenfassungen und Zusammenfassungen, die an Forschung oder Partner weitergegeben werden, immer aus mindestens
+10 Installationen, nie einzelne Haushalte.
 
 ### Geräte-Check (ab 0.15, nur mit *Anonyme Daten teilen*)
 

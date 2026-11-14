@@ -4,6 +4,17 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.0 - unreleased
 
+- **Sharing, new text:** the weekly statistic now uses a random id that changes every month (the fixed id of older versions is
+  deleted on the service once), plus how long the guard has been running as a rough class. With the text of 0.15 (the same
+  confirmation as for the device check) also the peak of the last month with and without the guard and the interventions of the
+  last 30 days, only as rough classes. The text names every purpose, also summaries passed on to research or partners, always
+  from at least 10 installations. The service keeps the weekly data at most 60 days.
+  *Deutsch:* Teilen mit neuem Text: Die Wochenstatistik hat jetzt eine zufällige Kennung, die jeden Monat wechselt (die feste
+  Kennung früherer Versionen wird am Dienst einmal gelöscht), dazu grob, wie lange der Wächter schon läuft. Mit dem Text von 0.15
+  (dieselbe Bestätigung wie für den Geräte-Check) auch die Spitze des letzten Monats mit und ohne Wächter und die Eingriffe der
+  letzten 30 Tage, nur als grobe Klassen. Der Text nennt alle Zwecke, auch Zusammenfassungen für Forschung oder Partner, immer aus
+  mindestens 10 Installationen. Der Dienst behält die Wochendaten höchstens 60 Tage.
+
 - **Device check (only with *Share anonymous data*):** once a day the guard asks our service whether the connected devices still work
   as usual. Wallbox: charging power against set current and phases (drop in power, a missing phase, a slow trend); home battery:
   usable capacity from full swings of at least 40 points; switches, pumps, water heaters: power while running ("needs more than
