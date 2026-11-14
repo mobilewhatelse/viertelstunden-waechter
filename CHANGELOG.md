@@ -4,6 +4,27 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.0 - unreleased
 
+- **Battery reserve: freeze at the current state of charge (from feedback):** with a minimum-SOC setting (e.g. Victron) enter
+  `soc` as the value that keeps the charge. Before a forecast peak the minimum is set to the state of charge at that moment,
+  rounded down (a minimum above it would make some inverters charge from the grid) and never below the value already set.
+  *Deutsch:* Akku-Reserve beim aktuellen Ladestand einfrieren (aus einer Rückmeldung): Bei einer Mindest-SOC-Einstellung (z. B.
+  Victron) als Wert `soc` eintragen. Vor einer erwarteten Spitze wird das Minimum auf den Ladestand in diesem Moment gesetzt,
+  abgerundet (ein Minimum darüber lässt manche Wechselrichter aus dem Netz laden) und nie unter den schon eingestellten Wert.
+- **Battery: minimum SOC follows the charge back up (from feedback, switch at the battery, default off):** after a release the
+  minimum SOC is not set back at once (e.g. 15 -> 30 % with the battery at 20 %, which makes a Victron ESS charge from the grid),
+  but to the state of charge, rounded down, and raised with it until the old value is reached. Stops if the value is changed by
+  someone else; the old value comes back at once in observe mode, when switched off or when the integration is unloaded.
+  *Deutsch:* Akku: Mindest-Ladestand folgt dem Ladestand zurück (aus einer Rückmeldung, Schalter beim Akku, Standard aus): Nach
+  einer Freigabe wird das Minimum nicht auf einmal zurückgestellt (z. B. 15 -> 30 % bei 20 % Ladestand, ein Victron ESS lädt dann
+  aus dem Netz), sondern auf den Ladestand, abgerundet, und mit ihm angehoben, bis der alte Wert erreicht ist. Endet, wenn jemand
+  anderer den Wert ändert; im Beobachtungsmodus, beim Ausschalten oder Entladen der Integration kommt der alte Wert sofort zurück.
+- **Battery: recharge from a time (from feedback, optional):** if PV has not reached the old minimum by the set time, it is set
+  back and the battery charges from the grid, slowly with an optional setting (e.g. maximum charge current 40 A) that is put back
+  when the old value is reached.
+  *Deutsch:* Akku: Nachladen ab einer Uhrzeit (aus einer Rückmeldung, optional): Hat die PV den alten Mindest-Ladestand bis zur
+  eingestellten Uhrzeit nicht erreicht, wird er zurückgestellt und der Akku aus dem Netz nachgeladen, langsam mit einer optionalen
+  Einstellung (z. B. maximaler Ladestrom 40 A), die zurückkommt, wenn der alte Wert erreicht ist.
+
 - **Sharing, new text:** the weekly statistic now uses a random id that changes every month (the fixed id of older versions is
   deleted on the service once), plus how long the guard has been running as a rough class. With the text of 0.15 (the same
   confirmation as for the device check) also the peak of the last month with and without the guard and the interventions of the

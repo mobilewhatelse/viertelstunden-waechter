@@ -51,6 +51,53 @@ class ReserveWindowTests(unittest.TestCase):
         self.assertIsNone(forecast.reserve_window([], MON18, 60))
 
 
+class FreezeTests(unittest.TestCase):
+    """Reserve value "soc": hold the battery at its state of charge now (e.g. minimum SOC of a Victron)."""
+
+    def test_the_words(self):
+        for w in ("soc", "SOC", " Ladestand ", "current", "aktuell"):
+            self.assertTrue(forecast.is_freeze(w))
+        for w in ("80", "", None, "standby"):
+            self.assertFalse(forecast.is_freeze(w))
+
+    def test_rounded_down_never_above_the_state_of_charge(self):
+        # above the state of charge an ESS would charge from the grid: a new peak
+        self.assertEqual(forecast.frozen_value(62.7, 30, 1, 0, 100), "62")
+        self.assertEqual(forecast.frozen_value(62.7, 30, 5, 10, 100), "60")
+        self.assertEqual(forecast.frozen_value(64.9, 30, 5, 0, 100), "60")
+        self.assertEqual(forecast.frozen_value(55.0, 30, 0.5, 0, 100), "55")
+        self.assertEqual(forecast.frozen_value(55.7, 30, 0.5, 0, 100), "55.5")
+
+    def test_never_below_the_value_set_now(self):
+        # holding must not release: at 28 % with a minimum of 30 nothing changes
+        self.assertIsNone(forecast.frozen_value(28.0, 30, 1, 0, 100))
+        self.assertIsNone(forecast.frozen_value(30.4, 30, 1, 0, 100))
+        self.assertEqual(forecast.frozen_value(31.0, 30, 1, 0, 100), "31")
+
+    def test_limits_and_missing_values(self):
+        self.assertEqual(forecast.frozen_value(99.0, 30, 1, 0, 95), "95")
+        self.assertIsNone(forecast.frozen_value(8.0, None, 1, 10, 100))   # below the setting's minimum
+        self.assertIsNone(forecast.frozen_value(None, 30))
+        self.assertIsNone(forecast.frozen_value(120.0, 30))
+        self.assertEqual(forecast.frozen_value(47.3, None), "47")       # no step, no limits: whole percent
+
+
+class RechargeTimeTests(unittest.TestCase):
+    def test_from_the_time_for_twelve_hours_across_midnight(self):
+        at = lambda h, m=0: datetime(2026, 11, 14, h, m, tzinfo=TZ)   # noqa: E731
+        self.assertFalse(forecast.recharge_due(at(21, 59), "22:00"))
+        self.assertTrue(forecast.recharge_due(at(22, 0), "22:00:00"))
+        self.assertTrue(forecast.recharge_due(at(3, 30), "22:00"))
+        self.assertTrue(forecast.recharge_due(at(9, 59), "22:00"))
+        self.assertFalse(forecast.recharge_due(at(10, 0), "22:00"))
+        self.assertTrue(forecast.recharge_due(at(14, 0), "06:30"))
+
+    def test_bad_times(self):
+        now = datetime(2026, 11, 14, 22, 0, tzinfo=TZ)
+        for bad in (None, "", "22", "abc", "25:00", "22:61"):
+            self.assertFalse(forecast.recharge_due(now, bad), bad)
+
+
 class ExportTests(unittest.TestCase):
     ROWS = [["2026-10-25T16:45+01:00", 8.857, 10.2, 7.1], ["2026-10-25T17:00+01:00", 2.0, 2.0, None], ["kaputt", 1]]
 

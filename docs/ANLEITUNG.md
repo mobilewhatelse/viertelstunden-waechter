@@ -521,6 +521,26 @@ einer solchen Einstellung an, tut nichts, solange er den Akku für einen Notfall
 Akku zuerst zurückgestellt. Wenn eigene Automationen dieselbe Einstellung ändern (z. B. beim Autoladen), entscheiden Sie, wer zuständig
 ist – der Wächter stellt nur zurück, solange noch sein eigener Wert gesetzt ist.
 
+**Beim aktuellen Ladestand einfrieren (ab 0.15).** Ist die Einstellung ein Mindest-SOC (eine Zahl, z. B. beim Victron), tragen
+Sie als Wert `soc` ein. Der Wächter setzt das Minimum dann auf den Ladestand in diesem Moment (aus dem Sensor *Ladestand* des
+Akkus), **abgerundet** auf die Schrittweite der Einstellung: Ein Minimum über dem Ladestand lässt manche Wechselrichter aus dem
+Netz laden, eine neue Spitze. Er setzt nie einen Wert unter dem, der schon eingestellt ist – das Halten gibt den Akku also nie frei.
+
+**Mindest-Ladestand folgt dem Ladestand zurück (ab 0.15, Schalter beim Akku, Standard aus).** Gibt der Wächter einen Akku über
+einen Mindest-SOC frei (z. B. 30 → 15 %), stellt er ihn danach normalerweise auf einmal zurück. Liegt der Akku dann bei 20 %, lädt
+ein Victron ESS sofort aus dem Netz auf 30 %. Mit dem Schalter setzt der Wächter das Minimum stattdessen auf den Ladestand
+(abgerundet, nie unter den Freigabewert) und zieht es bei jedem Durchlauf mit, wenn der Akku z. B. mit PV lädt: 20, 21, 22 … bis der
+alte Wert wieder erreicht ist. Ändert jemand anderer den Wert, hört er auf. Im Beobachtungsmodus, beim Ausschalten des Schalters und
+beim Entladen der Integration stellt er den alten Wert sofort zurück; nach einem Neustart macht er weiter. Nur für Mindest-SOC-
+Einstellungen in Prozent einschalten, nicht für Leistungs- oder Modus-Einstellungen; braucht den Sensor *Ladestand*.
+
+**Nachladen ab einer Uhrzeit (ab 0.15, optional, braucht den Schalter darüber).** Hat die PV den alten Mindest-Ladestand bis zur
+Uhrzeit *Nachladen ab* (z. B. 22:00) nicht erreicht, stellt der Wächter ihn zurück, und der Akku lädt aus dem Netz nach. Mit
+*Einstellung beim Nachladen* und ihrem Wert (z. B. der maximale Ladestrom eines ESS auf 40 A) setzt er diese **zuerst**, damit
+langsam geladen wird, und stellt sie zurück, sobald der alte Wert erreicht ist. Endet eine Freigabe erst nach der Uhrzeit, beginnt
+das Nachladen trotzdem (bis 12 Stunden nach der Uhrzeit). Wird der Akku währenddessen wieder freigegeben, kommt die Einstellung
+sofort zurück. Hat jemand anderer sie inzwischen geändert, lässt er sie so.
+
 **CSV-Export** (Dienst `viertelstunden_waechter.export_csv`). Schreibt das Viertelstunden-Lastprofil (120 Tage aufbewahrt: Beginn, Ende,
 Bezug in kW und kWh, Schätzung ohne Wächter, Wallbox in kW) oder die Tagesspitzen (400 Tage) nach `config/viertelstunden_waechter/export/`
 – kein öffentlicher Ordner. Format `standard` (Komma, Dezimalpunkt) oder `excel_de` (Semikolon, Dezimalkomma). Kleine Dateien kommen

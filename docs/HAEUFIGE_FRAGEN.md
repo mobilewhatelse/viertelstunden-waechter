@@ -28,6 +28,21 @@ Der Wächter greift dann nicht ein und zeigt *keine Daten*. Spitzen und Kosten z
 **Mein Template-Sensor (z. B. aus einem Shelly 3EM Pro) fehlt in der Auswahl.**
 Seit 0.13.3 lässt sich jeder Sensor wählen. Geprüft wird die **Einheit** (W/kW bzw. Wh/kWh), nicht die Geräteklasse.
 
+**Wie richte ich einen Victron-Akku mit Mindest-SOC ein (ab 0.15)?**
+Beispiel: Normal steht der Mindest-SOC auf 30 %, zum Abfangen einer Spitze soll der Akku bis 15 % liefern. Beim Gerät *Batterie*:
+
+| Feld | Eintrag |
+|---|---|
+| Ladestand | der SOC-Sensor des Akkus |
+| Einstellung, die die Batterie freigibt / Wert | die Einstellung *ESS Minimum SOC* / `15` |
+| Vorherige Werte wiederherstellen | an |
+| Mindest-Ladestand folgt dem Ladestand zurück | an: Nach der Spitze geht das Minimum nicht auf einmal auf 30 %, sondern folgt dem Ladestand (20, 21 … 30), sonst lädt der Victron sofort aus dem Netz |
+| Nachladen ab | optional, z. B. 22:00: Hat die PV die 30 % bis dahin nicht geschafft, lädt der Akku aus dem Netz nach |
+| Einstellung beim Nachladen / Wert | optional, z. B. *ESS maximaler Ladestrom* / `40`: damit langsam geladen wird, danach kommt der alte Wert zurück |
+| Einstellung, die die Ladung hält / Wert | optional für die Akku-Reserve vor einer Spitze: *ESS Minimum SOC* / `soc` (bleibt beim aktuellen Ladestand) |
+
+Mehr in der [Anleitung](ANLEITUNG.md), Abschnitt *Akku-Reserve vor einer Spitze*.
+
 ## Im Betrieb
 
 **Betriebsart *Aktiv*, das Protokoll sagt „würde drosseln“, aber es passiert nichts.**

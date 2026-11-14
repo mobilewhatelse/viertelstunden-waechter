@@ -14,6 +14,7 @@ model alone is the forecast, so a usual evening charging does not show as a risk
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -355,6 +356,45 @@ def reserve_window(windows: list[dict[str, Any]], now: datetime, lead_min: float
         if w["start"] - timedelta(minutes=lead_min) <= now < w["end"]:
             return w
     return None
+
+
+FREEZE_WORDS = ("soc", "ladestand", "current", "aktuell")   # reserve value: hold the battery at its state of charge now
+
+
+def is_freeze(value: Any) -> bool:
+    return str(value or "").strip().lower() in FREEZE_WORDS
+
+
+def frozen_value(soc: float | None, current: float | None, step: float | None = None, lo: float | None = None,
+                 hi: float | None = None) -> str | None:
+    """The minimum-SOC value that freezes the battery where it is now, or None when there is nothing to set.
+
+    Rounded DOWN to the setting's step: a minimum above the state of charge makes some inverters (e.g. Victron ESS)
+    charge the battery from the grid, a new peak. Never below the value that is set now: holding must not release."""
+    if soc is None or not 0 <= soc <= 100:
+        return None
+    st = step if step and step > 0 else 1.0
+    base = lo if lo is not None else 0.0
+    v = base + math.floor((soc - base) / st + 1e-9) * st
+    if hi is not None:
+        v = min(v, hi)
+    if lo is not None and v < lo:
+        return None
+    if current is not None and v <= current:
+        return None
+    return str(int(round(v))) if abs(v - round(v)) < 1e-9 else f"{v:g}"
+
+
+def recharge_due(now: datetime, at: Any, hours: float = 12.0) -> bool:
+    """True from the time `at` ("22:00" or "22:00:00") for `hours` hours, also across midnight."""
+    try:
+        h, m = (int(x) for x in str(at).split(":")[:2])
+    except (TypeError, ValueError):
+        return False
+    if not (0 <= h < 24 and 0 <= m < 60):
+        return False
+    since = (now.hour * 60 + now.minute - (h * 60 + m)) % 1440
+    return since < hours * 60
 
 
 def risk_windows(series: list[dict[str, Any]], target_kw: float, min_samples: int = MIN_SAMPLES) -> list[dict[str, Any]]:

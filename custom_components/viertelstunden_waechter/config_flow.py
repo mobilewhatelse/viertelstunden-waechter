@@ -18,7 +18,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.selector import (
     BooleanSelector, ConfigEntrySelector, ConfigEntrySelectorConfig, EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
-    SelectSelector, SelectSelectorConfig, TextSelector, TextSelectorConfig, TextSelectorType,
+    SelectSelector, SelectSelectorConfig, TextSelector, TextSelectorConfig, TextSelectorType, TimeSelector,
 )
 
 from .const import (
@@ -29,7 +29,7 @@ from .const import (
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC,
     D_COMFORT, D_COMFORT_MIN, D_HOLD, D_OBSERVE, D_MAX_VALUE, D_MIN_SOC, D_MIN_VALUE, D_PAUSE, D_REL1, D_REL1_VALUE, D_REL2,
-    D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_STEP, D_VALUE,
+    D_REL2_VALUE, D_RESTORE_ORIG, D_RESTORE_STEPWISE, D_RECHARGE_AT, D_RECHARGE_ENTITY, D_RECHARGE_VALUE, D_SOC, D_STEP, D_VALUE,
 )
 from .const import D_ART, D_BATTERY_POWER
 from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
@@ -272,6 +272,10 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_POWER_W, default=d.get(D_POWER_W, 800))] = _num(10, 20000, 10, "W")
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
         s[vol.Required(D_RESTORE_ORIG, default=d.get(D_RESTORE_ORIG, True))] = BooleanSelector()
+        s[vol.Required(D_RESTORE_STEPWISE, default=bool(d.get(D_RESTORE_STEPWISE, False)))] = BooleanSelector()
+        s[_opt(D_RECHARGE_AT, d)] = TimeSelector()
+        s[_opt(D_RECHARGE_ENTITY, d)] = _ent(["number", "input_number", "select", "input_select"])
+        s[_opt(D_RECHARGE_VALUE, d)] = TextSelector()
         s[_opt(D_OFF_SCRIPT, d)] = _ent("script")
         s[_opt(D_RESERVE_ENTITY, d)] = _ent(RELEASE_DOMAINS)
         s[_opt(D_RESERVE_VALUE, d)] = TextSelector()

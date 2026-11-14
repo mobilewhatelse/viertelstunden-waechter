@@ -22,7 +22,7 @@ from .const import (
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC, D_OBSERVE,
-    D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_SOC, D_VALUE,
+    D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_RESTORE_STEPWISE, D_RECHARGE_AT, D_RECHARGE_ENTITY, D_RECHARGE_VALUE, D_SOC, D_VALUE,
     CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
@@ -34,7 +34,7 @@ from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
 from .export import days_csv, quarters_csv
 from .forecast import (
-    MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile,
+    MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile, frozen_value, is_freeze, recharge_due,
 )
 from .corrections import correct_quarter as _correct_quarter
 from . import rueckmeldung as rm
@@ -58,6 +58,15 @@ def _same_value(state: str, wanted: str) -> bool:
         return abs(float(state) - float(wanted)) < 0.5
     except ValueError:
         return False
+
+
+def _num(x: Any) -> float | None:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
 LOG_KEEP = 200
 DAYS_KEEP = 400
 QUARTERS_KEEP = 120 * 96   # quarter-hour history for the export: 120 days
@@ -119,6 +128,7 @@ class Waechter:
         self.price_threshold = 10.0      # kW
         self._last_push: datetime | None = None
         self._battery_orig: dict[str, dict[str, str]] = {}  # settings before the release, per battery device
+        self._ratchet: dict[str, dict[str, Any]] = {}  # minimum SOC following the charge back up: entity, target, last
         # charge plan for the car
         self.plan_enabled = True         # compute the plan (needs a vehicle entry)
         self.plan_execute = False        # also carry it out (always off after a restart)
@@ -203,6 +213,7 @@ class Waechter:
         self.months = data.get("months", {})
         self.weekly = data.get("weekly", {})
         self._battery_orig = data.get("battery_orig", {})
+        self._ratchet = data.get("ratchet", {}) if isinstance(data.get("ratchet"), dict) else {}  # continues after a restart
         self._evcc_orig = data.get("evcc_orig", {})
         self._plan_paused = bool(data.get("plan_paused"))  # resumed by the first cycle (the plan switch is off)
         if self.month_peak.get("month") and self.month_peak["month"] not in self.months:
@@ -253,6 +264,8 @@ class Waechter:
             if self.executing and self.guard.interventions:
                 await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_unload")), True)
             await self._end_reserve_all(self.t("r_unload"))
+            for dev_id in list(self._ratchet):   # reload or removal: the old minimum back (a restart continues instead)
+                await self._step_finish(dev_id, self.t("r_unload"))
             self.executing = False
             self.guard.forget()
         await self._store.async_save(self._data())
@@ -658,6 +671,7 @@ class Waechter:
             self._update_forecast(now)
             await self._update_plan(now)
             await self._execute_plan(now)
+            await self._battery_step(now, execute)
             await self._battery_reserve_step(now, execute)
             await self._explain_due(now)
             self.status = self._status(locked, needed)
@@ -1362,7 +1376,7 @@ class Waechter:
         for dev_id, d in self.raw_devices.items():
             if d[D_KIND] != KIND_BATTERY or not d.get(D_RESERVE_ENTITY) or d.get(D_RESERVE_VALUE) in (None, ""):
                 continue
-            if dev_id in self.guard.interventions:
+            if dev_id in self.guard.interventions or dev_id in self._ratchet:
                 continue
             win = reserve_window(windows, now, float(d.get(D_RESERVE_LEAD, 60))) if (
                 self.battery_reserve and self.mode != MODE_OFF) else None
@@ -1379,6 +1393,11 @@ class Waechter:
                     continue
                 ent, val = d[D_RESERVE_ENTITY], str(d[D_RESERVE_VALUE])
                 st = self._state(ent)
+                if is_freeze(val):   # "soc": hold at the state of charge now (rounded down, never below the value set now)
+                    val = self._freeze_value(d, ent, st)
+                    if val is None:
+                        continue
+                    text = self.t("res_freeze", name=name, value=val, start=f"{win['start']:%H:%M}", end=f"{win['end']:%H:%M}")
                 try:
                     await self._set_entity(ent, val)
                 except Exception as err:  # noqa: BLE001
@@ -1389,6 +1408,140 @@ class Waechter:
                 self._log(Action(dev_id, "log", None, text, False), False)
             elif held is not None and (win is None or not execute):
                 await self._end_reserve(dev_id, self.t("r_risk_over") if win is None else self.t("r_mode"))
+
+    def _freeze_value(self, d: dict[str, Any], ent: str, st: Any, current: float | None = None,
+                      cap: float | None = None) -> str | None:
+        """The value of a number setting (e.g. minimum SOC) that keeps the battery at its state of charge now.
+        `current`: never at or below this (default: the value set now); `cap`: never above this (e.g. the old value)."""
+        if ent.split(".")[0] not in ("number", "input_number"):
+            return None
+        soc_st = self._state(d.get(D_SOC)) if d.get(D_SOC) else None
+        attrs = st.attributes if st is not None else {}
+        hi = _num(attrs.get("max"))
+        if cap is not None:
+            hi = cap if hi is None else min(hi, cap)
+        return frozen_value(_num(soc_st.state) if soc_st is not None else None,
+                            current if current is not None else (_num(st.state) if st is not None else None),
+                            _num(attrs.get("step")), _num(attrs.get("min")), hi)
+
+    # ---------- after a release: the minimum SOC follows the state of charge back up (0.15) ----------
+
+    async def _step_start(self, dev_id: str, d: dict[str, Any], ent: str, before: str, st: Any) -> bool:
+        """Instead of jumping back to the old minimum (e.g. 15 -> 30 with the battery at 20 %, which makes a Victron ESS
+        charge from the grid at once), set the minimum to the state of charge now and raise it with the charge.
+        False: not for this setting, put the old value back as usual."""
+        target = _num(before)
+        if not d.get(D_RESTORE_STEPWISE) or target is None or not 0 <= target <= 100 or _num(st.state) is None:
+            return False
+        soc_st = self._state(d.get(D_SOC)) if d.get(D_SOC) else None
+        if soc_st is None or _num(soc_st.state) is None or _num(soc_st.state) >= target:
+            return False                                   # no charge known, or already full enough: back at once
+        value = self._freeze_value(d, ent, st, cap=target)
+        if value is not None and _num(value) >= target:
+            return False
+        if value is not None:
+            await self._set_entity(ent, value)
+        last = value if value is not None else st.state
+        self._ratchet[dev_id] = {"entity": ent, "target": before, "last": last}
+        self._log(Action(dev_id, "log", None, self.t("step_start", name=d.get(D_NAME, dev_id), value=f"{_num(last):g}",
+                                                     target=f"{target:g}"), False), False)
+        return True
+
+    async def _battery_step(self, now: datetime, execute: bool) -> None:
+        """Each cycle: raise a minimum SOC that follows the charge, until it is back at its old value. From the recharge
+        time (if set) the old value is set at once and charged from the grid, with the recharge setting (e.g. a low
+        maximum charge current) until it is reached."""
+        for dev_id in list(self._ratchet):
+            r = self._ratchet[dev_id]
+            d = self.raw_devices.get(dev_id)
+            if d is None:
+                self._ratchet.pop(dev_id, None)               # device deleted: leave the setting alone
+                continue
+            if dev_id in self.guard.interventions:
+                continue                                       # released again: the release keeps the old value
+            name, ent, target = d.get(D_NAME, dev_id), r["entity"], _num(r["target"])
+            st = self._state(ent)
+            if st is None or st.state in _BAD:
+                continue
+            if not _same_value(st.state, str(r["last"])) or target is None:
+                self._ratchet.pop(dev_id, None)               # changed by someone else: theirs now
+                self._log(Action(dev_id, "log", None, self.t("step_changed", name=name), False), False)
+                continue
+            if not execute or not d.get(D_RESTORE_STEPWISE):
+                await self._step_finish(dev_id, self.t("r_mode"))
+                continue
+            soc_st = self._state(d.get(D_SOC)) if d.get(D_SOC) else None
+            soc = _num(soc_st.state) if soc_st is not None else None
+            if r.get("recharge") is not None:                  # charging from the grid: wait until the old value is reached
+                if soc is not None and soc >= target:
+                    await self._recharge_back(dev_id, r)
+                    self._ratchet.pop(dev_id, None)
+                    self._log(Action(dev_id, "log", None, self.t("step_done", name=name, target=f"{target:g}"), False), False)
+                continue
+            if d.get(D_RECHARGE_AT) and recharge_due(now, d[D_RECHARGE_AT]):
+                await self._recharge_start(dev_id, d, r, name, target)
+                continue
+            value = self._freeze_value(d, ent, st, current=_num(r["last"]), cap=target)
+            if value is None:
+                continue
+            try:
+                await self._set_entity(ent, value if _num(value) < target else str(r["target"]))
+            except Exception as err:  # noqa: BLE001
+                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+                continue
+            if _num(value) >= target:
+                self._ratchet.pop(dev_id, None)
+                self._log(Action(dev_id, "log", None, self.t("step_done", name=name, target=f"{target:g}"), False), False)
+            else:
+                r["last"] = value
+
+    async def _recharge_start(self, dev_id: str, d: dict[str, Any], r: dict[str, Any], name: str, target: float) -> None:
+        """The recharge setting first (so the charging starts slowly), then the old minimum SOC."""
+        rc: dict[str, Any] = {"entity": None, "value": None, "orig": None}
+        ent2, val2 = d.get(D_RECHARGE_ENTITY), d.get(D_RECHARGE_VALUE)
+        try:
+            if ent2 and val2 not in (None, ""):
+                st2 = self._state(ent2)
+                if st2 is not None and st2.state not in _BAD and not _same_value(st2.state, str(val2)):
+                    await self._set_entity(ent2, str(val2))
+                    rc = {"entity": ent2, "value": str(val2), "orig": st2.state}
+            r["recharge"] = rc
+            await self._set_entity(r["entity"], str(r["target"]))
+        except Exception as err:  # noqa: BLE001
+            self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+            return
+        r["last"] = str(r["target"])
+        self._log(Action(dev_id, "log", None, self.t("recharge_start", name=name, target=f"{target:g}"), False), False)
+
+    async def _recharge_back(self, dev_id: str, r: dict[str, Any] | None) -> None:
+        """Put the recharge setting back (only if it still holds the value the guard set)."""
+        rc = (r or {}).pop("recharge", None) or {}
+        if not rc.get("entity") or rc.get("orig") is None:
+            return
+        st = self._state(rc["entity"])
+        if st is not None and _same_value(st.state, str(rc["value"])):
+            try:
+                await self._set_entity(rc["entity"], str(rc["orig"]))
+            except Exception as err:  # noqa: BLE001
+                name = self.raw_devices.get(dev_id, {}).get(D_NAME, dev_id)
+                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+
+    async def _step_finish(self, dev_id: str, reason: str) -> None:
+        """End the stepping at once: the old value back (only if the setting still holds the last step)."""
+        r = self._ratchet.pop(dev_id, None)
+        if not r:
+            return
+        await self._recharge_back(dev_id, r)
+        name = self.raw_devices.get(dev_id, {}).get(D_NAME, dev_id)
+        st = self._state(r["entity"])
+        if st is not None and _same_value(st.state, str(r["last"])):
+            try:
+                await self._set_entity(r["entity"], str(r["target"]))
+            except Exception as err:  # noqa: BLE001
+                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+                return
+            self._log(Action(dev_id, "log", None, self.t("step_end", reason=reason, name=name,
+                                                         target=f"{_num(r['target']):g}"), False), False)
 
     async def _end_reserve(self, dev_id: str, reason: str) -> None:
         held = self._reserve.pop(dev_id, None)
@@ -1725,9 +1878,13 @@ class Waechter:
             await self._set_entity(d[D_VALUE], str(a.value))
         elif a.kind == "battery_release":
             orig: dict[str, str] = {}
+            stepping = self._ratchet.pop(a.device_id, None)   # released again while following the charge back up
+            await self._recharge_back(a.device_id, stepping)   # a slow charging setting back first
             for ent, val in self._battery_pairs(d):
                 st = self._state(ent)
-                if st is not None:
+                if stepping and stepping.get("entity") == ent:
+                    orig[ent] = str(stepping["target"])           # the value from before the first release, not the step
+                elif st is not None:
                     orig[ent] = st.state
                 await self._set_entity(ent, val)
             self._battery_orig[a.device_id] = orig
@@ -1775,6 +1932,8 @@ class Waechter:
                 before = orig.get(ent)
                 st = self._state(ent)
                 if before is not None and st is not None and _same_value(st.state, val):
+                    if await self._step_start(dev_id, d, ent, before, st):
+                        continue
                     await self._set_entity(ent, before)
         if d.get(D_OFF_SCRIPT):
             await self._call("script", "turn_on", {"entity_id": d[D_OFF_SCRIPT]})
@@ -1796,6 +1955,7 @@ class Waechter:
             "month_peak": self.month_peak,
             "months": self.months,
             "battery_orig": self._battery_orig,
+            "ratchet": self._ratchet,
             "evcc_orig": self._evcc_orig,
             "plan_paused": self._plan_paused,
             "day_peaks": self.day_peaks,

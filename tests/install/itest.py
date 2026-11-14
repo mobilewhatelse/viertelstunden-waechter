@@ -249,7 +249,7 @@ def main():
         "Geraete-Check: ohne Datenfreigabe kein Check und keine Anfrage", f"{gc_st.get('state')} {(gc_st.get('attributes') or {}).get('checked_at')}")
     log(sorted(d.get("name") for d in gc_dev) == ["Akku", "Poolpumpe", "Wallbox"] and all(d.get("status") == "none" and not d.get("found") for d in gc_dev),
         "Geraete-Check: alle Geraete ausser dem Auto gelistet, ohne Befund", str([(d.get("name"), d.get("status")) for d in gc_dev]))
-    for kind, field in (("battery", "battery_power_entity"), ("switch", "device_type")):
+    for kind, field in (("battery", "battery_power_entity"), ("battery", "restore_stepwise"), ("battery", "recharge_at"), ("battery", "recharge_entity"),("switch", "device_type")):
         s, d = api("POST", "/api/config/config_entries/subentries/flow", {"handler": [entry_id, kind]})
         names_f = {f.get("name") for f in (d.get("data_schema") or [])}
         log(field in names_f, f"Geraete-Check: Feld '{field}' beim Geraet '{kind}'", str(sorted(names_f)))

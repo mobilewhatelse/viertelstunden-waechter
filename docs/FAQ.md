@@ -28,6 +28,21 @@ does not act and shows *no data*. It still shows peaks and costs afterwards.
 **My template sensor (e.g. from a Shelly 3EM Pro) is missing from the list.**
 Since 0.13.3 any sensor can be chosen. The dialog checks the **unit** (W/kW or Wh/kWh), not the device class.
 
+**How do I set up a Victron battery with a minimum SOC (from 0.15)?**
+Example: normally the minimum SOC is 30 %; to catch a peak the battery may deliver down to 15 %. At the device *Battery*:
+
+| Field | Entry |
+|---|---|
+| State of charge | the battery's SOC sensor |
+| Setting that releases the battery / value | the setting *ESS minimum SOC* / `15` |
+| Put the previous values back | on |
+| Minimum SOC follows the charge back up | on: after the peak the minimum does not jump to 30 % but follows the charge (20, 21 … 30), otherwise the Victron charges from the grid at once |
+| Recharge from | optional, e.g. 22:00: if PV has not reached 30 % by then, the battery charges from the grid |
+| Setting while recharging / value | optional, e.g. *ESS maximum charge current* / `40`: so it charges slowly; the old value comes back afterwards |
+| Setting that keeps the charge / value | optional for the battery reserve before a peak: *ESS minimum SOC* / `soc` (stays at the current charge) |
+
+More in the [manual](MANUAL.md), section *Battery reserve before a peak*.
+
 ## In operation
 
 **Mode *Active*, the log says "would lower", but nothing happens.**

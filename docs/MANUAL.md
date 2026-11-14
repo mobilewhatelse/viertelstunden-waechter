@@ -428,6 +428,26 @@ when the integration is unloaded a held battery is given back first. If your own
 (for example while the car charges), decide which one is in charge - the guard only puts a value back while it is still
 the one it set.
 
+**Freeze at the current state of charge (from 0.15).** If the setting is a minimum SOC (a number, e.g. at a Victron), enter
+`soc` as the value. The guard then sets the minimum to the state of charge at that moment (from the battery's *state of
+charge* sensor), rounded **down** to the setting's step: a minimum above the state of charge would make some inverters charge
+from the grid, a new peak. It never sets a value below the one already set, so holding never releases the battery.
+
+**Minimum SOC follows the charge back up (from 0.15, switch at the battery, default off).** When the guard releases a battery
+through a minimum SOC (e.g. 30 → 15 %), it normally sets it back at once afterwards. With the battery at 20 % a Victron ESS then
+charges from the grid to 30 % right away. With the switch the guard sets the minimum to the state of charge instead (rounded down,
+never below the release value) and raises it every cycle while the battery charges, e.g. from PV: 20, 21, 22 … until the old value
+is reached. If someone else changes the value it stops. In observe mode, when the switch is turned off and when the integration is
+unloaded the old value comes back at once; after a restart it carries on. Only switch it on for minimum-SOC settings in percent,
+not for power or mode settings; it needs the *state of charge* sensor.
+
+**Recharge from a time (from 0.15, optional, needs the switch above).** If PV has not brought the battery back to the old minimum
+by the time *Recharge from* (e.g. 22:00), the guard sets it back and the battery charges from the grid. With *Setting while
+recharging* and its value (e.g. the maximum charge current of an ESS at 40 A) it sets that **first**, so the battery charges
+slowly, and puts it back as soon as the old value is reached. If a release ends after that time, recharging still starts (up to
+12 hours after the time). If the battery is released again meanwhile, the setting comes back at once. If someone else changed it
+meanwhile, it is left as it is.
+
 **CSV export** (service `viertelstunden_waechter.export_csv`). Writes the quarter-hour load profile (kept 120 days:
 start, end, import kW and kWh, estimate without the guard, wallbox kW) or the daily peaks (400 days) to
 `config/viertelstunden_waechter/export/` - not a public folder. Format `standard` (comma, decimal point) or `excel_de`
