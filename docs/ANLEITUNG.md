@@ -286,7 +286,7 @@ bei dem, was Sie eingetragen haben.
 **Die vollständige Liste für Wallboxen, Batterien und Wärmepumpen mit dem Teststand jeder Integration (von uns getestet / Entitätstypen im Quelltext bestätigt / Hilfe gesucht): [KOMPATIBILITAET.md](KOMPATIBILITAET.md).** Für die neuen Gerätetypen ist noch nichts als „getestet“ eingetragen – Berichte sind willkommen (siehe Ende dieser Seite).
 
 Der Wächter braucht von der Wallbox-Integration einen **Leistungssensor** und einen **einstellbaren Ladestrom**
-(`number`, A; seit 0.14.3 auch eine Auswahlliste wie „6 A“, „8 A“ …). Geprüft im Quelltext der Integrationen am 25.10.2026, auf echter Hardware nur der Wattpilot.
+(`number`, A; seit 0.14.3 auch eine Auswahlliste wie „6 A“, „8 A“ …). Geprüft im Quelltext der Integrationen am 25.10.2026, auf echter Hardware der Wattpilot (Autoren) und die Anker SOLIX V1 (Nutzer, 0.14.4).
 Entitätsnamen ändern sich zwischen Versionen – bitte in der eigenen Installation nachsehen.
 
 | Integration | Ladestrom als `number` | Leistungssensor | Geht? |

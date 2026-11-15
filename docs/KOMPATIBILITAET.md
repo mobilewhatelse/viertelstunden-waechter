@@ -15,8 +15,8 @@ die Hilfe der Community brauchen. *Stand der Prüfung: 25.10.2026, Integrationsv
 | ❌ | **Keine passende Entität gefunden** (nichts Schreibbares, das die Leistung senkt oder den Modus ändert). Skript oder Ein/Aus-Schalter verwenden. |
 
 **„Getestet“ heißt:** mindestens ein Abend im Modus **Aktiv** mit einem echten Eingriff **und** beobachtetem
-echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher hat nur der Wattpilot diese Stufe
-erreicht (durch die Autoren, 25.10.2026); die anderen Gerätetypen – Leistung drosseln, Einstellung ändern, Batterie-Freigabe – noch nicht.
+echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher haben der Wattpilot (durch die Autoren, 25.10.2026) und die Anker SOLIX V1 (durch einen Nutzer, 15.11.2026)
+diese Stufe erreicht; die anderen Gerätetypen – Leistung drosseln, Einstellung ändern, Batterie-Freigabe – noch nicht.
 Seien Sie der Erste – siehe „So melden Sie einen Test“.
 
 ## Bei anderen im Einsatz (aus der freiwilligen Statistik)
@@ -41,6 +41,7 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 | Integration | Ladestrom | Status |
 |---|---|---|
 | Wattpilot (Community, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | ✅ Autoren, 25.10.2026, 0.11.0: Auto lädt mit 11 kW, Herd und Backrohr dazu; in Stufen 16 → 12 → 10 → 8 → 6 A gesenkt, schrittweise wieder angehoben, „wieder 16 A“ protokolliert; Laden nie gestoppt, Viertelstunde unter dem Ziel. Noch nicht gesehen: Umschalten auf 1 Phase |
+| Anker SOLIX V1 Smart EV Charger (Community, Anker Solix) | Ladestrom als Auswahlliste („6 A“, „8 A“ …), seit 0.14.3 | ✅ Nutzer, 15.11.2026, 0.14.4: Auto lädt, Backrohr, Warmwasser und Wärmepumpe dazu; auf 8 A gedrosselt, bei mehr Luft auf 9 A zurück, „wieder frei (9 A)“ protokolliert, also genau auf den Wert vor dem Eingriff |
 | Wallbox (Home Assistant) | `number` „Maximum charging current“ | 🔍 |
 | OpenEVSE (Home Assistant) | `number` „Charge rate“ (A) | 🔍 |
 | Zaptec (Community) | `number` „charger_max_current“ | 🔍 |

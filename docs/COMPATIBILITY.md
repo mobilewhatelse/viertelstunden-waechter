@@ -15,8 +15,8 @@ community. *State of the check: 2026-10-25, integration version 0.12.0 (the Watt
 | ❌ | **No suitable entity found** in the source check (nothing writable that lowers power or changes the mode). Use a script or an on/off switch. |
 
 **"Tested" means:** at least one evening in the mode **Active** with a real intervention *and* the real take-back
-observed, on real hardware, reported with the version number. So far only the Wattpilot has reached this level
-(by the authors, 2026-10-25); the other device types - throttle power, change settings, battery release - have not.
+observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25) and the Anker SOLIX V1 (by a user,
+2026-11-15) have reached this level; the other device types - throttle power, change settings, battery release - have not.
 Please be the first - see "How to report a test" below.
 
 ## In use by others (from the voluntary statistic)
@@ -41,6 +41,7 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 | Integration | Charging current | Status |
 |---|---|---|
 | Wattpilot (community, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | ✅ authors, 2026-10-25, 0.11.0: car charging with 11 kW, cooker and oven added; lowered 16 → 12 → 10 → 8 → 6 A in steps, raised again step by step, "back to 16 A" logged; charging never stopped, the quarter hour stayed below the target. Not yet seen: 1-phase switching |
+| Anker SOLIX V1 Smart EV Charger (community, Anker Solix) | charging current as a list ("6 A", "8 A" …), since 0.14.3 | ✅ user, 2026-11-15, 0.14.4: car charging, oven, water heater and heat pump added; throttled to 8 A, back to 9 A when there was room again, "free again (9 A)" logged, so exactly the value before the intervention |
 | Wallbox (core) | `number` "Maximum charging current" | 🔍 |
 | OpenEVSE (core) | `number` "Charge rate" (A) | 🔍 |
 | Zaptec (community) | `number` "charger_max_current" | 🔍 |

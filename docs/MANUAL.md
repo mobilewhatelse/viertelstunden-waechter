@@ -268,8 +268,8 @@ controls it).
 **Full list for wallboxes, batteries and heat pumps, with the test status of every integration (tested by us / entity types verified in the source / help wanted): [docs/COMPATIBILITY.md](COMPATIBILITY.md).** Nothing is marked "tested" for the new device types yet - reports are welcome (see the end of that page).
 
 What the guard needs from a wallbox integration: a **charging power sensor** and a **settable charging current**
-(`number`, A; since 0.14.3 also a list like "6 A", "8 A" …, e.g. Anker SOLIX V1). Checked in the integrations' source code on 2026-10-25; only the Wattpilot was tried on real
-hardware. Entity names change between versions - look for them in your own installation.
+(`number`, A; since 0.14.3 also a list like "6 A", "8 A" …, e.g. Anker SOLIX V1). Checked in the integrations' source code on 2026-10-25; tried on real hardware: the Wattpilot
+(authors) and the Anker SOLIX V1 (a user, 0.14.4). Entity names change between versions - look for them in your own installation.
 
 | Integration | Charging current as `number` | Power sensor | Usable |
 |---|---|---|---|
