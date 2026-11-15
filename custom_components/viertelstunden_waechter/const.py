@@ -60,6 +60,7 @@ D_REL1_VALUE = "release_value_1"        # ... and the value that does it
 D_REL2 = "release_entity_2"
 D_REL2_VALUE = "release_value_2"
 D_RESTORE_ORIG = "restore_original"     # battery/setting: put the original values back (default on)
+D_SOC_STEP = "soc_step"                  # battery (0.15): own step of the minimum SOC in % (empty = the setting's step)
 D_RESTORE_STEPWISE = "restore_stepwise"  # battery (0.15): a minimum-SOC setting follows the state of charge back up (default off)
 D_RECHARGE_AT = "recharge_at"            # battery (0.15): from this time the old minimum SOC is charged from the grid (optional)
 D_RECHARGE_ENTITY = "recharge_entity"    # ... with this setting (e.g. maximum charge current) ...

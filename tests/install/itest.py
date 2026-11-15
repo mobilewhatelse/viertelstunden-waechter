@@ -1,5 +1,6 @@
 """Installationstest des Viertelstunden-Waechters gegen eine frische Home-Assistant-Instanz (Docker, localhost)."""
 import json
+import re
 import secrets
 import subprocess
 import sys
@@ -232,6 +233,25 @@ def main():
     log(len(share) == 1 and share[0]["state"] == "off", "Anonyme Daten teilen: ein Schalter, aus (nur mit Zustimmung)", str([(e["entity_id"], e["state"]) for e in share]))
     fb = [e["entity_id"] for e in ents if e["entity_id"].startswith(("text.", "button.")) and "ruckmeldung" in e["entity_id"]]
     log(len(fb) == 2, "Rueckmeldung: Textfeld und Knopf da", str(fb))
+    rep = [e["entity_id"] for e in ents if e["entity_id"].startswith("button.") and "fehlerbericht" in e["entity_id"]]
+    log(len(rep) == 1, "Fehlerbericht: eigener Knopf da", str(rep))
+    if rep:   # the test container cannot reach the real server (--add-host): the notification shows what would have been sent
+        svc("button", "press", {"entity_id": rep[0]})
+
+        def note():
+            c, w = ws_session()
+            try:
+                for m in c({"type": "persistent_notification/get"}):
+                    for n in (m.get("result") or []) if m.get("type") == "result" else []:
+                        if n.get("notification_id") == "viertelstunden_waechter_feedback":
+                            return n.get("message")
+            finally:
+                w.close()
+            return None
+        msg = wait_for(note, 30, 2) or ""
+        ids = re.findall(r"\b(?:sensor|number|select|switch|input_number|input_select)\.[a-z0-9_]+", msg)
+        log("wäre genau das" in msg and "Gerät 1" in msg and not ids,
+            "Fehlerbericht: ein Druck baut ihn, ohne Entitaets-IDs", msg[:400])
     need = ["select.viertelstunden_wachter_betriebsart", "sensor.viertelstunden_wachter_status", "number.viertelstunden_wachter_grenze",
             "switch.viertelstunden_wachter_vorausschauend_drosseln_nach_prognose", "switch.viertelstunden_wachter_vorwarnung_vor_einem_eingriff",
             "switch.viertelstunden_wachter_wochenbericht", "sensor.viertelstunden_wachter_wochenbericht", "sensor.viertelstunden_wachter_ladeplan",
@@ -249,12 +269,18 @@ def main():
         "Geraete-Check: ohne Datenfreigabe kein Check und keine Anfrage", f"{gc_st.get('state')} {(gc_st.get('attributes') or {}).get('checked_at')}")
     log(sorted(d.get("name") for d in gc_dev) == ["Akku", "Poolpumpe", "Wallbox"] and all(d.get("status") == "none" and not d.get("found") for d in gc_dev),
         "Geraete-Check: alle Geraete ausser dem Auto gelistet, ohne Befund", str([(d.get("name"), d.get("status")) for d in gc_dev]))
-    for kind, field in (("battery", "battery_power_entity"), ("battery", "restore_stepwise"), ("battery", "recharge_at"), ("battery", "recharge_entity"),("switch", "device_type")):
+    for kind, field in (("battery", "battery_power_entity"), ("battery", "restore_stepwise"), ("battery", "soc_step"), ("battery", "recharge_at"), ("battery", "recharge_entity"),("switch", "device_type")):
         s, d = api("POST", "/api/config/config_entries/subentries/flow", {"handler": [entry_id, kind]})
         names_f = {f.get("name") for f in (d.get("data_schema") or [])}
         log(field in names_f, f"Geraete-Check: Feld '{field}' beim Geraet '{kind}'", str(sorted(names_f)))
         if d.get("flow_id"):
             api("DELETE", f"/api/config/config_entries/subentries/flow/{d['flow_id']}")
+    # fields the charge plan does not use are not offered at the vehicle (feedback 15.11.: an unlabelled "allow_entity")
+    s, d = api("POST", "/api/config/config_entries/subentries/flow", {"handler": [entry_id, "vehicle"]})
+    names_v = {f.get("name") for f in (d.get("data_schema") or [])}
+    log(bool(names_v) and not names_v & {"allow_entity", "observe_only"}, "Fahrzeug: keine unbenutzten Felder (allow_entity, observe_only)", str(sorted(names_v)))
+    if d.get("flow_id"):
+        api("DELETE", f"/api/config/config_entries/subentries/flow/{d['flow_id']}")
 
     def val(eid):
         st = state(eid)

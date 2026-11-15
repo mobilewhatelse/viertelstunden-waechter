@@ -423,6 +423,9 @@
     "button": {
       "feedback_send": {
         "name": "Rückmeldung senden"
+      },
+      "feedback_report": {
+        "name": "Fehlerbericht senden"
       }
     }
   },
@@ -640,6 +643,7 @@
             "max_off_min": "Höchste Dauer",
             "restore_original": "Vorherige Werte wiederherstellen",
             "restore_stepwise": "Mindest-Ladestand folgt dem Ladestand zurück",
+            "soc_step": "Schrittweite Mindest-Ladestand",
             "recharge_at": "Nachladen ab",
             "recharge_entity": "Einstellung beim Nachladen",
             "recharge_value": "Wert beim Nachladen",
@@ -662,6 +666,7 @@
             "max_off_min": "0 = ohne Grenze. Danach wird die Batterie auf jeden Fall zurückgenommen.",
             "restore_original": "An: Die Werte von vor der Freigabe werden wiederhergestellt – aber nur die, die noch den Freigabewert haben. Aus: das Skript verwenden.",
             "restore_stepwise": "Für eine Mindest-Ladestand-Einstellung (z. B. Victron ESS): Nach der Freigabe wird sie nicht auf einmal zurückgestellt, sondern folgt dem Ladestand bis zum alten Wert, damit der Akku nicht auf einmal aus dem Netz lädt. Braucht den Ladestand. Für Leistungs- oder Modus-Einstellungen aus lassen.",
+            "soc_step": "Optional. Leer: die Schrittweite, die die Einstellung meldet (Victron ESS: 5 %). Z. B. 1 eintragen, wenn Ihr Akku jedes ganze Prozent annimmt (einmal von Hand ausprobieren), dann folgt der Mindest-Ladestand in feineren Schritten.",
             "recharge_at": "Optional, braucht den Schalter darüber. Liegt der Mindest-Ladestand zu dieser Uhrzeit noch unter dem alten Wert, wird er zurückgestellt und der Akku aus dem Netz nachgeladen, bis der alte Wert erreicht ist (gilt 12 Stunden ab dieser Uhrzeit).",
             "recharge_entity": "Optional, z. B. der maximale Ladestrom eines ESS, damit der Akku langsam lädt. Wird zurückgestellt, wenn der alte Wert erreicht ist.",
             "recharge_value": "Z. B. 40 für 40 A.",
@@ -690,6 +695,7 @@
             "max_off_min": "Höchste Dauer",
             "restore_original": "Vorherige Werte wiederherstellen",
             "restore_stepwise": "Mindest-Ladestand folgt dem Ladestand zurück",
+            "soc_step": "Schrittweite Mindest-Ladestand",
             "recharge_at": "Nachladen ab",
             "recharge_entity": "Einstellung beim Nachladen",
             "recharge_value": "Wert beim Nachladen",
@@ -712,6 +718,7 @@
             "max_off_min": "0 = ohne Grenze. Danach wird die Batterie auf jeden Fall zurückgenommen.",
             "restore_original": "An: Die Werte von vor der Freigabe werden wiederhergestellt – aber nur die, die noch den Freigabewert haben. Aus: das Skript verwenden.",
             "restore_stepwise": "Für eine Mindest-Ladestand-Einstellung (z. B. Victron ESS): Nach der Freigabe wird sie nicht auf einmal zurückgestellt, sondern folgt dem Ladestand bis zum alten Wert, damit der Akku nicht auf einmal aus dem Netz lädt. Braucht den Ladestand. Für Leistungs- oder Modus-Einstellungen aus lassen.",
+            "soc_step": "Optional. Leer: die Schrittweite, die die Einstellung meldet (Victron ESS: 5 %). Z. B. 1 eintragen, wenn Ihr Akku jedes ganze Prozent annimmt (einmal von Hand ausprobieren), dann folgt der Mindest-Ladestand in feineren Schritten.",
             "recharge_at": "Optional, braucht den Schalter darüber. Liegt der Mindest-Ladestand zu dieser Uhrzeit noch unter dem alten Wert, wird er zurückgestellt und der Akku aus dem Netz nachgeladen, bis der alte Wert erreicht ist (gilt 12 Stunden ab dieser Uhrzeit).",
             "recharge_entity": "Optional, z. B. der maximale Ladestrom eines ESS, damit der Akku langsam lädt. Wird zurückgestellt, wenn der alte Wert erreicht ist.",
             "recharge_value": "Z. B. 40 für 40 A.",

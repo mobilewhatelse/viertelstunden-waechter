@@ -146,10 +146,13 @@ def loeschen(integration: str, kennung: str) -> dict[str, Any]:
 
 
 def rueckmeldung(integration: str, version: str, ha_version: str, text: str, kontakt: str | None,
-                 einrichtung: dict[str, Any] | None) -> dict[str, Any]:
-    return {"schema": 1, "integration": integration, "version": version, "ha_version": ha_version,
-            "text": str(text or "").strip()[:MAX_TEXT], "kontakt": (str(kontakt).strip()[:MAX_KONTAKT] or None) if kontakt else None,
-            "einrichtung": einrichtung}
+                 einrichtung: dict[str, Any] | None, bericht: dict[str, Any] | None = None) -> dict[str, Any]:
+    d = {"schema": 1, "integration": integration, "version": version, "ha_version": ha_version,
+         "text": str(text or "").strip()[:MAX_TEXT], "kontakt": (str(kontakt).strip()[:MAX_KONTAKT] or None) if kontakt else None,
+         "einrichtung": einrichtung}
+    if bericht is not None:   # only on request (button 'Send bug report'); older servers simply ignore it
+        d["bericht"] = bericht
+    return d
 
 
 async def senden(session: Any, url: str, daten: dict[str, Any]) -> bool:

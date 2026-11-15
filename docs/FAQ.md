@@ -28,18 +28,25 @@ does not act and shows *no data*. It still shows peaks and costs afterwards.
 **My template sensor (e.g. from a Shelly 3EM Pro) is missing from the list.**
 Since 0.13.3 any sensor can be chosen. The dialog checks the **unit** (W/kW or Wh/kWh), not the device class.
 
-**How do I set up a Victron battery with a minimum SOC (from 0.15)?**
-Example: normally the minimum SOC is 30 %; to catch a peak the battery may deliver down to 15 %. At the device *Battery*:
+**How do I set up a battery with an adjustable minimum charge (from 0.15)?**
+This works for any battery whose lower limit in percent can be set in Home Assistant (minimum SOC, discharge limit, reserve).
+Example with a Victron: normally the minimum SOC is 30 %; to catch a peak the battery may deliver down to 15 %. At the device
+*Battery*:
 
 | Field | Entry |
 |---|---|
 | State of charge | the battery's SOC sensor |
 | Setting that releases the battery / value | the setting *ESS minimum SOC* / `15` |
 | Put the previous values back | on |
-| Minimum SOC follows the charge back up | on: after the peak the minimum does not jump to 30 % but follows the charge (20, 21 … 30), otherwise the Victron charges from the grid at once |
+| Minimum SOC follows the charge back up | on: after the peak the minimum does not jump to 30 % but follows the charge in the steps of the setting (Victron 5 %: 20, 25, 30), otherwise the Victron charges from the grid at once |
+| Step of the minimum SOC | optional, e.g. `1`: then 20, 21, 22 … if your battery takes every whole percent (try once by hand) |
 | Recharge from | optional, e.g. 22:00: if PV has not reached 30 % by then, the battery charges from the grid |
 | Setting while recharging / value | optional, e.g. *ESS maximum charge current* / `40`: so it charges slowly; the old value comes back afterwards |
 | Setting that keeps the charge / value | optional for the battery reserve before a peak: *ESS minimum SOC* / `soc` (stays at the current charge) |
+
+Your own peak-shaving automations (lower the minimum SOC at a peak, set it back afterwards, recharge in the evening) are then
+no longer needed: **disable** them (do not delete), otherwise two of them set the same values. The guard's mode must be *Active*,
+and *Observe only* must be off at the battery. The first time, check in the log that everything runs as expected.
 
 More in the [manual](MANUAL.md), section *Battery reserve before a peak*.
 
@@ -49,6 +56,11 @@ More in the [manual](MANUAL.md), section *Battery reserve before a peak*.
 Every device has its own switch *Observe only* as well. With it on, the guard never acts on that device.
 Since 0.14.2 a hint appears under **Settings > Repairs**, and *Fix* switches it off with one click.
 Without the update: at the device, three dots > *Reconfigure* > switch *Observe only* off.
+
+**The charge plan starts and pauses, but does not set the charging current.**
+Right, it does not do that yet: inside a planned window the car charges with what the wallbox is set to. Only the guard lowers
+the current, and only when a peak threatens. The guard's charge plan is a simple planner and gets no new features. When and how
+fast the car charges is planned by [Plugwhen](https://github.com/mobilewhatelse/plugwhen); setting the current is planned there.
 
 **Can it control my Wattpilot?**
 Yes, through the integration `wattpilot-HA` (charging current and phases). Tested on real hardware.

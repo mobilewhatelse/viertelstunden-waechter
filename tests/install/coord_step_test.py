@@ -153,12 +153,58 @@ class StepBackTests(unittest.TestCase):
         run(w._battery_step(NOON, True))
         self.assertEqual(w.states[MIN], "25")
 
+    def test_own_step_of_one_with_a_setting_of_five(self):
+        # Victron reports step 5 but takes every whole percent (user feedback 15.11.): the field *Step* = 1 wins
+        w = make(soc=23.0, attrs={"min": 10, "max": 100, "step": 5})
+        w.raw_devices["bat"]["soc_step"] = 1
+        w._battery_orig["bat"] = {MIN: "30"}
+        run(w._battery_restore("bat", w.raw_devices["bat"]))
+        self.assertEqual(w.states[MIN], "23")
+        w.states[SOC] = "24.6"
+        run(w._battery_step(NOON, True))
+        self.assertEqual(w.states[MIN], "24")
+
     def test_unload_puts_the_old_value_back(self):
         w = make(soc=20.0)
         w._battery_orig["bat"] = {MIN: "30"}
         run(w._battery_restore("bat", w.raw_devices["bat"]))
         run(w._step_finish("bat", "Integration beendet"))
         self.assertEqual((w.states[MIN], w._ratchet), ("30", {}))
+
+    def test_a_slow_device_is_waited_for(self):
+        # the inverter reports the new minimum only after some cycles: not "changed by someone else"
+        w = make(soc=20.0)
+        w._battery_orig["bat"] = {MIN: "30"}
+        run(w._battery_restore("bat", w.raw_devices["bat"]))
+        self.assertEqual(w.states[MIN], "20")
+        w.states[MIN] = "15"                                   # still the old value shown
+        for _ in range(co.LAG_CYCLES):
+            run(w._battery_step(NOON, True))
+        self.assertIn("bat", w._ratchet)
+        self.assertEqual(w.states[MIN], "15")                  # nothing new sent while waiting
+        w.states[MIN] = "20"                                   # now reported
+        w.states[SOC] = "22"
+        run(w._battery_step(NOON, True))
+        self.assertEqual(w.states[MIN], "22")
+        self.assertEqual(w._ratchet["bat"]["lag"], 0)
+
+    def test_a_value_never_taken_ends_after_the_wait(self):
+        w = make(soc=20.0)
+        w._battery_orig["bat"] = {MIN: "30"}
+        run(w._battery_restore("bat", w.raw_devices["bat"]))
+        w.states[MIN] = "15"
+        for _ in range(co.LAG_CYCLES + 1):
+            run(w._battery_step(NOON, True))
+        self.assertEqual(w._ratchet, {})
+        self.assertIn("anders eingestellt", w.lines[-1])
+
+    def test_unload_while_waiting_puts_the_old_value_back(self):
+        w = make(soc=20.0)
+        w._battery_orig["bat"] = {MIN: "30"}
+        run(w._battery_restore("bat", w.raw_devices["bat"]))
+        w.states[MIN] = "15"
+        run(w._step_finish("bat", "x"))
+        self.assertEqual(w.states[MIN], "30")
 
     def test_device_deleted_leaves_the_setting(self):
         w = make(soc=20.0)

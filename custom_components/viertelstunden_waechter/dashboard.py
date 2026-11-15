@@ -531,20 +531,21 @@ ENTITY_KEYS: dict[str, str] = {
     "cost_without": "sensor", "savings_month": "sensor", "savings_year": "sensor", "saved_now": "sensor",
     "forecast_now": "sensor", "forecast_peak": "sensor", "next_risk": "sensor",
     "charge_plan": "sensor", "charge_plan_enabled": "switch", "charge_plan_execute": "switch",
-    "feedback_text": "text", "feedback_send": "button", "share_usage": "switch", "device_check": "sensor",
+    "feedback_text": "text", "feedback_send": "button", "feedback_report": "button", "share_usage": "switch", "device_check": "sensor",
 }
 
 
-FEEDBACK_TEXT = {'de': ('Rückmeldung', 'Etwas funktioniert nicht, fehlt oder gefällt Ihnen? Text eingeben, Enter, dann bei *Rückmeldung senden* auf *Drücken*. Sie geht an den Autor; mitgesendet wird nur eine Übersicht der Einrichtung, keine Namen oder Messwerte.', 'Text', 'Senden', 'Anonyme Daten teilen'), 'en': ('Feedback', 'Something does not work, is missing or you like it? Type it, press Enter, then *Press* at *Send feedback*. It goes to the author; only an overview of the setup goes along, no names or measurements.', 'Text', 'Send', 'Share anonymous data')}
+FEEDBACK_TEXT = {'de': ('Rückmeldung', 'Etwas funktioniert nicht, fehlt oder gefällt Ihnen? Text eingeben, Enter, dann bei *Rückmeldung senden* auf *Drücken*. Sie geht an den Autor; mitgesendet wird nur eine Übersicht der Einrichtung, keine Namen oder Messwerte. Greift der Wächter falsch oder gar nicht ein, *Fehlerbericht senden* drücken (Text optional): Er enthält, was zur Fehlersuche nötig ist, ohne Namen und Entitäts-IDs; die Glocke zeigt danach genau, was gesendet wurde.', 'Text', 'Senden', 'Anonyme Daten teilen', 'Fehlerbericht senden'), 'en': ('Feedback', 'Something does not work, is missing or you like it? Type it, press Enter, then *Press* at *Send feedback*. It goes to the author; only an overview of the setup goes along, no names or measurements. If the guard acts wrongly or not at all, press *Send bug report* (text optional): it holds what is needed to find the error, without names and entity ids; the bell then shows exactly what was sent.', 'Text', 'Send', 'Share anonymous data', 'Send bug report')}
 
 
 def feedback_section(ids: dict[str, str], lang: str | None) -> dict:
     """The card 'Feedback': text field, button and the switch of the voluntary usage statistics."""
-    head, text, f_text, f_send, f_share = FEEDBACK_TEXT["de" if str(lang or "").lower().startswith("de") else "en"]
+    head, text, f_text, f_send, f_share, f_report = FEEDBACK_TEXT["de" if str(lang or "").lower().startswith("de") else "en"]
+    report = [{"entity": ids["feedback_report"], "name": f_report}] if ids.get("feedback_report") else []
     return {"type": "grid", "cards": [
         {"type": "heading", "heading": head, "icon": "mdi:message-text-outline"},
         {"type": "markdown", "content": text},
         {"type": "entities", "show_header_toggle": False, "entities": [
-            {"entity": ids["feedback_text"], "name": f_text}, {"entity": ids["feedback_send"], "name": f_send},
+            {"entity": ids["feedback_text"], "name": f_text}, {"entity": ids["feedback_send"], "name": f_send}, *report,
             {"entity": ids["share_usage"], "name": f_share}]},
     ]}

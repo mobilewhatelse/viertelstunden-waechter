@@ -441,6 +441,11 @@ is reached. If someone else changes the value it stops. In observe mode, when th
 unloaded the old value comes back at once; after a restart it carries on. Only switch it on for minimum-SOC settings in percent,
 not for power or mode settings; it needs the *state of charge* sensor.
 
+**Step of the minimum SOC (from 0.15, optional).** The minimum follows in the steps the setting reports. Some integrations report
+a coarse step although the battery takes every whole percent (e.g. Victron ESS reports 5 %). Enter the step you want in *Step of
+the minimum SOC*, e.g. `1`; then it follows 20, 21, 22 … instead of 20, 25, 30. Try it once by hand first (developer tools >
+actions > `number.set_value` with e.g. 22): if the value stays, the battery takes it. Works for any battery, not only Victron.
+
 **Recharge from a time (from 0.15, optional, needs the switch above).** If PV has not brought the battery back to the old minimum
 by the time *Recharge from* (e.g. 22:00), the guard sets it back and the battery charges from the grid. With *Setting while
 recharging* and its value (e.g. the maximum charge current of an ESS at 40 A) it sets that **first**, so the battery charges
@@ -612,12 +617,16 @@ sensor shows a hint (`solar_used: false`). The hourly forecast is spread over it
 
 **Carrying it out** (switch *Also carry out the charge plan*, **off by default and always off after a restart**):
 outside the planned windows the *pause* command is sent, inside them the *allow* command. It needs a pause command
-(without it the plan stays advice). Safety rules:
+(without it the plan stays advice). **The plan does not set the charging current:** inside a window the car charges with
+what the wallbox is set to, even if the plan reckons with less. Only the guard lowers the current, and only when a peak
+threatens. Safety rules:
 
 - only while the plan can reach the target (state *Planned*) and the car is plugged in (if you entered that entity);
 - if the plan is not feasible, not needed, has no departure, the switch is turned off, the integration unloads or
   Home Assistant restarts, the *allow* command is sent so that the car charges normally;
 - at most one command per five minutes while the plan runs; resuming is never delayed;
+- if a device answers slower than 15 s (e.g. a car through its cloud), the command goes on and counts as sent; if it really
+  fails, a pause is tried again after five minutes, resuming after one minute (from 0.14.4);
 - the peak guard still works on top of it and, as always, never stops the car by itself.
 
 **Limits:** only the first vehicle entry is used; the plan is advice based on habits (the load forecast) and a
@@ -758,6 +767,12 @@ on to research or partners, always from at least 10 installations, never single 
 **Feedback.** Write into the text field *Feedback* on the integration's device and press *Send feedback*, or use the action
 `send_feedback` (longer texts, an optional contact address, with or without the setup overview above). It goes to the author,
 nothing else is sent.
+
+**Bug report (from 0.15).** If the guard acts wrongly or not at all, press *Send bug report* (a text in the field *Feedback* goes
+along but is not needed). It holds the mode, the limit, the values of the running quarter hour, per device its kind, whether it is
+being reduced, per setting its integration, model, firmware and current value, how fast and reliably the commands arrived, whether
+the sensors deliver values, the last log entries (only as a distance, e.g. "vor 2.0 h") and the last warnings. Names, entity ids,
+addresses and identifiers are removed. Afterwards a notification shows exactly what was sent. Independent of *Share anonymous data*.
 
 ## Support and feedback
 

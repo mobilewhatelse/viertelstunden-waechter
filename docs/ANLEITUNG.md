@@ -534,6 +534,12 @@ alte Wert wieder erreicht ist. Ändert jemand anderer den Wert, hört er auf. Im
 beim Entladen der Integration stellt er den alten Wert sofort zurück; nach einem Neustart macht er weiter. Nur für Mindest-SOC-
 Einstellungen in Prozent einschalten, nicht für Leistungs- oder Modus-Einstellungen; braucht den Sensor *Ladestand*.
 
+**Schrittweite Mindest-Ladestand (ab 0.15, optional).** Das Minimum folgt in den Schritten, die die Einstellung meldet. Manche
+Integrationen melden einen groben Schritt, obwohl der Akku jedes ganze Prozent annimmt (z. B. meldet Victron ESS 5 %). Tragen Sie
+bei *Schrittweite Mindest-Ladestand* den gewünschten Schritt ein, z. B. `1`; dann folgt es 20, 21, 22 … statt 20, 25, 30. Vorher
+einmal von Hand ausprobieren (Entwicklerwerkzeuge > Aktionen > `number.set_value` mit z. B. 22): Bleibt der Wert stehen, nimmt der
+Akku ihn an. Gilt für jeden Akku, nicht nur Victron.
+
 **Nachladen ab einer Uhrzeit (ab 0.15, optional, braucht den Schalter darüber).** Hat die PV den alten Mindest-Ladestand bis zur
 Uhrzeit *Nachladen ab* (z. B. 22:00) nicht erreicht, stellt der Wächter ihn zurück, und der Akku lädt aus dem Netz nach. Mit
 *Einstellung beim Nachladen* und ihrem Wert (z. B. der maximale Ladestrom eines ESS auf 40 A) setzt er diese **zuerst**, damit
@@ -597,13 +603,17 @@ Viertelstunden verteilt.
 
 **Ausführen** (Schalter *Ladeplan auch ausführen*, **standardmäßig aus und nach jedem Neustart wieder aus**): Außerhalb
 der geplanten Zeiten wird der *Pausieren*-Befehl gesendet, innerhalb der *Erlauben*-Befehl. Dafür braucht es einen
-Pausieren-Befehl (ohne ihn bleibt der Plan ein Vorschlag). Schutzregeln:
+Pausieren-Befehl (ohne ihn bleibt der Plan ein Vorschlag). **Den Ladestrom stellt der Plan nicht ein:** Im Fenster lädt das
+Auto mit dem, was an der Wallbox eingestellt ist, auch wenn der Plan mit weniger rechnet. Den Strom senkt nur der Wächter, und
+nur, wenn eine Spitze droht. Schutzregeln:
 
 - nur solange der Plan das Ziel erreichen kann (Zustand *Geplant*) und das Auto angesteckt ist (wenn Sie diese
   Entität eingetragen haben);
 - ist der Plan nicht machbar, nicht nötig, ohne Abfahrt, wird der Schalter ausgeschaltet, die Integration entladen oder
   Home Assistant neu gestartet, wird der *Erlauben*-Befehl gesendet, damit das Auto normal lädt;
 - höchstens ein Befehl alle fünf Minuten, solange der Plan läuft; das Freigeben wird nie verzögert;
+- antwortet ein Gerät langsamer als 15 s (z. B. ein Auto über die Cloud), läuft der Befehl weiter und gilt als gesendet; schlägt er
+  wirklich fehl, wird das Pausieren nach fünf Minuten erneut versucht, das Freigeben nach einer Minute (ab 0.14.4);
 - der Spitzenwächter arbeitet zusätzlich weiter und stoppt das Auto, wie immer, nie von sich aus.
 
 **Grenzen:** Es wird nur der erste Fahrzeug-Eintrag benutzt; der Plan ist ein Vorschlag aus Gewohnheiten (Lastprognose)
@@ -869,6 +879,13 @@ sendet nichts.
 **Rückmeldung.** In das Textfeld *Rückmeldung* am Gerät der Integration schreiben und *Rückmeldung senden* drücken, oder die
 Aktion `send_feedback` (längere Texte, optional eine Kontaktadresse, mit oder ohne die Übersicht der Einrichtung oben). Sie geht
 an den Autor, sonst wird nichts gesendet.
+
+**Fehlerbericht (ab 0.15).** Greift der Wächter falsch oder gar nicht ein, *Fehlerbericht senden* drücken (ein Text im Feld
+*Rückmeldung* geht mit, ist aber nicht nötig). Er enthält Betriebsart, Grenze, die Werte der laufenden Viertelstunde, je Gerät die
+Art, ob gerade eingegriffen wird, je Einstellung Integration, Modell, Firmware und aktuellen Wert, wie schnell und verlässlich die
+Befehle ankamen, ob die Sensoren Werte liefern, die letzten Einträge des Protokolls (nur als Abstand, z. B. „vor 2.0 h“) und die
+letzten Warnungen. Namen, Entitäts-IDs, Adressen und Kennungen sind entfernt. Danach zeigt eine Benachrichtigung genau, was gesendet
+wurde. Unabhängig von *Anonyme Daten teilen*.
 
 ## 8. Häufige Fragen
 

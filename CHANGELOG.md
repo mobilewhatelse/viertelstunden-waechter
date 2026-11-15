@@ -4,6 +4,21 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.0 - unreleased
 
+- **Bug report on request:** new button *Send bug report* next to the feedback (text optional). One press sends it, and the
+  notification then shows exactly what was sent. It holds what is needed to find an error: version, mode, limit, the values of
+  the running quarter hour, where the grid reading comes from and how old it is, per device the kind, whether it is being reduced,
+  per setting its integration, model, firmware, the value now and its range, how fast and how often commands arrived or failed,
+  whether the sensors deliver values, the last 20 log entries (only as a distance in hours) and the last 20 warnings of the guard.
+  Names, entity ids, addresses, IP addresses and identifiers are removed first. Independent of *Share anonymous data*. Create
+  the dashboard again to see the button in the card *Feedback*.
+  *Deutsch:* Fehlerbericht auf Knopfdruck: neuer Knopf *Fehlerbericht senden* bei der Rückmeldung (Text optional). Ein Druck
+  sendet ihn, die Benachrichtigung zeigt danach genau, was gesendet wurde. Er enthält, was zur Fehlersuche nötig ist: Version,
+  Betriebsart, Grenze, die Werte der laufenden Viertelstunde, woher der Netzbezug kommt und wie alt er ist, je Gerät Art und ob
+  gerade eingegriffen wird, je Einstellung Integration, Modell, Firmware, aktueller Wert und Bereich, wie schnell und wie oft Befehle
+  ankamen oder fehlschlugen, ob die Sensoren Werte liefern, die letzten 20 Protokolleinträge (nur als Abstand in Stunden) und die
+  letzten 20 Warnungen. Namen, Entitäts-IDs, Adressen, IP-Adressen und Kennungen werden vorher entfernt. Unabhängig von *Anonyme
+  Daten teilen*. Dashboard neu erstellen, damit der Knopf in der Karte *Rückmeldung* erscheint.
+
 - **Battery reserve: freeze at the current state of charge (from feedback):** with a minimum-SOC setting (e.g. Victron) enter
   `soc` as the value that keeps the charge. Before a forecast peak the minimum is set to the state of charge at that moment,
   rounded down (a minimum above it would make some inverters charge from the grid) and never below the value already set.
@@ -24,6 +39,31 @@ Format: newest first. German version below each English block is a short summary
   *Deutsch:* Akku: Nachladen ab einer Uhrzeit (aus einer Rückmeldung, optional): Hat die PV den alten Mindest-Ladestand bis zur
   eingestellten Uhrzeit nicht erreicht, wird er zurückgestellt und der Akku aus dem Netz nachgeladen, langsam mit einer optionalen
   Einstellung (z. B. maximaler Ladestrom 40 A), die zurückkommt, wenn der alte Wert erreicht ist.
+- **Battery, step of the minimum SOC (from feedback):** new optional field *Step of the minimum SOC*. Some integrations report a
+  coarse step (Victron ESS 5 %) although the battery takes every whole percent; with `1` the minimum follows 20, 21, 22 … instead of
+  20, 25, 30. For any battery. *Deutsch:* Neues optionales Feld *Schrittweite Mindest-Ladestand*: Melden Integrationen einen groben
+  Schritt (Victron ESS 5 %), obwohl der Akku jedes ganze Prozent annimmt, folgt das Minimum mit `1` in 1-%-Schritten. Für jeden Akku.
+- **Battery, details for these three:** the minimum is always set in whole percent (a Victron takes no decimals). A device that
+  reports a new value late is waited for up to two minutes before the value counts as changed by someone else.
+  *Deutsch:* Akku, Details zu diesen drei: Das Minimum wird immer in ganzen Prozent gesetzt (ein Victron nimmt keine
+  Nachkommastellen). Meldet ein Gerät einen neuen Wert verspätet, wartet der Wächter bis zu zwei Minuten, bevor der Wert als von
+  jemand anderem geändert gilt.
+- **Slow commands are no longer cut off (also in 0.14.4):** after 15 s without an answer Home Assistant cancelled the command, so a
+  device that always needs longer (a car waking up, a wallbox through its cloud) never got one. Now the command goes on in the
+  background, the log says "device answers slowly", and a later error is logged too.
+  *Deutsch:* Langsame Befehle werden nicht mehr abgebrochen (auch in 0.14.4): Nach 15 s ohne Antwort brach Home Assistant den
+  Befehl ab, ein Gerät, das immer länger braucht (Auto beim Aufwecken, Wallbox über die Cloud), bekam so nie einen. Jetzt läuft der
+  Befehl im Hintergrund weiter, das Protokoll sagt „Gerät antwortet langsam“, ein späterer Fehler wird auch protokolliert.
+- **Charge plan: a failed command is no longer sent every 20 s (from feedback):** after a failed pause the next try comes after
+  5 minutes, after a failed resume after 1 minute. The log says what went wrong, e.g. "no answer within 15 s", instead of empty
+  brackets; this applies to all error lines.
+  *Deutsch:* Ladeplan: Ein fehlgeschlagener Befehl wird nicht mehr alle 20 s gesendet (aus einer Rückmeldung): Nach einer
+  fehlgeschlagenen Pause kommt der nächste Versuch nach 5 Minuten, nach einer fehlgeschlagenen Freigabe nach 1 Minute. Das
+  Protokoll sagt, was schiefging, z. B. „keine Antwort innerhalb von 15 s“, statt leerer Klammern; das gilt für alle Fehlerzeilen.
+- **Vehicle: unused field removed (from feedback):** the vehicle dialog showed an unlabelled field "allow_entity" that the charge
+  plan never used. A value already entered there is ignored as before.
+  *Deutsch:* Fahrzeug: unbenutztes Feld entfernt (aus einer Rückmeldung): Der Fahrzeug-Dialog zeigte ein unbeschriftetes Feld
+  „allow_entity“, das der Ladeplan nie benutzt hat. Ein dort schon eingetragener Wert wird wie bisher nicht beachtet.
 
 - **Sharing, new text:** the weekly statistic now uses a random id that changes every month (the fixed id of older versions is
   deleted on the service once), plus how long the guard has been running as a rough class. With the text of 0.15 (the same

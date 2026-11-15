@@ -22,7 +22,7 @@ from .const import (
     D_RESTORE, D_SWITCH, DOMAIN, MODE_ACTIVE, MODE_OBSERVE, MODE_OFF, UPDATE_INTERVAL,
     D_BASE, D_EFFICIENCY, D_CAPACITY, D_CHARGE_MAX, D_CHARGE_MIN, D_CONNECTED, D_DEPARTURE, D_START, D_START_VALUE, D_STOP,
     D_STOP_VALUE, D_TARGET_ENTITY, D_TARGET_SOC, D_OBSERVE,
-    D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_RESTORE_STEPWISE, D_RECHARGE_AT, D_RECHARGE_ENTITY, D_RECHARGE_VALUE, D_SOC, D_VALUE,
+    D_COMFORT, D_MIN_SOC, D_REL1, D_REL1_VALUE, D_REL2, D_REL2_VALUE, D_RESTORE_ORIG, D_RESTORE_STEPWISE, D_SOC_STEP, D_RECHARGE_AT, D_RECHARGE_ENTITY, D_RECHARGE_VALUE, D_SOC, D_VALUE,
     CONF_AI_TASK, CONF_CHARGE_PLAN, CONF_MAX_AGE, CONF_OUTDOOR_TEMP, CONF_PLANNER, CONF_WEATHER, DEFAULT_MAX_AGE_S, D_RESERVE_ENTITY, D_RESERVE_LEAD, D_RESERVE_VALUE,
 )
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
@@ -38,6 +38,7 @@ from .forecast import (
 )
 from .corrections import correct_quarter as _correct_quarter
 from . import rueckmeldung as rm
+from . import fehlerbericht as fb
 from .plan import charging_allowed, make_plan
 from .pricing import monthly_cost
 from .report import week_label, week_report
@@ -60,6 +61,9 @@ def _same_value(state: str, wanted: str) -> bool:
         return False
 
 
+LAG_CYCLES = 6   # a battery setting may take this many cycles (20 s each) to report a new value before it counts as changed
+
+
 def _num(x: Any) -> float | None:
     try:
         return float(x)
@@ -74,6 +78,10 @@ MODEL_VERSION = 2          # 2: the house model is filled without the wallboxes 
 AI_CALLS_PER_DAY = 4
 EXPLAIN_AT_HOUR = 21
 CALL_TIMEOUT_S = 15
+
+
+class SlowCall(TimeoutError):
+    """A command took longer than CALL_TIMEOUT_S; it goes on in the background (not cancelled)."""
 
 
 class Waechter:
@@ -116,6 +124,8 @@ class Waechter:
         self.weekly_enabled = True       # weekly report on Monday morning
         self.share_usage = bool(self.cfg.get("share_usage"))   # voluntary anonymous usage statistics, weekly (default off, rueckmeldung.py)
         self.feedback_text = ""          # the text field for a feedback
+        self.diag_calls = fb.Calls()     # bug report: how fast and how often commands arrived or failed (only in memory)
+        self._diag_lines = fb.Lines()    # bug report: the last warnings of the guard (only in memory)
         self._usage: dict[str, Any] = {}  # {"kennung", "gesendet"}: the random id of this installation and the last report
         self._usage_busy = False
         self.weekly: dict[str, Any] = {}  # the last report
@@ -136,6 +146,7 @@ class Waechter:
         self._plan_at: datetime | None = None
         self._plan_paused = False        # the plan has paused the charging (and must resume it)
         self._plan_cmd_at: datetime | None = None
+        self._plan_retry_at: datetime | None = None   # after a failed command: not before this time again
         self._solar_cache: tuple[datetime, dict[datetime, float] | None] | None = None
         # load forecast: learned typical grid import per weekday and quarter hour
         self.forecast_enabled = True
@@ -205,6 +216,7 @@ class Waechter:
     # ---------- life cycle ----------
 
     async def async_start(self) -> None:
+        logging.getLogger(__package__).addHandler(self._diag_lines)
         data = await self._store.async_load() or {}
         self.log = data.get("log", [])
         self.counts = data.get("counts", {})
@@ -255,6 +267,7 @@ class Waechter:
         self._unsub = async_track_time_interval(self.hass, self._tick, UPDATE_INTERVAL)
 
     async def async_stop(self) -> None:
+        logging.getLogger(__package__).removeHandler(self._diag_lines)
         if self._unsub:
             self._unsub()
             self._unsub = None
@@ -1157,15 +1170,103 @@ class Waechter:
         finally:
             self._usage_busy = False
 
-    async def send_feedback(self, text: str, kontakt: str | None, mit_einrichtung: bool) -> bool:
-        """A feedback the user writes and sends himself (service send_feedback, or the text field and its button)."""
+    async def send_feedback(self, text: str, kontakt: str | None, mit_einrichtung: bool, bericht: dict[str, Any] | None = None) -> bool:
+        """A feedback the user writes and sends himself (service send_feedback, or the text field and its button). With a bug
+        report (button 'Send bug report') the text may be empty."""
         from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
         if not str(text or "").strip():
-            return False
+            if bericht is None:
+                return False
+            text = "(Fehlerbericht)"
         v, ha = self._version()
-        daten = rm.rueckmeldung(DOMAIN, v, ha, text, kontakt, self.setup_overview() if mit_einrichtung else None)
+        daten = rm.rueckmeldung(DOMAIN, v, ha, text, kontakt, self.setup_overview() if mit_einrichtung else None, bericht)
         return await rm.senden(async_get_clientsession(self.hass), rm.ZIEL_RUECKMELDUNG, daten)
+
+    def build_report(self, now: datetime) -> dict[str, Any]:
+        """Bug report (button 'Send bug report'): what is needed to find an error, anonymised in fehlerbericht.py."""
+        from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+        reg, dreg = er.async_get(self.hass), dr.async_get(self.hass)
+        names: list[str] = [self.hass.config.location_name or "", self.entry.title or ""]
+        names += [str(d.get(D_NAME) or "") for d in self.raw_devices.values()]
+        names += [str(lp.get("title") or "") for lp in self._evcc_lp.values() if isinstance(lp, dict)]   # evcc loadpoints ("Carport")
+        keep: list[str] = ["wallbox", "evcc", "switch", "script", "battery", "setting", "vehicle", "throttle", "Viertelstunden-Wächter"]
+
+        def num(x: Any) -> Any:
+            return round(x, 3) if isinstance(x, float) else x
+
+        def ent_text(eid: str) -> str:
+            """Integration, model and firmware, what the entity says now and how its commands went - one line."""
+            st = self.hass.states.get(eid)
+            if st is not None and st.attributes.get("friendly_name"):
+                names.append(str(st.attributes["friendly_name"]))
+            e = reg.async_get(eid)
+            parts: list[Any] = [e.platform if e else "ohne Registrierung"]
+            if e:
+                keep.append(e.platform)
+            dev = dreg.async_get(e.device_id) if e and e.device_id else None
+            if dev is not None:
+                names.extend(x for x in (dev.name, dev.name_by_user) if x)
+                keep.extend(x for x in (dev.manufacturer, dev.model) if x)
+                parts += [x for x in (dev.manufacturer, dev.model, dev.sw_version and f"Firmware {dev.sw_version}") if x]
+            state = fb.sensor_state(st, now)
+            dom = eid.split(".")[0]
+            if st is not None and dom in ("number", "input_number", "select", "input_select", "switch", "input_boolean"):
+                state += f" {st.state}"
+                if dom in ("number", "input_number"):
+                    state += f" ({st.attributes.get('min')}..{st.attributes.get('max')} Schritt {st.attributes.get('step')})"
+                elif dom in ("select", "input_select"):
+                    state += f" von {st.attributes.get('options')}"
+            parts.append(state)
+            calls = self.diag_calls.text(eid)
+            if calls:
+                parts.append(calls)
+            return ", ".join(str(x) for x in parts)
+
+        geraete = []
+        for dev_id, d in sorted(self.raw_devices.items(), key=lambda x: int(x[1].get("priority", 5))):
+            g: dict[str, Any] = {"art": d.get(D_KIND), "prioritaet": d.get("priority"), "nur_beobachten": bool(d.get("observe_only")),
+                                 "eingriff_aktiv": dev_id in self.guard.interventions}
+            iv = self.guard.interventions.get(dev_id)
+            if isinstance(iv, dict):
+                g["eingriff"] = {k: num(v) for k, v in iv.items() if isinstance(v, (int, float, str, bool)) and not str(k).endswith("at")}
+            if d.get(D_KIND) == KIND_EVCC:
+                g["evcc_erreichbar"] = self._evcc_lp.get(dev_id) is not None
+            for k, v in d.items():
+                if not str(k).endswith("_entity"):
+                    continue
+                if isinstance(v, str) and v:
+                    g[k] = ent_text(v)
+                elif isinstance(v, list):
+                    g[k] = "; ".join(ent_text(x) for x in v if isinstance(x, str))
+            if dev_id in self._ratchet:
+                g["mindest_ladestand_folgt"] = {k: v for k, v in self._ratchet[dev_id].items() if k != "entity"}
+            if dev_id in self._reserve:
+                g["reserve_aktiv"] = True
+            geraete.append(g)
+
+        vals = {k: num(v) for k, v in self.guard.values.items() if k != "quarter"}
+        zustand: dict[str, Any] = {
+            "betriebsart": self.mode, "status": self.status, "strategie": self.guard.strategy, "ausfuehren": self.executing,
+            "grenze_kw": self.limit_kw, "puffer_kw": self.margin_kw, "werte": vals,
+            "netz_quelle": self.grid_source, "netz_alter_s": num(self.grid_age), "netz_zu_alt": self.grid_stale,
+            "netz_evcc_kw": num(self.grid_evcc_kw), "quellen_weichen_ab": self.sources_differ, "wallbox_doppelt": bool(self.wallbox_twice),
+            "letzte_viertelstunde_kw": num(self.last_quarter_kw), "monatsspitze_kw": (self.month_peak or {}).get("kw"),
+            "nicht_bestaetigt": self.guard.misses,
+            "netzsensor": ent_text(self.cfg[CONF_GRID_POWER]) if self.cfg.get(CONF_GRID_POWER) else None,
+            "prognose": bool(self.forecast_enabled), "vorausschauend": bool(self.predictive), "akku_reserve": bool(self.battery_reserve),
+            "ladeplan": (self.plan or {}).get("status"), "ladeplan_ausfuehren": bool(self.plan_execute),
+        }
+        verlauf = []
+        for x in self.log[:fb.MAX_LINES]:
+            when = fb.rel_h(x.get("t"), now) or "?"
+            verlauf.append(f"{when}{' [beobachten]' if x.get('shadow') else ''}: {x.get('text')}")
+        fehler = {"evcc": f"{len(self._evcc_down)} evcc nicht erreichbar" if self._evcc_down else None}
+        v, ha = self._version()
+        overview = self.setup_overview()
+        keep += [str(x) for x in overview.get("herkunft") or []]
+        return fb.bericht(v, ha, overview, zustand, geraete, verlauf, list(self._diag_lines.lines), fehler, names, keep)
 
     def _plan_entities(self) -> list[str]:
         """Charge plan sensors: those of the chosen car planner (all vehicles, found by their unique id) plus entities named by hand."""
@@ -1401,7 +1502,7 @@ class Waechter:
                 try:
                     await self._set_entity(ent, val)
                 except Exception as err:  # noqa: BLE001
-                    self._log(Action(dev_id, "log", None, self.t("res_fail", name=name, err=err), False), False)
+                    self._log(Action(dev_id, "log", None, self.t("res_fail", name=name, err=self._err(err)), False), False)
                     continue
                 self._reserve[dev_id] = {"entity": ent, "value": val, "orig": st.state if st else None,
                                          "until": win["end"].isoformat()}
@@ -1412,7 +1513,8 @@ class Waechter:
     def _freeze_value(self, d: dict[str, Any], ent: str, st: Any, current: float | None = None,
                       cap: float | None = None) -> str | None:
         """The value of a number setting (e.g. minimum SOC) that keeps the battery at its state of charge now.
-        `current`: never at or below this (default: the value set now); `cap`: never above this (e.g. the old value)."""
+        `current`: never at or below this (default: the value set now); `cap`: never above this (e.g. the old value).
+        The step: the battery's own field *Step* if set (a Victron reports 5 % but takes every whole percent), else the setting's."""
         if ent.split(".")[0] not in ("number", "input_number"):
             return None
         soc_st = self._state(d.get(D_SOC)) if d.get(D_SOC) else None
@@ -1422,7 +1524,7 @@ class Waechter:
             hi = cap if hi is None else min(hi, cap)
         return frozen_value(_num(soc_st.state) if soc_st is not None else None,
                             current if current is not None else (_num(st.state) if st is not None else None),
-                            _num(attrs.get("step")), _num(attrs.get("min")), hi)
+                            _num(d.get(D_SOC_STEP)) or _num(attrs.get("step")), _num(attrs.get("min")), hi)
 
     # ---------- after a release: the minimum SOC follows the state of charge back up (0.15) ----------
 
@@ -1442,7 +1544,7 @@ class Waechter:
         if value is not None:
             await self._set_entity(ent, value)
         last = value if value is not None else st.state
-        self._ratchet[dev_id] = {"entity": ent, "target": before, "last": last}
+        self._ratchet[dev_id] = {"entity": ent, "target": before, "last": last, "prev": st.state, "lag": 0}
         self._log(Action(dev_id, "log", None, self.t("step_start", name=d.get(D_NAME, dev_id), value=f"{_num(last):g}",
                                                      target=f"{target:g}"), False), False)
         return True
@@ -1463,8 +1565,13 @@ class Waechter:
             st = self._state(ent)
             if st is None or st.state in _BAD:
                 continue
+            lagging = (r.get("prev") is not None and not _same_value(st.state, str(r["last"]))
+                       and _same_value(st.state, str(r["prev"])))
+            if lagging and int(r.get("lag", 0)) < LAG_CYCLES and target is not None:
+                r["lag"] = int(r.get("lag", 0)) + 1            # the device has not reported the new value yet: wait
+                continue
             if not _same_value(st.state, str(r["last"])) or target is None:
-                self._ratchet.pop(dev_id, None)               # changed by someone else: theirs now
+                self._ratchet.pop(dev_id, None)               # changed by someone else (or never taken): theirs now
                 self._log(Action(dev_id, "log", None, self.t("step_changed", name=name), False), False)
                 continue
             if not execute or not d.get(D_RESTORE_STEPWISE):
@@ -1487,13 +1594,13 @@ class Waechter:
             try:
                 await self._set_entity(ent, value if _num(value) < target else str(r["target"]))
             except Exception as err:  # noqa: BLE001
-                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=self._err(err)), False), False)
                 continue
             if _num(value) >= target:
                 self._ratchet.pop(dev_id, None)
                 self._log(Action(dev_id, "log", None, self.t("step_done", name=name, target=f"{target:g}"), False), False)
             else:
-                r["last"] = value
+                r["prev"], r["last"], r["lag"] = r["last"], value, 0
 
     async def _recharge_start(self, dev_id: str, d: dict[str, Any], r: dict[str, Any], name: str, target: float) -> None:
         """The recharge setting first (so the charging starts slowly), then the old minimum SOC."""
@@ -1508,9 +1615,9 @@ class Waechter:
             r["recharge"] = rc
             await self._set_entity(r["entity"], str(r["target"]))
         except Exception as err:  # noqa: BLE001
-            self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+            self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=self._err(err)), False), False)
             return
-        r["last"] = str(r["target"])
+        r["prev"], r["last"], r["lag"] = r["last"], str(r["target"]), 0
         self._log(Action(dev_id, "log", None, self.t("recharge_start", name=name, target=f"{target:g}"), False), False)
 
     async def _recharge_back(self, dev_id: str, r: dict[str, Any] | None) -> None:
@@ -1524,7 +1631,7 @@ class Waechter:
                 await self._set_entity(rc["entity"], str(rc["orig"]))
             except Exception as err:  # noqa: BLE001
                 name = self.raw_devices.get(dev_id, {}).get(D_NAME, dev_id)
-                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=self._err(err)), False), False)
 
     async def _step_finish(self, dev_id: str, reason: str) -> None:
         """End the stepping at once: the old value back (only if the setting still holds the last step)."""
@@ -1534,11 +1641,13 @@ class Waechter:
         await self._recharge_back(dev_id, r)
         name = self.raw_devices.get(dev_id, {}).get(D_NAME, dev_id)
         st = self._state(r["entity"])
-        if st is not None and _same_value(st.state, str(r["last"])):
+        ours = st is not None and (_same_value(st.state, str(r["last"]))
+                                   or (r.get("prev") is not None and _same_value(st.state, str(r["prev"]))))
+        if ours:
             try:
                 await self._set_entity(r["entity"], str(r["target"]))
             except Exception as err:  # noqa: BLE001
-                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=err), False), False)
+                self._log(Action(dev_id, "log", None, self.t("step_fail", name=name, err=self._err(err)), False), False)
                 return
             self._log(Action(dev_id, "log", None, self.t("step_end", reason=reason, name=name,
                                                          target=f"{_num(r['target']):g}"), False), False)
@@ -1553,7 +1662,7 @@ class Waechter:
             try:
                 await self._set_entity(held["entity"], str(held["orig"]))
             except Exception as err:  # noqa: BLE001
-                self._log(Action(dev_id, "log", None, self.t("res_back_fail", name=name, err=err), False), False)
+                self._log(Action(dev_id, "log", None, self.t("res_back_fail", name=name, err=self._err(err)), False), False)
                 return
             self._log(Action(dev_id, "log", None, self.t("res_end", reason=reason, name=name), False), False)
         else:
@@ -1758,24 +1867,29 @@ class Waechter:
         paused_wanted = want is False
         if v is None or paused_wanted == self._plan_paused:
             return
+        if self._plan_retry_at is not None and now < self._plan_retry_at:
+            return  # a command failed shortly before: do not send it again every cycle (e.g. a slow cloud)
         if self._plan_cmd_at is not None and active and (now - self._plan_cmd_at) < timedelta(minutes=5):
             return  # at most one command per five minutes while the plan is running; resuming is never delayed
         try:
-            if paused_wanted:
-                if not v.get(D_STOP):
-                    return  # nothing to pause with; the plan stays advice
-                await self._vehicle_command(v, "stop")
-                self._plan_paused = True
-                self._log(Action("", "log", None, self.t("plan_pause"), False), False)
-            else:
-                if v.get(D_START):
-                    await self._vehicle_command(v, "start")
-                self._plan_paused = False
-                self._log(Action("", "log", None, self.t("plan_go"), False), False)
-            self._plan_cmd_at = now
+            if paused_wanted and not v.get(D_STOP):
+                return  # nothing to pause with; the plan stays advice
+            slow = False
+            if paused_wanted or v.get(D_START):
+                try:
+                    await self._vehicle_command(v, "stop" if paused_wanted else "start")
+                except SlowCall:
+                    slow = True   # still on its way (a car waking up): counts as sent
+            self._plan_paused = paused_wanted
+            text = self.t("plan_pause" if paused_wanted else "plan_go")
+            self._log(Action("", "log", None, text + (" " + self.t("slow_note") if slow else ""), False), False)
+            self._plan_cmd_at, self._plan_retry_at = now, None
         except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("Charge plan command failed: %s", err)
-            self._log(Action("", "log", None, self.t("plan_fail", err=err), False), False)
+            # pausing is tried again after 5 minutes; resuming sooner, so the car is not held back
+            wait = 5 if paused_wanted else 1
+            self._plan_retry_at = now + timedelta(minutes=wait)
+            _LOGGER.warning("Charge plan command failed: %r", err)
+            self._log(Action("", "log", None, self.t("plan_fail", err=self._err(err), min=wait), False), False)
 
     # ---------- executing ----------
 
@@ -1790,13 +1904,51 @@ class Waechter:
                 continue
             try:
                 await self._exec(a)
+            except SlowCall:
+                self._log(Action(a.device_id, "log", None, self.t("slow", what=a.text or a.kind, s=CALL_TIMEOUT_S), False), False)
             except Exception as err:  # noqa: BLE001 - a failing device must not stop the guard
                 _LOGGER.warning("Action %s for %s failed: %s", a.kind, a.device_id, err)
-                self._log(Action(a.device_id, "log", None, self.t("error", what=a.text or a.kind, err=err), False), False)
+                self._log(Action(a.device_id, "log", None, self.t("error", what=a.text or a.kind, err=self._err(err)), False), False)
+
+    def _err(self, err: BaseException) -> str:
+        """Readable error text: a timeout or an error without text would otherwise show empty brackets."""
+        if isinstance(err, SlowCall):
+            return self.t("err_slow", s=CALL_TIMEOUT_S)
+        if isinstance(err, TimeoutError):
+            return self.t("err_timeout", s=CALL_TIMEOUT_S)
+        return str(err).strip() or type(err).__name__
 
     async def _call(self, domain: str, service: str, data: dict[str, Any]) -> None:
-        async with asyncio.timeout(CALL_TIMEOUT_S):
-            await self.hass.services.async_call(domain, service, data, blocking=True)
+        """Send a command and wait at most CALL_TIMEOUT_S for it. A slower device (a car or wallbox through its cloud) is not
+        cut off: Home Assistant would cancel the command itself, so it would never arrive. It goes on in the background,
+        SlowCall tells the caller, and an error that comes later is still written to the log."""
+        task = self.hass.async_create_task(
+            self.hass.services.async_call(domain, service, data, blocking=True), f"{DOMAIN} {domain}.{service}")
+        eid = data.get("entity_id")
+        key = eid if isinstance(eid, str) else f"{domain}.{service}"
+        started = asyncio.get_running_loop().time()
+
+        def note(t: asyncio.Task) -> None:   # bug report: time and outcome of every command, also of a slow one that ends later
+            err = None if t.cancelled() else t.exception()
+            self.diag_calls.call(key, asyncio.get_running_loop().time() - started, err)
+
+        task.add_done_callback(note)
+        done, _ = await asyncio.wait({task}, timeout=CALL_TIMEOUT_S)
+        if task in done:
+            task.result()   # raises the device's error
+            return
+        what = f"{domain}.{service} {data.get('entity_id', '')}".strip()
+        task.add_done_callback(lambda t: self._late_result(t, what))
+        raise SlowCall(what)
+
+    def _late_result(self, task: asyncio.Task, what: str) -> None:
+        """A slow command has ended after all: only a failure is worth a line."""
+        if task.cancelled():
+            return
+        err = task.exception()
+        if err is not None:
+            _LOGGER.warning("Slow command %s failed later: %r", what, err)
+            self._log(Action("", "log", None, self.t("late_fail", what=what, err=self._err(err)), False), False)
 
     @staticmethod
     def _engine_dict(d: dict[str, Any]) -> dict[str, Any]:

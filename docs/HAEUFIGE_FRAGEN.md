@@ -28,18 +28,25 @@ Der Wächter greift dann nicht ein und zeigt *keine Daten*. Spitzen und Kosten z
 **Mein Template-Sensor (z. B. aus einem Shelly 3EM Pro) fehlt in der Auswahl.**
 Seit 0.13.3 lässt sich jeder Sensor wählen. Geprüft wird die **Einheit** (W/kW bzw. Wh/kWh), nicht die Geräteklasse.
 
-**Wie richte ich einen Victron-Akku mit Mindest-SOC ein (ab 0.15)?**
-Beispiel: Normal steht der Mindest-SOC auf 30 %, zum Abfangen einer Spitze soll der Akku bis 15 % liefern. Beim Gerät *Batterie*:
+**Wie richte ich einen Akku mit einstellbarem Mindest-Ladestand ein (ab 0.15)?**
+Gilt für jeden Akku, bei dem sich in Home Assistant eine Untergrenze in Prozent einstellen lässt (Mindest-SOC, Entladegrenze,
+Reserve). Beispiel mit einem Victron: Normal steht der Mindest-SOC auf 30 %, zum Abfangen einer Spitze soll der Akku bis 15 %
+liefern. Beim Gerät *Batterie*:
 
 | Feld | Eintrag |
 |---|---|
 | Ladestand | der SOC-Sensor des Akkus |
 | Einstellung, die die Batterie freigibt / Wert | die Einstellung *ESS Minimum SOC* / `15` |
 | Vorherige Werte wiederherstellen | an |
-| Mindest-Ladestand folgt dem Ladestand zurück | an: Nach der Spitze geht das Minimum nicht auf einmal auf 30 %, sondern folgt dem Ladestand (20, 21 … 30), sonst lädt der Victron sofort aus dem Netz |
+| Mindest-Ladestand folgt dem Ladestand zurück | an: Nach der Spitze geht das Minimum nicht auf einmal auf 30 %, sondern folgt dem Ladestand in den Schritten der Einstellung (beim Victron 5 %: 20, 25, 30), sonst lädt der Victron sofort aus dem Netz |
+| Schrittweite Mindest-Ladestand | optional, z. B. `1`: dann 20, 21, 22 …, wenn Ihr Akku jedes ganze Prozent annimmt (einmal von Hand ausprobieren) |
 | Nachladen ab | optional, z. B. 22:00: Hat die PV die 30 % bis dahin nicht geschafft, lädt der Akku aus dem Netz nach |
 | Einstellung beim Nachladen / Wert | optional, z. B. *ESS maximaler Ladestrom* / `40`: damit langsam geladen wird, danach kommt der alte Wert zurück |
 | Einstellung, die die Ladung hält / Wert | optional für die Akku-Reserve vor einer Spitze: *ESS Minimum SOC* / `soc` (bleibt beim aktuellen Ladestand) |
+
+Eigene Automationen fürs Peak-Shaving (Min-SOC bei einer Spitze senken, danach zurückstellen, abends nachladen) braucht es
+dann nicht mehr: **deaktivieren** (nicht löschen), sonst stellen zwei an denselben Werten. Die Betriebsart des Wächters muss *Aktiv*
+sein, und beim Akku darf *Nur beobachten* nicht an sein. Beim ersten Mal im Protokoll nachsehen, ob alles wie erwartet läuft.
 
 Mehr in der [Anleitung](ANLEITUNG.md), Abschnitt *Akku-Reserve vor einer Spitze*.
 
@@ -49,6 +56,12 @@ Mehr in der [Anleitung](ANLEITUNG.md), Abschnitt *Akku-Reserve vor einer Spitze*
 Jedes Gerät hat zusätzlich einen eigenen Schalter *Nur beobachten*. Ist er an, greift der Wächter bei diesem Gerät nie ein.
 Seit 0.14.2 erscheint dann unter **Einstellungen > Reparaturen** ein Hinweis, und *Reparieren* schaltet es mit einem Klick aus.
 Ohne Update: beim Gerät die drei Punkte > *Neu konfigurieren* > *Nur beobachten* aus.
+
+**Der Ladeplan startet und pausiert, stellt aber den Ladestrom nicht ein.**
+Richtig, das tut er bisher nicht: Im geplanten Fenster lädt das Auto mit dem, was an der Wallbox eingestellt ist. Den Strom senkt
+nur der Wächter, und nur, wenn eine Spitze droht. Der Ladeplan des Wächters ist ein einfacher Planer und bekommt keine neuen
+Funktionen mehr. Wann und wie stark das Auto lädt, plant [Plugwhen](https://github.com/mobilewhatelse/plugwhen); dort ist das
+Einstellen des Ladestroms geplant.
 
 **Kann er meinen Wattpilot steuern?**
 Ja, über die Integration `wattpilot-HA` (Ladestrom und Phasen). Das ist auf echter Hardware getestet.

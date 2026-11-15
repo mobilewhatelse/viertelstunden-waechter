@@ -1,4 +1,5 @@
-"""Sends what is in the feedback text field, with an overview of the setup (no names, entity ids or values)."""
+"""Two buttons: 'Send feedback' sends the text with an overview of the setup (no names, entity ids or values); 'Send bug report'
+sends the text (may be empty) together with the bug report (fehlerbericht.py), and the notification then shows exactly what went."""
 
 from __future__ import annotations
 
@@ -8,8 +9,9 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
-from . import WaechterEntry
+from . import WaechterEntry, fehlerbericht as fb
 from .entity import WaechterEntity
 
 TEXTS = {
@@ -21,7 +23,7 @@ TEXTS = {
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddEntitiesCallback) -> None:
-    add([FeedbackButton(entry.runtime_data)])
+    add([FeedbackButton(entry.runtime_data), ReportButton(entry.runtime_data)])
 
 
 class FeedbackButton(WaechterEntity, ButtonEntity):
@@ -43,3 +45,25 @@ class FeedbackButton(WaechterEntity, ButtonEntity):
         else:
             msg = failed
         async_create(self.hass, msg, title="Viertelstunden-W\u00e4chter", notification_id="viertelstunden_waechter_feedback")
+
+
+class ReportButton(WaechterEntity, ButtonEntity):
+    """One press: the text (if any) and the bug report go at once; the notification shows exactly what was sent (or, if sending
+    failed, what would have been sent). Independent of 'Share anonymous data'."""
+
+    _attr_icon = "mdi:bug-outline"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, w) -> None:
+        super().__init__(w, "feedback_report")
+
+    async def async_press(self) -> None:
+        w = self.waechter
+        de = str(self.hass.config.language or "").startswith("de")
+        b = w.build_report(dt_util.now())
+        ok = await w.send_feedback(w.feedback_text, None, True, b)
+        if ok:
+            w.feedback_text = ""
+            async_dispatcher_send(self.hass, w.signal)
+        async_create(self.hass, fb.anzeige(b, de, ok), title="Viertelstunden-W\u00e4chter",
+                     notification_id="viertelstunden_waechter_feedback")

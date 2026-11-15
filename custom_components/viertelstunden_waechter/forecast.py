@@ -370,11 +370,12 @@ def frozen_value(soc: float | None, current: float | None, step: float | None = 
     """The minimum-SOC value that freezes the battery where it is now, or None when there is nothing to set.
 
     Rounded DOWN to the setting's step: a minimum above the state of charge makes some inverters (e.g. Victron ESS)
-    charge the battery from the grid, a new peak. Never below the value that is set now: holding must not release."""
+    charge the battery from the grid, a new peak. Never below the value that is set now: holding must not release.
+    Always whole percent (a Victron only takes whole percent): a step below 1 counts as 1, others are rounded up."""
     if soc is None or not 0 <= soc <= 100:
         return None
-    st = step if step and step > 0 else 1.0
-    base = lo if lo is not None else 0.0
+    st = float(max(1, math.ceil(step - 1e-9))) if step and step > 0 else 1.0
+    base = float(math.ceil(lo - 1e-9)) if lo is not None else 0.0
     v = base + math.floor((soc - base) / st + 1e-9) * st
     if hi is not None:
         v = min(v, hi)

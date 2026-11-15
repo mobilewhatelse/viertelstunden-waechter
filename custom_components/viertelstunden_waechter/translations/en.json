@@ -423,6 +423,9 @@
     "button": {
       "feedback_send": {
         "name": "Send feedback"
+      },
+      "feedback_report": {
+        "name": "Send bug report"
       }
     }
   },
@@ -640,6 +643,7 @@
             "max_off_min": "Maximum duration",
             "restore_original": "Put the previous values back",
             "restore_stepwise": "Minimum SOC follows the charge back up",
+            "soc_step": "Step of the minimum SOC",
             "recharge_at": "Recharge from",
             "recharge_entity": "Setting while recharging",
             "recharge_value": "Value while recharging",
@@ -662,6 +666,7 @@
             "max_off_min": "0 = no limit. After this time the battery is taken back in any case.",
             "restore_original": "On: the values from before the release are put back - but only those still holding the release value. Off: use the script instead.",
             "restore_stepwise": "For a minimum-SOC setting (e.g. Victron ESS): after the release it is not set back at once but follows the state of charge up to its old value, so the battery does not charge from the grid all at once. Needs the state of charge. Leave off for power or mode settings.",
+            "soc_step": "Optional. Empty: the step the setting reports (Victron ESS: 5 %). Enter e.g. 1 if your battery takes every whole percent (try it once by hand), then the minimum follows the charge in finer steps.",
             "recharge_at": "Optional, needs the switch above. If the minimum SOC is still below its old value at this time, it is set back and the battery is charged from the grid until the old value is reached (looked at for 12 hours from this time).",
             "recharge_entity": "Optional, e.g. the maximum charge current of an ESS, so the battery charges slowly. Put back when the old value is reached.",
             "recharge_value": "E.g. 40 for 40 A.",
@@ -690,6 +695,7 @@
             "max_off_min": "Maximum duration",
             "restore_original": "Put the previous values back",
             "restore_stepwise": "Minimum SOC follows the charge back up",
+            "soc_step": "Step of the minimum SOC",
             "recharge_at": "Recharge from",
             "recharge_entity": "Setting while recharging",
             "recharge_value": "Value while recharging",
@@ -712,6 +718,7 @@
             "max_off_min": "0 = no limit. After this time the battery is taken back in any case.",
             "restore_original": "On: the values from before the release are put back - but only those still holding the release value. Off: use the script instead.",
             "restore_stepwise": "For a minimum-SOC setting (e.g. Victron ESS): after the release it is not set back at once but follows the state of charge up to its old value, so the battery does not charge from the grid all at once. Needs the state of charge. Leave off for power or mode settings.",
+            "soc_step": "Optional. Empty: the step the setting reports (Victron ESS: 5 %). Enter e.g. 1 if your battery takes every whole percent (try it once by hand), then the minimum follows the charge in finer steps.",
             "recharge_at": "Optional, needs the switch above. If the minimum SOC is still below its old value at this time, it is set back and the battery is charged from the grid until the old value is reached (looked at for 12 hours from this time).",
             "recharge_entity": "Optional, e.g. the maximum charge current of an ESS, so the battery charges slowly. Put back when the old value is reached.",
             "recharge_value": "E.g. 40 for 40 A.",

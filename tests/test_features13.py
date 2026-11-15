@@ -66,7 +66,13 @@ class FreezeTests(unittest.TestCase):
         self.assertEqual(forecast.frozen_value(62.7, 30, 5, 10, 100), "60")
         self.assertEqual(forecast.frozen_value(64.9, 30, 5, 0, 100), "60")
         self.assertEqual(forecast.frozen_value(55.0, 30, 0.5, 0, 100), "55")
-        self.assertEqual(forecast.frozen_value(55.7, 30, 0.5, 0, 100), "55.5")
+
+    def test_always_whole_percent(self):
+        # a Victron takes only whole percent: a finer step of the setting does not give decimals
+        self.assertEqual(forecast.frozen_value(55.7, 30, 0.5, 0, 100), "55")
+        self.assertEqual(forecast.frozen_value(62.79, 30, 0.1, 0, 100), "62")
+        self.assertEqual(forecast.frozen_value(21.4, 15, 0.1, 10.5, 100), "21")
+        self.assertEqual(forecast.frozen_value(23.0, 15, 2.5, 0, 100), "21")       # step 2.5 counts as 3: 0, 3 ... 21
 
     def test_never_below_the_value_set_now(self):
         # holding must not release: at 28 % with a minimum of 30 nothing changes
