@@ -584,6 +584,8 @@ Pausieren-Befehl (ohne ihn bleibt der Plan ein Vorschlag). Schutzregeln:
 - ist der Plan nicht machbar, nicht nötig, ohne Abfahrt, wird der Schalter ausgeschaltet, die Integration entladen oder
   Home Assistant neu gestartet, wird der *Erlauben*-Befehl gesendet, damit das Auto normal lädt;
 - höchstens ein Befehl alle fünf Minuten, solange der Plan läuft; das Freigeben wird nie verzögert;
+- antwortet ein Gerät langsamer als 15 s (z. B. ein Auto über die Cloud), läuft der Befehl weiter und gilt als gesendet; schlägt er
+  wirklich fehl, wird das Pausieren nach fünf Minuten erneut versucht, das Freigeben nach einer Minute (ab 0.14.4);
 - der Spitzenwächter arbeitet zusätzlich weiter und stoppt das Auto, wie immer, nie von sich aus.
 
 **Grenzen:** Es wird nur der erste Fahrzeug-Eintrag benutzt; der Plan ist ein Vorschlag aus Gewohnheiten (Lastprognose)

@@ -65,6 +65,10 @@ EXPLAIN_AT_HOUR = 21
 CALL_TIMEOUT_S = 15
 
 
+class SlowCall(TimeoutError):
+    """A command took longer than CALL_TIMEOUT_S; it goes on in the background (not cancelled)."""
+
+
 class Waechter:
     """One guard per config entry."""
 
@@ -124,6 +128,7 @@ class Waechter:
         self._plan_at: datetime | None = None
         self._plan_paused = False        # the plan has paused the charging (and must resume it)
         self._plan_cmd_at: datetime | None = None
+        self._plan_retry_at: datetime | None = None   # after a failed command: not before this time again
         self._solar_cache: tuple[datetime, dict[datetime, float] | None] | None = None
         # load forecast: learned typical grid import per weekday and quarter hour
         self.forecast_enabled = True
@@ -1165,7 +1170,7 @@ class Waechter:
                 try:
                     await self._set_entity(ent, val)
                 except Exception as err:  # noqa: BLE001
-                    self._log(Action(dev_id, "log", None, self.t("res_fail", name=name, err=err), False), False)
+                    self._log(Action(dev_id, "log", None, self.t("res_fail", name=name, err=self._err(err)), False), False)
                     continue
                 self._reserve[dev_id] = {"entity": ent, "value": val, "orig": st.state if st else None,
                                          "until": win["end"].isoformat()}
@@ -1183,7 +1188,7 @@ class Waechter:
             try:
                 await self._set_entity(held["entity"], str(held["orig"]))
             except Exception as err:  # noqa: BLE001
-                self._log(Action(dev_id, "log", None, self.t("res_back_fail", name=name, err=err), False), False)
+                self._log(Action(dev_id, "log", None, self.t("res_back_fail", name=name, err=self._err(err)), False), False)
                 return
             self._log(Action(dev_id, "log", None, self.t("res_end", reason=reason, name=name), False), False)
         else:
@@ -1388,24 +1393,29 @@ class Waechter:
         paused_wanted = want is False
         if v is None or paused_wanted == self._plan_paused:
             return
+        if self._plan_retry_at is not None and now < self._plan_retry_at:
+            return  # a command failed shortly before: do not send it again every cycle (e.g. a slow cloud)
         if self._plan_cmd_at is not None and active and (now - self._plan_cmd_at) < timedelta(minutes=5):
             return  # at most one command per five minutes while the plan is running; resuming is never delayed
         try:
-            if paused_wanted:
-                if not v.get(D_STOP):
-                    return  # nothing to pause with; the plan stays advice
-                await self._vehicle_command(v, "stop")
-                self._plan_paused = True
-                self._log(Action("", "log", None, self.t("plan_pause"), False), False)
-            else:
-                if v.get(D_START):
-                    await self._vehicle_command(v, "start")
-                self._plan_paused = False
-                self._log(Action("", "log", None, self.t("plan_go"), False), False)
-            self._plan_cmd_at = now
+            if paused_wanted and not v.get(D_STOP):
+                return  # nothing to pause with; the plan stays advice
+            slow = False
+            if paused_wanted or v.get(D_START):
+                try:
+                    await self._vehicle_command(v, "stop" if paused_wanted else "start")
+                except SlowCall:
+                    slow = True   # still on its way (a car waking up): counts as sent
+            self._plan_paused = paused_wanted
+            text = self.t("plan_pause" if paused_wanted else "plan_go")
+            self._log(Action("", "log", None, text + (" " + self.t("slow_note") if slow else ""), False), False)
+            self._plan_cmd_at, self._plan_retry_at = now, None
         except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("Charge plan command failed: %s", err)
-            self._log(Action("", "log", None, self.t("plan_fail", err=err), False), False)
+            # pausing is tried again after 5 minutes; resuming sooner, so the car is not held back
+            wait = 5 if paused_wanted else 1
+            self._plan_retry_at = now + timedelta(minutes=wait)
+            _LOGGER.warning("Charge plan command failed: %r", err)
+            self._log(Action("", "log", None, self.t("plan_fail", err=self._err(err), min=wait), False), False)
 
     # ---------- executing ----------
 
@@ -1420,13 +1430,42 @@ class Waechter:
                 continue
             try:
                 await self._exec(a)
+            except SlowCall:
+                self._log(Action(a.device_id, "log", None, self.t("slow", what=a.text or a.kind, s=CALL_TIMEOUT_S), False), False)
             except Exception as err:  # noqa: BLE001 - a failing device must not stop the guard
                 _LOGGER.warning("Action %s for %s failed: %s", a.kind, a.device_id, err)
-                self._log(Action(a.device_id, "log", None, self.t("error", what=a.text or a.kind, err=err), False), False)
+                self._log(Action(a.device_id, "log", None, self.t("error", what=a.text or a.kind, err=self._err(err)), False), False)
+
+    def _err(self, err: BaseException) -> str:
+        """Readable error text: a timeout or an error without text would otherwise show empty brackets."""
+        if isinstance(err, SlowCall):
+            return self.t("err_slow", s=CALL_TIMEOUT_S)
+        if isinstance(err, TimeoutError):
+            return self.t("err_timeout", s=CALL_TIMEOUT_S)
+        return str(err).strip() or type(err).__name__
 
     async def _call(self, domain: str, service: str, data: dict[str, Any]) -> None:
-        async with asyncio.timeout(CALL_TIMEOUT_S):
-            await self.hass.services.async_call(domain, service, data, blocking=True)
+        """Send a command and wait at most CALL_TIMEOUT_S for it. A slower device (a car or wallbox through its cloud) is not
+        cut off: Home Assistant would cancel the command itself, so it would never arrive. It goes on in the background,
+        SlowCall tells the caller, and an error that comes later is still written to the log."""
+        task = self.hass.async_create_task(
+            self.hass.services.async_call(domain, service, data, blocking=True), f"{DOMAIN} {domain}.{service}")
+        done, _ = await asyncio.wait({task}, timeout=CALL_TIMEOUT_S)
+        if task in done:
+            task.result()   # raises the device's error
+            return
+        what = f"{domain}.{service} {data.get('entity_id', '')}".strip()
+        task.add_done_callback(lambda t: self._late_result(t, what))
+        raise SlowCall(what)
+
+    def _late_result(self, task: asyncio.Task, what: str) -> None:
+        """A slow command has ended after all: only a failure is worth a line."""
+        if task.cancelled():
+            return
+        err = task.exception()
+        if err is not None:
+            _LOGGER.warning("Slow command %s failed later: %r", what, err)
+            self._log(Action("", "log", None, self.t("late_fail", what=what, err=self._err(err)), False), False)
 
     @staticmethod
     def _engine_dict(d: dict[str, Any]) -> dict[str, Any]:

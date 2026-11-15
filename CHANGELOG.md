@@ -2,6 +2,25 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.14.4 - 2026-11-15
+
+Fix for devices that answer slowly, e.g. a car or wallbox through its cloud.
+
+- **Slow commands are no longer cut off (from feedback):** the guard waited at most 15 s for a command and then Home Assistant
+  cancelled it, so a device that always needs longer (a car that has to wake up, a wallbox through its cloud) never got a command:
+  neither the lowering of the charging current nor the pause of the charge plan. Now the guard still waits at most 15 s, but the
+  command goes on in the background; the log says "device answers slowly", and an error that comes later is logged too.
+- **Charge plan:** a slow command counts as sent. A command that really failed is tried again after 5 minutes (pause) or 1 minute
+  (resume) instead of every 20 s.
+- **Log:** errors say what went wrong, e.g. "no answer within 15 s", instead of empty brackets.
+
+*Deutsch:* Fix für Geräte, die langsam antworten, z. B. Auto oder Wallbox über die Cloud. Der Wächter wartete höchstens 15 s auf
+einen Befehl, danach brach Home Assistant ihn ab, so bekam ein Gerät, das immer länger braucht, nie einen Befehl (weder das Senken
+des Ladestroms noch die Pause des Ladeplans). Jetzt wartet er weiter höchstens 15 s, der Befehl läuft aber im Hintergrund weiter;
+das Protokoll sagt „Gerät antwortet langsam“, ein späterer Fehler wird auch protokolliert. Ladeplan: ein langsamer Befehl gilt als
+gesendet, ein wirklich fehlgeschlagener wird nach 5 Minuten (Pause) bzw. 1 Minute (Freigabe) erneut versucht statt alle 20 s.
+Fehlertexte sagen, was schiefging, statt leerer Klammern.
+
 ## 0.14.3 - 2026-11-14
 
 Small things: wallboxes with the charging current as a list, the car's target from a list, and the current grid import in the dashboard.

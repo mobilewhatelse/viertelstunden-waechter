@@ -598,6 +598,8 @@ outside the planned windows the *pause* command is sent, inside them the *allow*
 - if the plan is not feasible, not needed, has no departure, the switch is turned off, the integration unloads or
   Home Assistant restarts, the *allow* command is sent so that the car charges normally;
 - at most one command per five minutes while the plan runs; resuming is never delayed;
+- if a device answers slower than 15 s (e.g. a car through its cloud), the command goes on and counts as sent; if it really
+  fails, a pause is tried again after five minutes, resuming after one minute (from 0.14.4);
 - the peak guard still works on top of it and, as always, never stops the car by itself.
 
 **Limits:** only the first vehicle entry is used; the plan is advice based on habits (the load forecast) and a
