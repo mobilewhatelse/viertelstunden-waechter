@@ -27,3 +27,12 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m unittest discover tests -v
+
+  # every coordinator test (tests/install/*_test.py) needs Home Assistant: run them all in its image, found automatically
+  coordinator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: >-
+          docker run --rm -v "$PWD:/w" -w /w --entrypoint python ghcr.io/home-assistant/home-assistant:stable
+          tests/install/run_coordinator_tests.py
