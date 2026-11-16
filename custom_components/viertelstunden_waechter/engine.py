@@ -57,6 +57,10 @@ WALLBOX_UP_AFTER_S = 90
 MISSING_DATA_S = 90           # no grid reading this long: give everything back
 VERIFY_S = 60                # an intervention must show in the readings after this long, else it is repeated once
 MISS_REST_MIN = 10            # a device that did not follow is left alone this long, the next lever is used
+VERIFY_MAX_S = 300            # a device whose power sensor reports rarely (cloud) is checked after at most this long
+POWER_GAP_KEEP = 6            # gaps between new power values remembered per device
+POWER_GAP_MIN_KW = 0.3        # gaps count only while the device draws at least this much
+POWER_GAP_MIN_N = 3           # gaps needed before the measured interval is used
 MAX_PLAUSIBLE_KW = 60.0       # counter jumps after an outage are not real peaks
 CHARGING_W = 500.0
 
@@ -122,6 +126,25 @@ class Reading:
     releasable: bool = True       # battery/setting: at least one setting differs from its release value
     value: float | None = None    # throttle: current value of the number
     current_steps: tuple[int, ...] | None = None  # wallbox with a list of currents (select): the amps it offers, else any whole amp
+    power_gap_s: float | None = None  # typical seconds between new values of the power sensor (None: not measured yet)
+
+
+def power_gap(gaps: list[float]) -> float | None:
+    """Median of the measured gaps between new power values, or None while fewer than POWER_GAP_MIN_N are known."""
+    if len(gaps) < POWER_GAP_MIN_N:
+        return None
+    s = sorted(gaps)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0
+
+
+def verify_wait(r: Reading | None) -> float:
+    """Seconds after a command before the readings must show it: the usual minute, longer for a power sensor
+    that reports rarely (one and a half of its intervals plus a cycle), never more than VERIFY_MAX_S."""
+    gap = r.power_gap_s if r is not None else None
+    if not gap:
+        return float(VERIFY_S)
+    return min(float(VERIFY_MAX_S), max(float(VERIFY_S), gap * 1.5 + 20.0))
 
 
 @dataclass
@@ -422,7 +445,7 @@ class Guard:
         if a.kind == "set_current":
             if r.current_a is None or r.current_a > float(a.value) + 0.5:
                 return self.t("cur_not", cur=r.current_a, want=a.value) if r.current_a is not None else self.t("no_cur")
-            if _secs(pend["act_at"], self._now) >= max(VERIFY_S, pend["power_after"]) - 5 and (r.power_w or 0.0) / 1000.0 > pend["expect_kw"] * 1.2 + 0.4:
+            if _secs(pend["act_at"], self._now) >= max(verify_wait(r), pend["power_after"]) - 5 and (r.power_w or 0.0) / 1000.0 > pend["expect_kw"] * 1.2 + 0.4:
                 return self.t("power_despite", kw=(r.power_w or 0.0) / 1000.0, want=a.value)
         elif a.kind == "turn_off":
             if r.is_on is not False:
@@ -445,7 +468,7 @@ class Guard:
                 del self._pending[dev_id]
                 continue
             age = _secs(pend["since"], now)
-            if age < VERIFY_S - 5:  # the cycle is 20 s, so the check happens at about 60 s
+            if age < verify_wait(readings.get(dev_id)) - 5:  # the cycle is 20 s, so the check happens at about 60 s
                 continue
             problem = self._followed(dev, pend, readings.get(dev_id), age)
             if not problem:

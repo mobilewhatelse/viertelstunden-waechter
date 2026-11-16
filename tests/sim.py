@@ -47,6 +47,10 @@ class House:
         self.deaf_wb = False       # the wallbox accepts no commands (cloud problem, wrong entity ...)
         self.wb_steps = None       # a wallbox with a list of currents (select, e.g. 6/8/10/.../16 A)
         self.wb_commands: list[int] = []
+        self.wb_report_s = None    # the wallbox power comes through a cloud: a new value only every so many seconds
+        self.wb_gap_known = False  # the guard has already measured that interval
+        self._t_s = 0.0
+        self._wb_reported = (-1e9, 0.0)
 
     def _car_setpoint_kw(self) -> float:
         if not self.car_wants:
@@ -66,6 +70,9 @@ class House:
         load = self.base_kw + cook + self.car_kw + (0.75 if self.pool_on else 0.0) + (2.0 if self.heater_on else 0.0)
         if self.has_throttle:
             load += self.thr_power_kw()
+        self._t_s = t_min * 60.0
+        if self.wb_report_s and self._t_s - self._wb_reported[0] >= self.wb_report_s:
+            self._wb_reported = (self._t_s, self.car_kw)
         grid = max(0.0, load - self.pv_kw - (0.8 if self.bat_released else 0.0))
         self.counter_kwh += grid * STEP_S / 3600.0
         return grid
@@ -79,8 +86,10 @@ class House:
         if self.has_throttle:
             extra["hp"] = R(power_w=self.thr_power_kw() * 1000, value=self.thr_value, soc=self.comfort)
         return {**extra,
-            "wb": R(power_w=self.car_kw * 1000, current_a=self.current, phase_option=self.phase_option,
-                    phases=1 if self.phase_option == "1 Phase" else 3, current_steps=self.wb_steps),
+            "wb": R(power_w=(self._wb_reported[1] if self.wb_report_s else self.car_kw) * 1000, current_a=self.current,
+                    phase_option=self.phase_option, phases=1 if self.phase_option == "1 Phase" else 3,
+                    current_steps=self.wb_steps,
+                    power_gap_s=float(self.wb_report_s) if self.wb_report_s and self.wb_gap_known else None),
             "pool": R(power_w=750.0 if self.pool_on else 0.0, is_on=self.pool_on),
             "heater": R(power_w=2000.0 if self.heater_on else 0.0, is_on=self.heater_on),
         }

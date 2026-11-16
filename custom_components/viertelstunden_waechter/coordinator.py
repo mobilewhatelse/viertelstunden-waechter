@@ -45,6 +45,7 @@ from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
     DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS, amps_of, percent_of, step_down,
+    POWER_GAP_KEEP, POWER_GAP_MIN_KW, power_gap,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -181,6 +182,7 @@ class Waechter:
         # battery reserve before a forecast peak (switch, default off)
         self.battery_reserve = False
         self._reserve: dict[str, dict[str, Any]] = {}   # battery devices held now: entity, original value, until
+        self._pw_seen: dict[str, dict[str, Any]] = {}   # per device: last power change and the gaps between changes
         self._reserve_seen: dict[str, str] = {}         # observe mode: window already logged per device
         # quarter-hour history for the export
         self.quarters: list[list[Any]] = []
@@ -588,6 +590,23 @@ class Waechter:
             ir.async_create_issue(self.hass, DOMAIN, issue_id, is_fixable=False, is_persistent=False, severity=ir.IssueSeverity.WARNING,
                                   translation_key="device_check", translation_placeholders={"name": str(name), "detail": self._finding_text(f)})
 
+    def _power_gap(self, dev_id: str, entity: str | None, kw: float | None) -> float | None:
+        """Typical seconds between two new values of the device's power sensor while it draws power.
+
+        A sensor that comes through a cloud may report a new value only every few minutes; the check whether a
+        device followed a command must wait at least that long, or it reports a miss that is only a late report."""
+        st = self._state(entity) if entity else None
+        if st is None or kw is None:
+            return None
+        seen = self._pw_seen.setdefault(dev_id, {"at": None, "kw": None, "gaps": []})
+        changed = st.last_changed
+        if seen["at"] is not None and changed > seen["at"]:
+            if (seen["kw"] or 0.0) >= POWER_GAP_MIN_KW:
+                seen["gaps"] = (seen["gaps"] + [(changed - seen["at"]).total_seconds()])[-POWER_GAP_KEEP:]
+        if seen["at"] is None or changed > seen["at"]:
+            seen["at"], seen["kw"] = changed, kw
+        return power_gap(seen["gaps"])
+
     def _readings(self) -> dict[str, Reading]:
         out: dict[str, Reading] = {}
         for dev_id, d in self.raw_devices.items():
@@ -597,6 +616,8 @@ class Waechter:
             p = self._power_kw(d.get(D_POWER), bool(d.get(D_POWER_INVERT)))
             r.power_w = p * 1000.0 if p is not None else None
             kind = d[D_KIND]
+            if kind != KIND_EVCC:
+                r.power_gap_s = self._power_gap(dev_id, d.get(D_POWER), p)
             if kind == KIND_EVCC:
                 lp = self._evcc_lp.get(dev_id)
                 if p is None and lp:
@@ -1244,6 +1265,10 @@ class Waechter:
                 g["mindest_ladestand_folgt"] = {k: v for k, v in self._ratchet[dev_id].items() if k != "entity"}
             if dev_id in self._reserve:
                 g["reserve_aktiv"] = True
+            gaps = (self._pw_seen.get(dev_id) or {}).get("gaps") or []
+            if gaps:
+                g["leistung_neuer_wert_alle_s"] = num(power_gap(gaps) or max(gaps))
+                g["leistung_gemessene_abstaende"] = len(gaps)
             geraete.append(g)
 
         vals = {k: num(v) for k, v in self.guard.values.items() if k != "quarter"}

@@ -9,14 +9,15 @@ community. *State of the check: 2026-10-25, integration version 0.12.0 (the Watt
 | Symbol | Meaning |
 |---|---|
 | ✅ | **Tested.** At least one evening in the mode *Active* with a real intervention and the real take-back observed, on real hardware, reported with the version number (see below). |
+| ⚠️ | **Under review.** Intervened and took back on real hardware in the mode *Active*, but the effect on the power is not clearly shown yet (for example because a cloud reports the power only rarely). |
 | 🟡 | **In use by the authors.** Their hardware, observe mode with this integration (the release path was not yet triggered in real operation), or the same entities are used by the authors' own automations / the predecessor script. |
 | 🔍 | **Entity types verified in the source code** of the integration (version in the Home Assistant release 2026.10). *Not* tested on hardware; whether your model or firmware supports the function is open. |
 | ❔ | **Not checked / help wanted.** The integration has the platforms (`number`, `select`, `switch`), but the entities are generated from device definitions or were not looked at. Please test and report. |
 | ❌ | **No suitable entity found** in the source check (nothing writable that lowers power or changes the mode). Use a script or an on/off switch. |
 
 **"Tested" means:** at least one evening in the mode **Active** with a real intervention *and* the real take-back
-observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25) and the Anker SOLIX V1 (by a user,
-2026-11-15) have reached this level; the other device types - throttle power, change settings, battery release - have not.
+observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25) and the Anker SOLIX V1 (by a user, 2026-11-15)
+have reached this level, the Anker Solarbank 3 Pro is under review; the other device types - throttle power, change settings, battery release - have not.
 Please be the first - see "How to report a test" below.
 
 ## In use by others (from the voluntary statistic)
@@ -41,7 +42,7 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 | Integration | Charging current | Status |
 |---|---|---|
 | Wattpilot (community, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | ✅ authors, 2026-10-25, 0.11.0: car charging with 11 kW, cooker and oven added; lowered 16 → 12 → 10 → 8 → 6 A in steps, raised again step by step, "back to 16 A" logged; charging never stopped, the quarter hour stayed below the target. Not yet seen: 1-phase switching |
-| Anker SOLIX V1 Smart EV Charger (community, Anker Solix) | charging current as a list ("6 A", "8 A" …), since 0.14.3 | ✅ user, 2026-11-15, 0.14.4: car charging, oven, water heater and heat pump added; throttled to 8 A, back to 9 A when there was room again, "free again (9 A)" logged, so exactly the value before the intervention |
+| Anker SOLIX V1 Smart EV Charger (community, Anker Solix) | charging current as a list ("6 A", "8 A" …), since 0.14.3 | ✅ user, 2026-11-15, 0.14.4: car charging, oven, water heater and heat pump added; throttled to 8 A, back to 9 A when there was room again, "free again (9 A)" logged, so exactly the value before the intervention; the current changes in the app. **Note:** the power comes through the Anker cloud, which without MQTT updates only every 60 to 300 seconds. From 0.15 the guard measures this interval and waits accordingly before it reports "not carried out" |
 | Wallbox (core) | `number` "Maximum charging current" | 🔍 |
 | OpenEVSE (core) | `number` "Charge rate" (A) | 🔍 |
 | Zaptec (community) | `number` "charger_max_current" | 🔍 |
@@ -62,6 +63,7 @@ the house (maximum output / discharge power, operating mode) and puts them back.
 | Integration | Writable entities found | Idea for "released" | Status |
 |---|---|---|---|
 | Jackery (the authors' installation) | `select` auto standby mode, `number` maximum output power (on-grid), `sensor` battery SOC | mode `on`, power `800` | 🟡 |
+| Anker Solarbank 3 Pro (community, Anker Solix) | settings of the Solarbank | release output to the house | ⚠️ user, 2026-11-15, 0.14.4: "battery released (1.4 kW too much, charge 30 %)", after 14 minutes "back as before" logged. Whether the output rose was not seen. As a balcony-solar storage it delivers at most 800 W, so its effect against a peak is small |
 | Fronius (core) | `number` battery discharge power limit (+ enable switch), charge power limit, minimum reserve, AC power limit; `switch` battery grid charging | raise the discharge limit, or lower the minimum reserve | 🔍 |
 | Kostal Plenticore (core) | `number` battery min SOC, battery min home consumption, active power limitation; `select` battery charge | lower min SOC / set min home consumption | 🔍 |
 | GoodWe (core) | `number` battery discharge depth, charge current, grid export limit; `select` operation mode | operation mode / discharge depth | 🔍 Reported by a tester (GW10KN-ET with smart meter, BYD HVS), not yet tested with the guard: operation mode with the options general, off grid, backup, eco, peak shaving. **Note:** "Active Power" is **negative** while importing from the grid; as the grid import use a template with the sign flipped, or evcc. |
@@ -72,7 +74,7 @@ the house (maximum output / discharge power, operating mode) and puts them back.
 | HomeWizard battery (core) | `select` battery group mode | the mode that discharges | 🔍 |
 | Imeon (core) | `select` manager inverter mode | the discharging mode | 🔍 |
 | Sigenergy local Modbus (community) | `number` ESS max discharging limit; `select` remote EMS control mode | raise the discharge limit | 🔍 |
-| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix, SolarEdge Modbus Multi (community) | platforms exist, entities generated from device definitions | | ❔ |
+| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix (other models), SolarEdge Modbus Multi (community) | platforms exist, entities generated from device definitions | | ❔ |
 | SMA, SolarEdge (cloud), Powerwall, Victron GX, Solarman, Solax, Bluetti Modbus, KACO Modbus (core) | nothing writable that lowers power found | | ❌ |
 
 Cloud-based integrations (Growatt, Tesla, EcoFlow, ...) react with a delay of seconds to minutes; a guard working

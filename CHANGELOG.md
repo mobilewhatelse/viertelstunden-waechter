@@ -19,6 +19,17 @@ Format: newest first. German version below each English block is a short summary
   letzten 20 Warnungen. Namen, Entitäts-IDs, Adressen, IP-Adressen und Kennungen werden vorher entfernt. Unabhängig von *Anonyme
   Daten teilen*. Dashboard neu erstellen, damit der Knopf in der Karte *Rückmeldung* erscheint.
 
+- **Devices behind a cloud are no longer reported too early (from feedback):** the guard measures how often a device's power
+  sensor delivers a new value while it draws power. If that takes longer than usual (e.g. a wallbox whose power comes through
+  the manufacturer's cloud only every few minutes), it waits that long before it calls a command "not carried out", at most
+  5 minutes. Before, it checked after one minute and reported a miss that was only a late report. The bug report shows the
+  measured interval per device.
+  *Deutsch:* Geräte hinter einer Cloud werden nicht mehr zu früh gemeldet (aus einer Rückmeldung): Der Wächter misst, wie oft
+  der Leistungssensor eines Geräts einen neuen Wert liefert, während es Strom zieht. Dauert das länger als üblich (z. B. eine
+  Wallbox, deren Leistung nur alle paar Minuten über die Cloud des Herstellers kommt), wartet er so lange, bevor er einen Befehl
+  „nicht umgesetzt“ nennt, höchstens 5 Minuten. Bisher prüfte er nach einer Minute und meldete einen Fehler, der nur eine späte
+  Meldung war. Der Fehlerbericht zeigt den gemessenen Abstand je Gerät.
+
 - **Battery reserve: freeze at the current state of charge (from feedback):** with a minimum-SOC setting (e.g. Victron) enter
   `soc` as the value that keeps the charge. Before a forecast peak the minimum is set to the state of charge at that moment,
   rounded down (a minimum above it would make some inverters charge from the grid) and never below the value already set.
