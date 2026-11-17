@@ -14,7 +14,6 @@ from homeassistant.config_entries import (
     ConfigEntry, ConfigFlow, ConfigFlowResult, ConfigSubentryFlow, OptionsFlow, SubentryFlowResult,
 )
 from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.selector import (
     BooleanSelector, ConfigEntrySelector, ConfigEntrySelectorConfig, EntitySelector, EntitySelectorConfig, NumberSelector, NumberSelectorConfig, NumberSelectorMode,
@@ -94,13 +93,33 @@ LOCAL_EVCC_URLS = ("http://localhost:7070",)   # evcc on the same machine as Hom
 PROBE_TIMEOUT_S = 2.0
 
 
+class _OwnSession:
+    """A client session of its own for one look at evcc, closed again right away: evcc's login cookie never lands in the session
+    Home Assistant shares with every integration."""
+
+    def __init__(self, hass: Any) -> None:
+        self._hass = hass
+        self._session: Any = None
+
+    async def __aenter__(self) -> Any:
+        from homeassistant.helpers.aiohttp_client import async_create_clientsession
+
+        self._session = async_create_clientsession(self._hass, auto_cleanup=False)
+        return self._session
+
+    async def __aexit__(self, *exc: Any) -> bool:
+        await self._session.close()
+        return False
+
+
 async def find_local_evcc(hass: Any, need_grid: bool = False) -> str | None:
     """The address of an evcc on the same machine, if one answers there within two seconds. Offered in the dialogs, never
     forced: nothing is saved unless the form is saved with it. `need_grid`: only an evcc that reports a grid meter (the
     general settings use evcc for the grid import and would refuse one without). An evcc that wants a password counts."""
     for url in LOCAL_EVCC_URLS:
         try:
-            state = await EvccClient(async_get_clientsession(hass), url, None, timeout=PROBE_TIMEOUT_S).state()
+            async with _OwnSession(hass) as session:
+                state = await EvccClient(session, url, None, timeout=PROBE_TIMEOUT_S).state()
         except EvccAuthError:
             return url
         except EvccError:
@@ -160,7 +179,8 @@ async def _evcc_state(hass: Any, url: str | None, password: str | None) -> dict[
     if not url:
         return None
     try:
-        return await EvccClient(async_get_clientsession(hass), str(url), password, timeout=PROBE_TIMEOUT_S).state()
+        async with _OwnSession(hass) as session:
+            return await EvccClient(session, str(url), password, timeout=PROBE_TIMEOUT_S).state()
     except EvccError:
         return None
 
@@ -181,9 +201,10 @@ async def _grid_source_errors(hass: Any, u: dict[str, Any]) -> dict[str, str]:
     if not url:
         return {}
     try:
-        client = EvccClient(async_get_clientsession(hass), url, u.get(CONF_EVCC_PASSWORD))
-        state = await client.state()
-        await client.check_password()
+        async with _OwnSession(hass) as session:
+            client = EvccClient(session, url, u.get(CONF_EVCC_PASSWORD))
+            state = await client.state()
+            await client.check_password()
     except EvccAuthError:
         return {CONF_EVCC_PASSWORD: "evcc_auth"}
     except EvccError:
@@ -584,10 +605,11 @@ class EvccFlow(_DeviceFlow):
         return {}
 
     async def _validate_async(self, u: dict[str, Any]) -> dict[str, str]:
-        client = EvccClient(async_get_clientsession(self.hass), str(u.get(D_EVCC_URL) or ""), u.get(D_EVCC_PASSWORD))
         try:
-            state = await client.state()
-            await client.check_password()
+            async with _OwnSession(self.hass) as session:
+                client = EvccClient(session, str(u.get(D_EVCC_URL) or ""), u.get(D_EVCC_PASSWORD))
+                state = await client.state()
+                await client.check_password()
         except EvccAuthError:
             return {D_EVCC_PASSWORD: "evcc_auth"}
         except EvccError:

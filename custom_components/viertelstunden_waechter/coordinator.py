@@ -81,6 +81,14 @@ EXPLAIN_AT_HOUR = 21
 CALL_TIMEOUT_S = 15
 
 
+
+SECRET_MARKERS = ("password", "token", "secret", "api_key")
+
+
+def is_secret(key: Any) -> bool:
+    """A setting that must never be shown (status attribute, diagnostics): an evcc password and the like."""
+    return any(m in str(key).lower() for m in SECRET_MARKERS)
+
 class SlowCall(TimeoutError):
     """A command took longer than CALL_TIMEOUT_S; it goes on in the background (not cancelled)."""
 
@@ -99,6 +107,7 @@ class Waechter:
         self._evcc_lp: dict[str, dict[str, Any] | None] = {}   # device id -> loadpoint as read from evcc (None = not reachable)
         self._evcc_orig: dict[str, dict[str, float]] = {}      # device id -> ceiling and virtual current when a reduction began
         self._evcc_clients: dict[tuple[str, str], EvccClient] = {}
+        self._evcc_session: Any = None   # the guard's own client session for evcc (its login cookie stays here)
         self._evcc_down: set[tuple[str, str]] = set()
         self.guard = Guard(
             [DeviceConfig.from_dict(self._engine_dict(d)) for d in self.raw_devices.values() if d[D_KIND] != KIND_VEHICLE], STRATEGY_COMFORT,
@@ -283,6 +292,10 @@ class Waechter:
                 await self._step_finish(dev_id, self.t("r_unload"))
             self.executing = False
             self.guard.forget()
+        if self._evcc_session is not None and not self._evcc_session.closed:
+            await self._evcc_session.close()
+        self._evcc_session = None
+        self._evcc_clients.clear()
         await self._store.async_save(self._data())
         # the quarter hours and the learned model are saved with a delay; a reload (e.g. after a change in the settings) within that
         # delay lost the last quarter hours of the export, while the last quarter-hour value (saved above) was kept
@@ -1985,7 +1998,14 @@ class Waechter:
     def _evcc_client(self, url: str, password: str) -> EvccClient:
         key = (url, password)
         if key not in self._evcc_clients:
-            self._evcc_clients[key] = EvccClient(async_get_clientsession(self.hass), url, password)
+            if self._evcc_session is None or self._evcc_session.closed:
+                # one session per config entry, not Home Assistant's shared one: evcc's login cookie never reaches other
+                # integrations (same point as the HACS review of Plugwhen, 17.11.2026). Closed when the entry is unloaded
+                from homeassistant.helpers.aiohttp_client import async_create_clientsession
+
+                self._evcc_session = async_create_clientsession(self.hass, auto_cleanup=False)
+                self._evcc_clients.clear()
+            self._evcc_clients[key] = EvccClient(self._evcc_session, url, password)
         return self._evcc_clients[key]
 
     async def _poll_evcc(self) -> None:
@@ -2172,7 +2192,7 @@ class Waechter:
             "condition": self.cfg.get(CONF_CONDITION),
             "lock": self.cfg.get(CONF_LOCK),
             "notify": self.cfg.get(CONF_NOTIFY),
-            "devices": [{k: v for k, v in d.items() if k != D_ID} for d in devices],
+            "devices": [{k: v for k, v in d.items() if k != D_ID and not is_secret(k)} for d in devices],   # never a password
         }
 
     def import_history(self, days: list[dict[str, Any]], months: list[dict[str, Any]]) -> dict[str, int]:
