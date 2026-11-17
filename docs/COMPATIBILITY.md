@@ -16,8 +16,8 @@ community. *State of the check: 2026-10-25, integration version 0.12.0 (the Watt
 | ❌ | **No suitable entity found** in the source check (nothing writable that lowers power or changes the mode). Use a script or an on/off switch. |
 
 **"Tested" means:** at least one evening in the mode **Active** with a real intervention *and* the real take-back
-observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25) and the Anker SOLIX V1 (by a user, 2026-11-15)
-have reached this level, the Anker Solarbank 3 Pro is under review; the other device types - throttle power, change settings, battery release - have not.
+observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25), the Anker SOLIX V1 and the Anker Solarbank 3 Pro (both by a user, 2026-11-15)
+have reached this level; the other device types - throttle power, change settings - have not.
 Please be the first - see "How to report a test" below.
 
 ## In use by others (from the voluntary statistic)
@@ -63,7 +63,7 @@ the house (maximum output / discharge power, operating mode) and puts them back.
 | Integration | Writable entities found | Idea for "released" | Status |
 |---|---|---|---|
 | Jackery (the authors' installation) | `select` auto standby mode, `number` maximum output power (on-grid), `sensor` battery SOC | mode `on`, power `800` | 🟡 |
-| Anker Solarbank 3 Pro (community, Anker Solix) | settings of the Solarbank | release output to the house | ⚠️ user, 2026-11-15, 0.14.4: "battery released (1.4 kW too much, charge 30 %)", after 14 minutes "back as before" logged. Whether the output rose was not seen. As a balcony-solar storage it delivers at most 800 W, so its effect against a peak is small |
+| Anker Solarbank 3 Pro (community, Anker Solix) | settings of the Solarbank | release output to the house | ✅ user, 2026-11-15, 0.14.4: "battery released (1.4 kW too much, charge 30 %)", after 14 minutes "back as before" logged; the output limit went from 100 to 350 W and back (seen by the user in the app, confirmed 2026-11-17). As a balcony-solar storage it delivers at most 800 W, so its effect against a peak is small |
 | Fronius (core) | `number` battery discharge power limit (+ enable switch), charge power limit, minimum reserve, AC power limit; `switch` battery grid charging | raise the discharge limit, or lower the minimum reserve | 🔍 |
 | Kostal Plenticore (core) | `number` battery min SOC, battery min home consumption, active power limitation; `select` battery charge | lower min SOC / set min home consumption | 🔍 |
 | GoodWe (core) | `number` battery discharge depth, charge current, grid export limit; `select` operation mode | operation mode / discharge depth | 🔍 Reported by a tester (GW10KN-ET with smart meter, BYD HVS), not yet tested with the guard: operation mode with the options general, off grid, backup, eco, peak shaving. **Note:** "Active Power" is **negative** while importing from the grid; as the grid import use a template with the sign flipped, or evcc. |

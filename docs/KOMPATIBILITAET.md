@@ -16,8 +16,8 @@ die Hilfe der Community brauchen. *Stand der Prüfung: 25.10.2026, Integrationsv
 | ❌ | **Keine passende Entität gefunden** (nichts Schreibbares, das die Leistung senkt oder den Modus ändert). Skript oder Ein/Aus-Schalter verwenden. |
 
 **„Getestet“ heißt:** mindestens ein Abend im Modus **Aktiv** mit einem echten Eingriff **und** beobachtetem
-echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher haben der Wattpilot (durch die Autoren, 25.10.2026) und die Anker SOLIX V1 (durch einen Nutzer, 15.11.2026)
-diese Stufe erreicht, die Anker Solarbank 3 Pro ist in Prüfung; die anderen Gerätetypen – Leistung drosseln, Einstellung ändern, Batterie-Freigabe – noch nicht.
+echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher haben der Wattpilot (durch die Autoren, 25.10.2026), die Anker SOLIX V1 und die Anker Solarbank 3 Pro (beide durch einen Nutzer, 15.11.2026)
+diese Stufe erreicht; die anderen Gerätetypen – Leistung drosseln, Einstellung ändern – noch nicht.
 Seien Sie der Erste – siehe „So melden Sie einen Test“.
 
 ## Bei anderen im Einsatz (aus der freiwilligen Statistik)
@@ -64,7 +64,7 @@ Braucht einen Ladestand-Sensor.
 | Integration | Schreibbare Entitäten (gefunden) | Idee für „freigegeben“ | Status |
 |---|---|---|---|
 | Jackery (Installation der Autoren) | `select` Auto-Standby-Modus, `number` maximale Ausgangsleistung (Netz), `sensor` Ladestand | Modus `on`, Leistung `800` | 🟡 |
-| Anker Solarbank 3 Pro (Community, Anker Solix) | Einstellungen der Solarbank | Ausgabe ins Haus freigeben | ⚠️ Nutzer, 15.11.2026, 0.14.4: „Batterie freigegeben (1.4 kW zu viel, Ladestand 30 %)“, nach 14 Minuten „wieder wie vorher“ protokolliert. Ob die Ausgabe dabei gestiegen ist, wurde nicht gesehen. Als Balkonkraftwerk-Speicher gibt sie höchstens 800 W ab, die Wirkung gegen eine Spitze ist also klein |
+| Anker Solarbank 3 Pro (Community, Anker Solix) | Einstellungen der Solarbank | Ausgabe ins Haus freigeben | ✅ Nutzer, 15.11.2026, 0.14.4: „Batterie freigegeben (1.4 kW zu viel, Ladestand 30 %)“, nach 14 Minuten „wieder wie vorher“ protokolliert; das Abgabelimit wurde dabei von 100 auf 350 W gestellt und wieder zurück (vom Nutzer in der App gesehen, bestätigt 17.11.2026). Als Balkonkraftwerk-Speicher gibt sie höchstens 800 W ab, die Wirkung gegen eine Spitze ist also klein |
 | Fronius (Home Assistant) | `number` Entladeleistungs-Limit (+ Aktivierungs-Schalter), Ladeleistungs-Limit, Mindest-Reserve, AC-Leistungs-Limit; `switch` Laden aus dem Netz | Entladelimit anheben oder Mindest-Reserve senken | 🔍 |
 | Kostal Plenticore (Home Assistant) | `number` Batterie-Mindest-SOC, Mindest-Hausverbrauch, Wirkleistungsbegrenzung; `select` Batterie-Laden | Mindest-SOC senken / Mindest-Hausverbrauch setzen | 🔍 |
 | GoodWe (Home Assistant) | `number` Entladetiefe, Ladestrom, Einspeisebegrenzung; `select` Betriebsmodus | Betriebsmodus / Entladetiefe | 🔍 Angaben eines Testers (GW10KN-ET mit Smart Meter, BYD HVS), mit dem Wächter noch nicht getestet: Betriebsmodus mit den Optionen Allgemein, Netzunabhängig, Backup, Eco, Spitzenlastreduzierung. **Achtung:** „Active Power“ ist bei Netzbezug **negativ**; als Netzbezug eine Vorlage mit umgedrehtem Vorzeichen oder evcc eintragen. |
