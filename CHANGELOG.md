@@ -4,6 +4,10 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.0 - unreleased
 
+- **evcc on its own connection:** the guard talks to evcc on a client session of its own (one per installation) instead of Home Assistant's
+  shared one, so evcc's login cookie never reaches other integrations. *Deutsch:* evcc über eine eigene Verbindung: Der Wächter spricht mit
+  evcc über eine eigene Sitzung statt über die gemeinsame von Home Assistant, das Anmelde-Cookie von evcc erreicht keine andere Integration.
+  (The password fix of 0.14.5 is included. / Die Korrektur zum Passwort aus 0.14.5 ist enthalten.)
 - **Bug report on request:** new button *Send bug report* next to the feedback (text optional). One press sends it, and the
   notification then shows exactly what was sent. It holds what is needed to find an error: version, mode, limit, the values of
   the running quarter hour, where the grid reading comes from and how old it is, per device the kind, whether it is being reduced,
@@ -113,6 +117,38 @@ der Wächter misst nur, beurteilt wird auf unserem Dienst. Sensor, Karte, Repara
 *Art des Geräts*. Wer schon geteilt hat, bestätigt den Geräte-Check einmal unter Reparaturen; bis dahin sendet er nichts.
 Für den späteren Vergleich mit gleichen Geräten zusätzlich Werte, die nicht von der Hausgröße abhängen (Akku in Prozent vom
 Anfangswert, Nennkapazität, Alter; Wärmepumpe und Boiler gegen den eigenen üblichen Wert).
+
+## 0.14.5 - 2026-11-17
+
+Security fix.
+
+- **The evcc password is no longer shown:** with an evcc loadpoint that has a password, the password was in the attribute
+  `configuration` of the status sensor and in the downloaded diagnostics. It was never sent anywhere and never written to the
+  database. Now settings with a password, token or secret are left out. If you shared a diagnostics file with an evcc password,
+  change the password in evcc.
+
+*Deutsch:* Sicherheitskorrektur: Bei einem evcc-Ladepunkt mit Passwort stand das Passwort im Attribut `configuration` des
+Status-Sensors und in der heruntergeladenen Diagnose. Es wurde nie gesendet und nicht in die Datenbank geschrieben. Jetzt fehlen
+Einstellungen mit Passwort, Token oder Geheimnis dort. Wer eine Diagnosedatei mit evcc-Passwort geteilt hat: Passwort in evcc ändern.
+
+## 0.14.4 - 2026-11-15
+
+Fix for devices that answer slowly, e.g. a car or wallbox through its cloud.
+
+- **Slow commands are no longer cut off (from feedback):** the guard waited at most 15 s for a command and then Home Assistant
+  cancelled it, so a device that always needs longer (a car that has to wake up, a wallbox through its cloud) never got a command:
+  neither the lowering of the charging current nor the pause of the charge plan. Now the guard still waits at most 15 s, but the
+  command goes on in the background; the log says "device answers slowly", and an error that comes later is logged too.
+- **Charge plan:** a slow command counts as sent. A command that really failed is tried again after 5 minutes (pause) or 1 minute
+  (resume) instead of every 20 s.
+- **Log:** errors say what went wrong, e.g. "no answer within 15 s", instead of empty brackets.
+
+*Deutsch:* Fix für Geräte, die langsam antworten, z. B. Auto oder Wallbox über die Cloud. Der Wächter wartete höchstens 15 s auf
+einen Befehl, danach brach Home Assistant ihn ab, so bekam ein Gerät, das immer länger braucht, nie einen Befehl (weder das Senken
+des Ladestroms noch die Pause des Ladeplans). Jetzt wartet er weiter höchstens 15 s, der Befehl läuft aber im Hintergrund weiter;
+das Protokoll sagt „Gerät antwortet langsam“, ein späterer Fehler wird auch protokolliert. Ladeplan: ein langsamer Befehl gilt als
+gesendet, ein wirklich fehlgeschlagener wird nach 5 Minuten (Pause) bzw. 1 Minute (Freigabe) erneut versucht statt alle 20 s.
+Fehlertexte sagen, was schiefging, statt leerer Klammern.
 
 ## 0.14.3 - 2026-11-14
 
