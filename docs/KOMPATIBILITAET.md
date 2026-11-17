@@ -15,9 +15,9 @@ die Hilfe der Community brauchen. *Stand der Prüfung: 25.10.2026, Integrationsv
 | ❌ | **Keine passende Entität gefunden** (nichts Schreibbares, das die Leistung senkt oder den Modus ändert). Skript oder Ein/Aus-Schalter verwenden. |
 
 **„Getestet“ heißt:** mindestens ein Abend im Modus **Aktiv** mit einem echten Eingriff **und** beobachtetem
-echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher hat nur der Wattpilot diese Stufe
-erreicht (durch die Autoren, 25.10.2026); die anderen Gerätetypen – Leistung drosseln, Einstellung ändern, Batterie-Freigabe – noch nicht.
-Seien Sie der Erste – siehe „So melden Sie einen Test“.
+echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher haben der Wattpilot (durch die Autoren, 25.10.2026), die Anker SOLIX V1 und die Anker Solarbank 3 Pro
+(beide durch einen Nutzer, 15.11.2026) diese Stufe erreicht; die anderen Gerätetypen – Leistung drosseln, Einstellung ändern – noch nicht.
+Melden Sie Ihr Gerät – siehe „So melden Sie einen Test“.
 
 ## Bei anderen im Einsatz (aus der freiwilligen Statistik)
 
@@ -40,6 +40,7 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 | Integration | Ladestrom | Status |
 |---|---|---|
 | Wattpilot (Community, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | ✅ Autoren, 25.10.2026, 0.11.0: Auto lädt mit 11 kW, Herd und Backrohr dazu; in Stufen 16 → 12 → 10 → 8 → 6 A gesenkt, schrittweise wieder angehoben, „wieder 16 A“ protokolliert; Laden nie gestoppt, Viertelstunde unter dem Ziel. Noch nicht gesehen: Umschalten auf 1 Phase |
+| Anker SOLIX V1 Smart EV Charger (Community, Anker Solix) | Ladestrom als Auswahlliste („6 A“, „8 A“ …), seit 0.14.3 | ✅ Nutzer, 15.11.2026, 0.14.4: Auto lädt, Backrohr, Warmwasser und Wärmepumpe dazu; auf 8 A gedrosselt, bei mehr Luft auf 9 A zurück, „wieder frei (9 A)“ protokolliert, also genau auf den Wert vor dem Eingriff; der Ladestrom ändert sich in der App. **Hinweis:** Die Leistung kommt über die Anker-Cloud, die ohne MQTT nur alle 60 bis 300 Sekunden aktualisiert. |
 | Wallbox (Home Assistant) | `number` „Maximum charging current“ | 🔍 |
 | OpenEVSE (Home Assistant) | `number` „Charge rate“ (A) | 🔍 |
 | Zaptec (Community) | `number` „charger_max_current“ | 🔍 |
@@ -61,6 +62,7 @@ Braucht einen Ladestand-Sensor.
 | Integration | Schreibbare Entitäten (gefunden) | Idee für „freigegeben“ | Status |
 |---|---|---|---|
 | Jackery (Installation der Autoren) | `select` Auto-Standby-Modus, `number` maximale Ausgangsleistung (Netz), `sensor` Ladestand | Modus `on`, Leistung `800` | 🟡 |
+| Anker Solarbank 3 Pro (Community, Anker Solix) | Einstellungen der Solarbank | Ausgabe ins Haus freigeben | ✅ Nutzer, 15.11.2026, 0.14.4: „Batterie freigegeben (1.4 kW zu viel, Ladestand 30 %)“, nach 14 Minuten „wieder wie vorher“ protokolliert; das Abgabelimit wurde dabei von 100 auf 350 W gestellt und wieder zurück (vom Nutzer in der App gesehen, bestätigt 17.11.2026). Als Balkonkraftwerk-Speicher gibt sie höchstens 800 W ab, die Wirkung gegen eine Spitze ist also klein |
 | Fronius (Home Assistant) | `number` Entladeleistungs-Limit (+ Aktivierungs-Schalter), Ladeleistungs-Limit, Mindest-Reserve, AC-Leistungs-Limit; `switch` Laden aus dem Netz | Entladelimit anheben oder Mindest-Reserve senken | 🔍 |
 | Kostal Plenticore (Home Assistant) | `number` Batterie-Mindest-SOC, Mindest-Hausverbrauch, Wirkleistungsbegrenzung; `select` Batterie-Laden | Mindest-SOC senken / Mindest-Hausverbrauch setzen | 🔍 |
 | GoodWe (Home Assistant) | `number` Entladetiefe, Ladestrom, Einspeisebegrenzung; `select` Betriebsmodus | Betriebsmodus / Entladetiefe | 🔍 Angaben eines Testers (GW10KN-ET mit Smart Meter, BYD HVS), mit dem Wächter noch nicht getestet: Betriebsmodus mit den Optionen Allgemein, Netzunabhängig, Backup, Eco, Spitzenlastreduzierung. **Achtung:** „Active Power“ ist bei Netzbezug **negativ**; als Netzbezug eine Vorlage mit umgedrehtem Vorzeichen oder evcc eintragen. |
@@ -71,7 +73,7 @@ Braucht einen Ladestand-Sensor.
 | HomeWizard Batterie (Home Assistant) | `select` Batterie-Gruppenmodus | der Modus, der entlädt | 🔍 |
 | Imeon (Home Assistant) | `select` Manager-Wechselrichtermodus | der entladende Modus | 🔍 |
 | Sigenergy lokal per Modbus (Community) | `number` ESS maximale Entladegrenze; `select` Remote-EMS-Steuermodus | Entladegrenze anheben | 🔍 |
-| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix, SolarEdge Modbus Multi (Community) | Plattformen vorhanden, Entitäten aus Gerätedefinitionen erzeugt | | ❔ |
+| Huawei SUN2000, SolaX Modbus, EcoFlow, Zendure, Victron Modbus, AlphaESS, Anker Solix (andere Modelle), SolarEdge Modbus Multi (Community) | Plattformen vorhanden, Entitäten aus Gerätedefinitionen erzeugt | | ❔ |
 | SMA, SolarEdge (Cloud), Powerwall, Victron GX, Solarman, Solax, Bluetti Modbus, KACO Modbus (Home Assistant) | nichts Schreibbares gefunden, das die Leistung senkt | | ❌ |
 
 Cloud-Integrationen (Growatt, Tesla, EcoFlow …) reagieren mit Sekunden bis Minuten Verzögerung. Ein Wächter, der
