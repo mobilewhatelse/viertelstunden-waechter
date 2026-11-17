@@ -8,3 +8,5 @@ tests/install/report_evcc.txt
 tests/install/run_dbg/
 tests/install/run_upgrade/
 tests/install/run_liste/
+tests/install/run_evcc_pw/
+tests/install/report_evcc_password.txt

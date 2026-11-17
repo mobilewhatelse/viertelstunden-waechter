@@ -1,0 +1,31 @@
+# A real evcc (not --demo: the demo refuses a password) with a simulated meter, charger (car plugged in) and vehicle.
+# The installation test sets the admin password itself. Used by itest_evcc_password.py.
+network:
+  port: 7070
+interval: 10s
+meters:
+  - name: grid
+    type: template
+    template: demo-meter
+    usage: grid
+    power: 500
+chargers:
+  - name: wb
+    type: template
+    template: demo-charger
+    status: C
+    power: 3000
+loadpoints:
+  - title: Carport
+    charger: wb
+    vehicle: testauto
+vehicles:
+  - name: testauto
+    type: template
+    template: offline
+    title: Testauto
+    capacity: 60
+site:
+  title: Test
+  meters:
+    grid: grid

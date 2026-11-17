@@ -2,6 +2,19 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.14.5 - 2026-11-17
+
+Security fix.
+
+- **The evcc password is no longer shown:** with an evcc loadpoint that has a password, the password was in the attribute
+  `configuration` of the status sensor and in the downloaded diagnostics. It was never sent anywhere and never written to the
+  database. Now settings with a password, token or secret are left out. If you shared a diagnostics file with an evcc password,
+  change the password in evcc.
+
+*Deutsch:* Sicherheitskorrektur: Bei einem evcc-Ladepunkt mit Passwort stand das Passwort im Attribut `configuration` des
+Status-Sensors und in der heruntergeladenen Diagnose. Es wurde nie gesendet und nicht in die Datenbank geschrieben. Jetzt fehlen
+Einstellungen mit Passwort, Token oder Geheimnis dort. Wer eine Diagnosedatei mit evcc-Passwort geteilt hat: Passwort in evcc ändern.
+
 ## 0.14.4 - 2026-11-15
 
 Fix for devices that answer slowly, e.g. a car or wallbox through its cloud.

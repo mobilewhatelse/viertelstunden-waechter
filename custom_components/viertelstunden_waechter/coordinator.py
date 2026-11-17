@@ -65,6 +65,14 @@ EXPLAIN_AT_HOUR = 21
 CALL_TIMEOUT_S = 15
 
 
+
+SECRET_MARKERS = ("password", "token", "secret", "api_key")
+
+
+def is_secret(key: Any) -> bool:
+    """A setting that must never be shown (status attribute, diagnostics): an evcc password and the like."""
+    return any(m in str(key).lower() for m in SECRET_MARKERS)
+
 class SlowCall(TimeoutError):
     """A command took longer than CALL_TIMEOUT_S; it goes on in the background (not cancelled)."""
 
@@ -1657,7 +1665,7 @@ class Waechter:
             "condition": self.cfg.get(CONF_CONDITION),
             "lock": self.cfg.get(CONF_LOCK),
             "notify": self.cfg.get(CONF_NOTIFY),
-            "devices": [{k: v for k, v in d.items() if k != D_ID} for d in devices],
+            "devices": [{k: v for k, v in d.items() if k != D_ID and not is_secret(k)} for d in devices],   # never a password
         }
 
     def import_history(self, days: list[dict[str, Any]], months: list[dict[str, Any]]) -> dict[str, int]:
