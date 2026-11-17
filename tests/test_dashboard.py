@@ -121,6 +121,32 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(json.dumps(build_views(IDS, "en", [])), json.dumps(build_views(IDS, "en")))
         self.assertIn(f'"entity": "{IDS["charge_plan"]}"', json.dumps(build_views(IDS, "en")))
 
+    def test_settings_are_full_width_tiles_so_the_names_are_not_cut_off(self):
+        """Field 17.11.2026 (phone): in entities rows the names were cut off ('Leistungspreis bis z…'). Now one full-width tile per
+        setting with a short name; numbers with +/-, selections with their options, switches toggle on a tap."""
+        keys = ("mode", "strategy", "limit", "margin", "paid_peak", "notify_intervention", "costs_enabled", "forecast_enabled",
+                "predictive", "battery_reserve", "ai_explainer", "prewarn", "weekly_report_enabled", "price_low", "price_high",
+                "price_threshold", "weather_enabled", "share_usage", "charge_plan_enabled", "charge_plan_execute")
+        for lang in ("de", "en"):
+            cards = list(_cards(build_views(IDS, lang)))
+            for k in keys:
+                tiles = [c for c in cards if c.get("type") == "tile" and c.get("entity") == IDS[k]]
+                self.assertTrue(tiles, k)
+                for t in tiles:
+                    self.assertEqual(t["grid_options"], {"columns": "full"}, k)
+                    self.assertLessEqual(len(t["name"]), 32, t["name"])
+                    kind = IDS[k].split(".")[0]
+                    if kind == "number":
+                        self.assertEqual(t["features"][0]["type"], "numeric-input", k)
+                    elif kind == "select":
+                        self.assertEqual(t["features"][0]["type"], "select-options", k)
+                    else:
+                        self.assertEqual(t["tap_action"], {"action": "toggle"}, k)
+            # the feedback card keeps its short list (text field, send buttons, sharing): a text field needs an entities row
+            self.assertFalse([c for c in cards if c.get("type") == "entities"
+                              and not any(e.get("entity", "").startswith("text.") for e in c.get("entities", []))
+                              and any(e.get("entity") in [IDS[k] for k in keys] for e in c.get("entities", []))])
+
     def test_titled_entities_cards_have_no_header_toggle(self):
         """The header toggle of an entities card flips all its switches at once (it could switch on "carry out the plan")."""
         for planners in (None, [{"name": "Car", "plan": "sensor.car_charge_plan", "ready": None}]):

@@ -33,18 +33,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
         "mode": "Betriebsart", "strategy": "Strategie", "limit": "Grenze (kW)", "margin": "Sicherheitsabstand (kW)",
         "paid_peak": "Bereits erreichte Spitze nutzen", "notify": "Meldung bei Eingriff", "costs_on": "Kosten und Ersparnis berechnen",
-        "forecast_on": "Lastprognose lernen und anzeigen", "price_low": "Leistungspreis bis zur Schwelle (pro kW und Jahr)",
-        "price_high": "Leistungspreis über der Schwelle (pro kW und Jahr)", "threshold": "Preisschwelle (kW)",
+        "forecast_on": "Lastprognose lernen und anzeigen", "price_low": "Leistungspreis bis Schwelle",
+        "price_high": "Leistungspreis über Schwelle", "threshold": "Preisschwelle (kW)",
         "status": "Status", "prognosis": "Prognose Viertelstunde", "allowed": "Erlaubt jetzt", "so_far": "Viertelstunde bisher",
         "last": "Letzte Viertelstunde", "peak_today": "Spitze heute", "peak_month": "Spitze im Monat", "iv_today": "Eingriffe heute",
         "cost_month": "Leistungspreis diesen Monat", "cost_without": "Ohne Wächter (Schätzung)", "saving_month": "Ersparnis Monat",
         "saving_year": "Ersparnis Jahr", "saved_now": "Entlastung jetzt",
         "typical_now": "Typisch jetzt", "expected_peak": "Erwartete Spitze 24 h", "next_risk": "Nächstes Risiko",
         "risk_none": "keines in den nächsten 24 Stunden", "risk_today": "heute", "risk_up_to": "bis",
-        "reserve_on": "Akku-Reserve vor einer Spitze (Standard aus)", "ai_on": "KI-Erklärer (Standard aus, nach Neustart aus)",
+        "reserve_on": "Akku-Reserve vor Spitzen", "ai_on": "KI-Erklärer",
         "ai_title": "Erklärung des Tages", "ai_none": "Noch keine Erklärung. Der Erklärer schreibt abends um 21 Uhr, wenn er eingeschaltet und in den Einstellungen eine KI-Aufgabe gewählt ist.",
         "expl_from": "Erklärung vom", "expl_next": "Die Erklärung für heute kommt abends um 21 Uhr.", "expl_error": "Die Erklärung konnte nicht erstellt werden",
-        "predictive": "Vorausschauend drosseln nach Prognose (Standard aus)", "prewarn": "Vorwarnung vor Eingriff (Standard aus)", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
+        "predictive": "Vorausschauend drosseln", "prewarn": "Vorwarnung vor Eingriff", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
         "check_title": "Geräte-Check", "check_state": "Geräte-Check", "check_share": "Anonyme Daten teilen",
         "check_off": "**Geräte-Check ist aus.** Ihnen entgeht eine Meldung, wenn die Wallbox plötzlich nur noch mit 2 Phasen lädt, "
@@ -77,7 +77,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "enough_data": "Die Tabelle füllt sich mit jeder Viertelstunde.",
         "when_on": "aus ab", "wallbox": "dann 1-phasig", "script": "Skript", "battery": "Batterie ab",
         "setting": "Einstellung ändern", "throttle": "Schritt", "if_only": "eingreifen nur, wenn", "again_only": "wieder an nur, wenn",
-        "plan": "Ladeplan fürs Auto", "plan_on": "Ladeplan berechnen", "plan_exec": "Ladeplan auch ausführen (Standard aus)",
+        "plan": "Ladeplan fürs Auto", "plan_on": "Ladeplan berechnen", "plan_exec": "Ladeplan auch ausführen",
         "plan_status": "Ladeplan", "ready": "Fertig ca.", "departure": "Abfahrt", "soc": "Ladestand", "missing": "Es fehlen", "vehicle_hint": "Ohne Fahrzeug-Eintrag (Konfigurieren) gibt es keinen Plan.",
         "paused_by_plan": "Der Plan hat das Laden pausiert.", "executing": "Der Plan wird ausgeführt.",
         "planner_plan": "Ladeplan vom Auto-Planer", "readiness": "Bereit zur Abfahrt",
@@ -90,7 +90,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "view_main": "Guard", "view_stats": "Statistics and forecast",
         "intro": "**Observe only** = the guard decides and logs but switches nothing. \"Active\" is refused while the lock from the general settings is on.",
         "settings": "Settings", "features": "Features and prices",
-        "weather": "Weather correction", "weather_on": "Weather correction of the forecast",
+        "weather": "Weather correction", "weather_on": "Weather-corrected forecast",
         "weather_none": "No weather entity and no outdoor temperature sensor chosen in the settings: the forecast stays without weather.",
         "weather_off": "The weather correction is switched off: no temperatures are learned and nothing is corrected.",
         "weather_outdoor": "Outdoor temperature", "weather_hours": "hours of forecast", "weather_learned": "Learned from",
@@ -104,18 +104,18 @@ TEXTS: dict[str, dict[str, str]] = {
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
         "mode": "Mode", "strategy": "Strategy", "limit": "Limit (kW)", "margin": "Safety margin (kW)",
         "paid_peak": "Use peak already reached", "notify": "Message on intervention", "costs_on": "Calculate cost and savings",
-        "forecast_on": "Learn and show the load forecast", "price_low": "Demand charge up to the threshold (per kW and year)",
-        "price_high": "Demand charge above the threshold (per kW and year)", "threshold": "Price threshold (kW)",
+        "forecast_on": "Learn and show the load forecast", "price_low": "Demand charge to threshold",
+        "price_high": "Demand charge above threshold", "threshold": "Price threshold (kW)",
         "status": "Status", "prognosis": "Quarter-hour forecast", "allowed": "Allowed now", "so_far": "Quarter hour so far",
         "last": "Last quarter hour", "peak_today": "Peak today", "peak_month": "Peak this month", "iv_today": "Interventions today",
         "cost_month": "Demand charge this month", "cost_without": "Without the guard (estimate)", "saving_month": "Savings this month",
         "saving_year": "Savings this year", "saved_now": "Relief now",
         "typical_now": "Typical now", "expected_peak": "Expected peak in 24 h", "next_risk": "Next risk",
         "risk_none": "none in the next 24 hours", "risk_today": "today", "risk_up_to": "up to",
-        "reserve_on": "Battery reserve before a peak (default off)", "ai_on": "AI explainer (default off, off after restart)",
+        "reserve_on": "Battery reserve before peaks", "ai_on": "AI explainer",
         "ai_title": "Explanation of the day", "ai_none": "No explanation yet. The explainer writes at 21:00 when it is switched on and an AI task is chosen in the settings.",
         "expl_from": "Explanation of", "expl_next": "The explanation for today follows in the evening at 21:00.", "expl_error": "The explanation could not be created",
-        "predictive": "Throttle ahead using the forecast (default off)", "prewarn": "Early warning before an intervention (default off)", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
+        "predictive": "Throttle ahead by forecast", "prewarn": "Warn before an intervention", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
         "check_title": "Device check", "check_state": "Device check", "check_share": "Share anonymous data",
         "check_off": "**Device check is off.** You miss a message when the wallbox suddenly charges on 2 phases only, "
@@ -148,7 +148,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "enough_data": "The table fills with every quarter hour.",
         "when_on": "off from", "wallbox": "then 1 phase", "script": "script", "battery": "battery from",
         "setting": "change setting", "throttle": "step", "if_only": "intervene only if", "again_only": "on again only if",
-        "plan": "Charge plan for the car", "plan_on": "Calculate the charge plan", "plan_exec": "Also carry out the plan (default off)",
+        "plan": "Charge plan for the car", "plan_on": "Calculate the charge plan", "plan_exec": "Also carry out the plan",
         "plan_status": "Charge plan", "ready": "Ready about", "departure": "Departure", "soc": "State of charge", "missing": "Missing", "vehicle_hint": "Without a vehicle entry (Configure) there is no plan.",
         "paused_by_plan": "The plan has paused the charging.", "executing": "The plan is being carried out.",
         "planner_plan": "Charge plan from the car planner", "readiness": "Ready for departure",
@@ -408,7 +408,7 @@ def _plan_section(ids: dict[str, str], x: dict[str, str], planners: list[dict[st
         return {"type": "grid", "cards": [
             {"type": "heading", "heading": x["plan"], "icon": "mdi:ev-station"},
             _tile(ids["charge_plan"], x["plan_status"]),
-            {"type": "entities", "entities": [{"entity": ids["charge_plan_enabled"], "name": x["plan_on"]}, {"entity": ids["charge_plan_execute"], "name": x["plan_exec"]}]},
+            _setting(ids["charge_plan_enabled"], x["plan_on"]), _setting(ids["charge_plan_execute"], x["plan_exec"]),
             {"type": "markdown", "content": _plan_markdown(ids, x)},
         ]}
     cards: list[dict[str, Any]] = [{"type": "heading", "heading": x["planner_plan"], "icon": "mdi:ev-station"}]
@@ -421,6 +421,19 @@ def _plan_section(ids: dict[str, str], x: dict[str, str], planners: list[dict[st
 
 def _tile(entity: str, name: str) -> dict[str, Any]:
     return {"type": "tile", "entity": entity, "name": name}
+
+
+def _setting(entity: str, name: str) -> dict[str, Any]:
+    """A setting as a full-width tile: the name on its own line, the value below it. A number gets +/- buttons, a selection its
+    options, a switch is toggled with a tap."""
+    tile: dict[str, Any] = {"type": "tile", "entity": entity, "name": name, "grid_options": {"columns": "full"}}
+    if entity.startswith("number."):
+        tile.update(features=[{"type": "numeric-input", "style": "buttons"}], features_position="bottom")
+    elif entity.startswith("select."):
+        tile.update(features=[{"type": "select-options"}], features_position="bottom")
+    else:
+        tile.update(tap_action={"action": "toggle"}, icon_tap_action={"action": "toggle"}, hold_action={"action": "more-info"})
+    return tile
 
 
 def _grid_now(ids: dict[str, str], x: dict[str, str]) -> list[dict[str, Any]]:
@@ -438,16 +451,15 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
         "sections": [
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["view_main"], "icon": "mdi:shield-half-full"},
-                {"type": "entities", "title": x["settings"], "show_header_toggle": False, "entities": [
-                    {"entity": ids["mode"], "name": x["mode"]}, {"entity": ids["strategy"], "name": x["strategy"]},
-                    {"entity": ids["limit"], "name": x["limit"]}, {"entity": ids["margin"], "name": x["margin"]}]},
-                {"type": "entities", "title": x["features"], "show_header_toggle": False, "entities": [
-                    {"entity": ids["paid_peak"], "name": x["paid_peak"]}, {"entity": ids["notify_intervention"], "name": x["notify"]},
-                    {"entity": ids["costs_enabled"], "name": x["costs_on"]}, {"entity": ids["forecast_enabled"], "name": x["forecast_on"]},
-                    {"entity": ids["predictive"], "name": x["predictive"]}, {"entity": ids["battery_reserve"], "name": x["reserve_on"]},
-                    {"entity": ids["ai_explainer"], "name": x["ai_on"]}, {"entity": ids["prewarn"], "name": x["prewarn"]}, {"entity": ids["weekly_report_enabled"], "name": x["weekly_on"]},
-                    {"entity": ids["price_low"], "name": x["price_low"]}, {"entity": ids["price_high"], "name": x["price_high"]},
-                    {"entity": ids["price_threshold"], "name": x["threshold"]}]},
+                # one full-width tile per setting: on a phone the names in an entities row were cut off (field 17.11.2026)
+                {"type": "heading", "heading": x["settings"], "heading_style": "subtitle"},
+                *[_setting(ids[k], x[n]) for k, n in (("mode", "mode"), ("strategy", "strategy"), ("limit", "limit"), ("margin", "margin"))],
+                {"type": "heading", "heading": x["features"], "heading_style": "subtitle"},
+                *[_setting(ids[k], x[n]) for k, n in (
+                    ("paid_peak", "paid_peak"), ("notify_intervention", "notify"), ("costs_enabled", "costs_on"),
+                    ("forecast_enabled", "forecast_on"), ("predictive", "predictive"), ("battery_reserve", "reserve_on"),
+                    ("ai_explainer", "ai_on"), ("prewarn", "prewarn"), ("weekly_report_enabled", "weekly_on"),
+                    ("price_low", "price_low"), ("price_high", "price_high"), ("price_threshold", "threshold"))],
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["now"], "icon": "mdi:timer-outline"},
@@ -471,7 +483,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 {"type": "heading", "heading": x["now_title"], "icon": "mdi:shield-half-full"},
                 _tile(ids["status"], x["status"]), *_grid_now(ids, x),
                 {"type": "markdown", "content": charts.now_bar(ids, x["now_of"], x["legend_now"])},
-                {"type": "entities", "entities": [{"entity": ids["mode"], "name": x["mode_title"]}]},
+                _setting(ids["mode"], x["mode_title"]),
                 _tile(ids["today_peak"], x["peak_today"]), _tile(ids["month_peak"], x["peak_month"]),
                 _tile(ids["interventions_today"], x["iv_today"]),
             ]},
@@ -493,7 +505,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 {"type": "markdown", "content": _next_risk_markdown(ids, x)},
                 {"type": "markdown", "content": charts.forecast(ids, x["target_label"], x["legend_forecast"], x["no_forecast"])},
                 {"type": "heading", "heading": x["weather"], "icon": "mdi:weather-partly-cloudy"},
-                {"type": "entities", "entities": [{"entity": ids["weather_enabled"], "name": x["weather_on"]}]},
+                _setting(ids["weather_enabled"], x["weather_on"]),
                 {"type": "markdown", "content": _weather_markdown(ids, x)},
             ]},
             _plan_section(ids, x, planners),
@@ -501,7 +513,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 {"type": "heading", "heading": x["check_title"], "icon": "mdi:stethoscope"},
                 _tile(ids["device_check"], x["check_state"]),
                 {"type": "markdown", "content": _check_markdown(ids, x)},
-                {"type": "entities", "entities": [{"entity": ids["share_usage"], "name": x["check_share"]}]},
+                _setting(ids["share_usage"], x["check_share"]),
             ]},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["profile"], "icon": "mdi:calendar-week"},
