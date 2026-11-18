@@ -220,9 +220,6 @@ async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
     if cfg.get("grid_power"):
         ids["grid_power_sensor"] = cfg["grid_power"]
     config = {"views": build_views(ids, hass.config.language, _planners(hass, entries[0]), evcc=bool(cfg.get("evcc_site_url")))}
-    from .vollbild import link_charts
-
-    link_charts(config, hass.config.language)   # a tap on a chart opens it over the whole width (held sideways: large)
 
     text = ha_yaml.dump(config)
     await hass.services.async_call(
