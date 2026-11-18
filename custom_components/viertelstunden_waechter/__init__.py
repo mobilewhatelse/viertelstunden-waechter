@@ -132,14 +132,15 @@ def _register_services(hass: HomeAssistant) -> None:
 
     async def handle_correct(call: ServiceCall) -> dict[str, Any]:
         try:
-            return await _guard().correct_quarter(str(call.data["start"]).strip()[:16], float(call.data["kw"]))
+            kw = call.data.get("kw")   # without a value the quarter hour is taken out of the record
+            return await _guard().correct_quarter(str(call.data["start"]).strip()[:16], None if kw is None else float(kw))
         except ValueError as err:
             raise ServiceValidationError(str(err)) from err
 
     async_register_admin_service(
         hass, DOMAIN, SERVICE_CORRECT, handle_correct,
         schema=vol.Schema({vol.Required("start"): cv.string,
-                           vol.Required("kw"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1000.0))}),
+                           vol.Optional("kw"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1000.0))}),
         supports_response=SupportsResponse.OPTIONAL,
     )
 

@@ -11,6 +11,39 @@ from __future__ import annotations
 from typing import Any
 
 
+def remove_quarter(quarters: list[list[Any]], day_peaks: dict[str, Any], months: dict[str, Any], month_peak: dict[str, Any],
+                   start: str) -> dict[str, Any]:
+    """Take the quarter hour that begins at `start` out of the record (its real value is not known, e.g. a counter step after a
+    gap, issue #4) and work out the peaks again from what is left. Raises ValueError if there is no such quarter hour."""
+    rows = [r for r in quarters if isinstance(r, list) and len(r) >= 3 and str(r[0]).startswith(start)]
+    if not rows:
+        raise ValueError(f"no recorded quarter hour begins at {start}")
+    row = rows[0]
+    old = float(row[1])
+    day, month = str(row[0])[:10], str(row[0])[:7]
+    covered = str(quarters[0][0])[:10] <= f"{month}-01"
+    quarters.remove(row)
+
+    in_day = [r for r in quarters if str(r[0])[:10] == day]
+    if in_day:
+        best = max(in_day, key=lambda r: float(r[1]))
+        day_peaks[day] = {"kw": float(best[1]), "at": str(best[0])[11:16]}
+    else:
+        day_peaks.pop(day, None)
+
+    in_month = [r for r in quarters if str(r[0])[:7] == month]
+    m = months.setdefault(month, {"kw": 0.0, "ug": 0.0})
+    before = dict(m)
+    if covered or abs(float(m.get("kw") or 0.0) - old) < 1e-3:
+        top = max(in_month, key=lambda r: float(r[1])) if in_month else None
+        m["kw"] = float(top[1]) if top else 0.0
+        m["ug"] = max((max(float(r[1]), float(r[2] or 0.0)) for r in in_month), default=0.0)
+        if month_peak.get("month") == month:
+            month_peak.update({"kw": m["kw"], "at": str(top[0]) if top else None})
+    return {"start": str(row[0]), "old_kw": old, "new_kw": None, "removed": True, "day_peak": day_peaks.get(day), "month": month,
+            "month_before": before, "month_after": dict(m)}
+
+
 def correct_quarter(quarters: list[list[Any]], day_peaks: dict[str, Any], months: dict[str, Any], month_peak: dict[str, Any],
                     start: str, kw: float) -> dict[str, Any]:
     """Set the quarter hour that begins at `start` (local time, "YYYY-MM-DDTHH:MM") to `kw` and work out the peaks again.

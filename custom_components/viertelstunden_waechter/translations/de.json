@@ -1180,7 +1180,7 @@
     },
     "correct_quarter": {
       "name": "Viertelstunde korrigieren",
-      "description": "Ersetzt einen falsch verbuchten Viertelstundenwert durch den Wert vom Zähler und rechnet die Spitze des Tages und des Monats neu. Nur für Administratoren.",
+      "description": "Ersetzt einen falsch verbuchten Viertelstundenwert durch den Wert vom Zähler – oder nimmt die Viertelstunde ohne Wert aus der Aufzeichnung – und rechnet die Spitze des Tages und des Monats neu. Nur für Administratoren.",
       "fields": {
         "start": {
           "name": "Beginn",
@@ -1188,7 +1188,7 @@
         },
         "kw": {
           "name": "Wert",
-          "description": "Mittlerer Netzbezug dieser Viertelstunde laut Zähler, in kW."
+          "description": "Mittlerer Netzbezug dieser Viertelstunde laut Zähler, in kW. Leer lassen, um die Viertelstunde aus der Aufzeichnung zu nehmen (der richtige Wert ist nicht bekannt)."
         }
       }
     },

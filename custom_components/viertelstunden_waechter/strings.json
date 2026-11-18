@@ -1180,7 +1180,7 @@
     },
     "correct_quarter": {
       "name": "Correct a quarter hour",
-      "description": "Replaces a quarter-hour value that was recorded wrong with the value from the meter and works out the day's and the month's peak again. Only for administrators.",
+      "description": "Replaces a quarter-hour value that was recorded wrong with the value from the meter - or, without a value, takes the quarter hour out of the record - and works out the day's and the month's peak again. Only for administrators.",
       "fields": {
         "start": {
           "name": "Start",
@@ -1188,7 +1188,7 @@
         },
         "kw": {
           "name": "Value",
-          "description": "Mean grid import of that quarter hour from the meter, in kW."
+          "description": "Mean grid import of that quarter hour from the meter, in kW. Leave empty to take the quarter hour out of the record (the real value is not known)."
         }
       }
     },

@@ -36,7 +36,7 @@ from .export import days_csv, quarters_csv
 from .forecast import (
     MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile, frozen_value, is_freeze, recharge_due,
 )
-from .corrections import correct_quarter as _correct_quarter
+from .corrections import correct_quarter as _correct_quarter, remove_quarter as _remove_quarter
 from . import rueckmeldung as rm
 from . import fehlerbericht as fb
 from .plan import charging_allowed, make_plan
@@ -1056,14 +1056,19 @@ class Waechter:
         hours = running_charge_hours(p, self._float(v.get(D_SOC)), limit, v.get(D_CAPACITY), v.get(D_EFFICIENCY))
         return (p, now + timedelta(hours=hours)) if hours > 0 else None
 
-    async def correct_quarter(self, start: str, kw: float) -> dict[str, Any]:
-        """A quarter hour recorded wrong gets the value from the meter; the day's and the month's peak are worked out again and
-        written to the log (service correct_quarter)."""
-        result = _correct_quarter(self.quarters, self.day_peaks, self.months, self.month_peak, start, kw)
+    async def correct_quarter(self, start: str, kw: float | None = None) -> dict[str, Any]:
+        """A quarter hour recorded wrong gets the value from the meter - or, without a value, is taken out of the record; the
+        day's and the month's peak are worked out again and written to the log (service correct_quarter)."""
+        if kw is None:
+            result = _remove_quarter(self.quarters, self.day_peaks, self.months, self.month_peak, start)
+        else:
+            result = _correct_quarter(self.quarters, self.day_peaks, self.months, self.month_peak, start, kw)
         if self.last_quarter_kw is not None and abs(float(self.last_quarter_kw) - result["old_kw"]) < 1e-3:
             self.last_quarter_kw = result["new_kw"]
-        self._log(Action("", "log", None, self.t("corrected", start=result["start"][:16].replace("T", " "), old=result["old_kw"],
-                                                  new=result["new_kw"]), False), False)
+        when = result["start"][:16].replace("T", " ")
+        text = (self.t("removed", start=when, old=result["old_kw"]) if kw is None
+                else self.t("corrected", start=when, old=result["old_kw"], new=result["new_kw"]))
+        self._log(Action("", "log", None, text, False), False)
         await self._store.async_save(self._data())
         await self._quarters_store.async_save({"rows": self.quarters})
         async_dispatcher_send(self.hass, self.signal)

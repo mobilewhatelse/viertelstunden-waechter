@@ -100,6 +100,26 @@ tun würde.
 Updates kommen über den Marketplace (HACS) unter **Einstellungen > Updates**. Bis eine neue Version dort auftaucht, kann es ein paar
 Stunden dauern.
 
+**Warum komme ich trotz Wächter über die Grenze?**
+Der Wächter kann nur senken, was er steuern darf, und nur so schnell, wie die Geräte und ihre Messwerte reagieren. Die häufigsten
+Gründe: Es läuft mehr, als sich abschalten oder drosseln lässt (Herd, Backofen, Wärmepumpe ohne Eintrag). Ein Gerät steht auf
+*Nur beobachten*. Eine Wallbox ist schon am Mindeststrom. Ein Befehl kommt spät an oder der Leistungswert des Geräts kommt über
+eine Cloud nur alle paar Minuten. Oder der Abstand zur Grenze ist für die Anlage zu klein eingestellt. Im Protokoll *Letzte
+Eingriffe* steht, was der Wächter versucht hat und was nicht umgesetzt wurde.
+
+**Welchen Leistungssensor trage ich bei der Wallbox ein?**
+Möglichst einen, der direkt von der Wallbox kommt und die **gesamte** Ladeleistung zeigt, nicht nur eine Phase (L1) und nicht den
+Wert aus der Cloud des Autos. Ein Sensor für nur eine Phase zeigt bei dreiphasigem Laden ein Drittel; ein Wert, der über eine
+Cloud nur alle paar Minuten kommt, lässt den Wächter zu spät sehen, ob ein Befehl gewirkt hat.
+
+**Eine Viertelstunde ist falsch verbucht (z. B. eine Spitze, die es nie gab). Wie korrigiere ich das?**
+Mit der Aktion `viertelstunden_waechter.correct_quarter` unter **Entwicklerwerkzeuge > Aktionen** (nur Administratoren):
+*Beginn* ist der Anfang der Viertelstunde in Ortszeit, z. B. `2026-11-16T06:15`. Mit einem *Wert* (kW laut Zähler) wird sie
+ersetzt; **ohne Wert wird sie aus der Aufzeichnung genommen** (wenn der richtige Wert nicht bekannt ist). Die Spitze des Tages
+und des Monats wird neu berechnet, im Protokoll steht eine Zeile, und der CSV-Export enthält danach den neuen Stand.
+Ab 0.15 erkennt der Wächter den häufigsten Auslöser selbst: Stand der Bezugszähler länger als eine Viertelstunde still (Zähler
+oder Verbindung weg) und bringt dann alles auf einmal, wird diese Viertelstunde nicht als Spitze verbucht.
+
 ## Dashboard
 
 **Wie lege ich das Dashboard an?** (Administrator-Konto nötig)

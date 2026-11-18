@@ -61,7 +61,20 @@ VERIFY_MAX_S = 300            # a device whose power sensor reports rarely (clou
 POWER_GAP_KEEP = 6            # gaps between new power values remembered per device
 POWER_GAP_MIN_KW = 0.3        # gaps count only while the device draws at least this much
 POWER_GAP_MIN_N = 3           # gaps needed before the measured interval is used
-MAX_PLAUSIBLE_KW = 60.0       # counter jumps after an outage are not real peaks
+MAX_PLAUSIBLE_KW = 60.0       # counter jumps after an outage are not real peaks (without a limit; see plausible_kw)
+MIN_PLAUSIBLE_KW = 25.0       # ... and never tighter than this (a house connection of 3 x 35 A)
+PLAUSIBLE_LIMITS = 4.0        # an average of more than this many times the own limit is no measurement
+COUNTER_SILENT_S = 1200.0     # a counter that said nothing for longer than a quarter hour and then steps: the step is the backlog
+COUNTER_JUMP_KWH = 0.1        # ... if it is this much more than (half as much again as) the power sensor measured in the
+COUNTER_JUMP_FACTOR = 1.5     #     running quarter hour (a counter that reports every quarter hour is never meant)
+
+
+def plausible_kw(limit_kw: float | None) -> float:
+    """The highest quarter-hour average a counter step may mean: four times the own limit, at least 25 kW (issue #4: 60 kW
+    for every house let the backlog of hours through)."""
+    if not limit_kw or limit_kw <= 0:
+        return MAX_PLAUSIBLE_KW
+    return max(MIN_PLAUSIBLE_KW, PLAUSIBLE_LIMITS * float(limit_kw))
 CHARGING_W = 500.0
 
 
@@ -216,6 +229,9 @@ class Guard:
         self.values: dict[str, Any] = {}
         self.state = "ready"
         self._counter_at_q: float | None = None
+        self._counter_seen: float | None = None        # the last counter value and when it last changed: a counter that
+        self._counter_changed: datetime | None = None  # stood still and then steps brings the backlog of the whole gap
+        self.max_plausible_kw = MAX_PLAUSIBLE_KW       # set from the limit in step()
         self._last_t: datetime | None = None
         self._last_p = 0.0
         self._last_action: datetime | None = None
@@ -269,7 +285,7 @@ class Guard:
             return False
         elapsed_h = max(1.0, (now - q).total_seconds()) / 3600.0
         base = r.get("counter_at_q")
-        if counter_kwh is not None and base is not None and 0.0 <= counter_kwh - float(base) <= MAX_PLAUSIBLE_KW * elapsed_h + 0.05:
+        if counter_kwh is not None and base is not None and 0.0 <= counter_kwh - float(base) <= self.max_plausible_kw * elapsed_h + 0.05:
             self.energy_kwh = counter_kwh - float(base)
         else:
             gap_h = max(0.0, min((now - q).total_seconds(), (now - at).total_seconds())) / 3600.0
@@ -315,12 +331,33 @@ class Guard:
         if counter_kwh is not None:
             if self._counter_at_q is None:
                 self._counter_at_q = counter_kwh - self.energy_kwh
+            self._counter_backlog(now, q, counter_kwh)
             diff = counter_kwh - self._counter_at_q
             elapsed_h = max(1.0, (now - q).total_seconds()) / 3600.0
-            if 0.0 <= diff <= MAX_PLAUSIBLE_KW * elapsed_h + 0.05:
+            if 0.0 <= diff <= self.max_plausible_kw * elapsed_h + 0.05:
                 self.energy_kwh = max(self.energy_kwh, diff)  # the counter is the better source; take the larger (careful)
         if grid_kw is not None:
             self._last_t, self._last_p = now, grid_kw
+
+    def _counter_backlog(self, now: datetime, q: datetime, counter_kwh: float) -> None:
+        """A counter that stood still for longer than a quarter hour (the meter or its connection was away) and then steps
+        brings the energy of the whole gap at once. That is not the import of the running quarter hour (issue #4: no values
+        from 02:00 to 06:15, then 5 kWh in one step, recorded as a peak of 20 kW). The step is left out, the quarter hour goes on
+        with what the power sensor measured and counts as estimated: it is not recorded as a peak. A counter that only stood
+        still because nothing was imported (the sun covered the house) steps by what the power sensor saw too: nothing happens."""
+        seen, changed = self._counter_seen, self._counter_changed
+        if seen is None or changed is None:
+            self._counter_seen, self._counter_changed = counter_kwh, now
+            return
+        if counter_kwh == seen:
+            return
+        step = counter_kwh - seen
+        self._counter_seen, self._counter_changed = counter_kwh, now
+        if (now - changed).total_seconds() < COUNTER_SILENT_S or changed >= q:
+            return
+        if step > COUNTER_JUMP_FACTOR * self.energy_kwh + COUNTER_JUMP_KWH:
+            self._counter_at_q = counter_kwh - self.energy_kwh
+            self.quarter_estimated = True
 
     # ---------- main step ----------
 
@@ -337,6 +374,7 @@ class Guard:
         reserve_text: str = "",
     ) -> list[Action]:
         self._now = now
+        self.max_plausible_kw = plausible_kw(limit_kw)
         self._account(now, grid_kw, counter_kwh)
         target = limit_kw - margin_kw
         q_end = self.quarter + timedelta(minutes=15)

@@ -64,7 +64,7 @@ correct_quarter:
       selector:
         text:
     kw:
-      required: true
+      required: false
       example: 8.44
       selector:
         number:

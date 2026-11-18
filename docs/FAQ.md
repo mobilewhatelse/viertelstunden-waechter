@@ -97,6 +97,26 @@ its own power sensor. At first let it run a few days in mode *Observe only*: it 
 **I see no update.**
 Updates come through the Marketplace (HACS) under **Settings > Updates**. It can take a few hours until a new version shows up.
 
+**Why do I get above the limit although the guard is running?**
+The guard can only lower what it may control, and only as fast as the devices and their readings react. The usual reasons: more is
+running than can be switched off or throttled (cooker, oven, a heat pump that is not entered). A device is set to *Observe only*.
+A wallbox is at its minimum current already. A command arrives late, or the device's power value comes through a cloud only every
+few minutes. Or the distance to the limit is too small for this house. The log *Latest interventions* says what the guard tried
+and what was not carried out.
+
+**Which power sensor do I enter for the wallbox?**
+If possible one that comes straight from the wallbox and shows the **whole** charging power, not a single phase (L1) and not the
+value from the car's cloud. A sensor of one phase shows a third while charging on three phases; a value that comes through a cloud
+only every few minutes lets the guard see too late whether a command worked.
+
+**A quarter hour was recorded wrong (e.g. a peak that never happened). How do I correct it?**
+With the action `viertelstunden_waechter.correct_quarter` under **Developer tools > Actions** (administrators only): *Start* is
+the local start of the quarter hour, e.g. `2026-11-16T06:15`. With a *Value* (kW from the meter) it is replaced; **without a
+value it is taken out of the record** (when the real value is not known). The day's and the month's peak are worked out again, a
+line goes to the log, and the CSV export then holds the new state.
+From 0.15 the guard recognises the usual cause itself: if the import counter stood still for longer than a quarter hour (the meter
+or its connection was away) and then brings everything at once, that quarter hour is not recorded as a peak.
+
 ## Dashboard
 
 **How do I add the dashboard?** (administrator account needed)

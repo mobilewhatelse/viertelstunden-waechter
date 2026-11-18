@@ -4,6 +4,22 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.0 - unreleased
 
+- **A counter step after a gap is no peak (issue #4):** if the import counter said nothing for longer than a quarter hour (the meter
+  or its connection was away) and then brings the energy of the whole gap at once, the step is left out: the quarter hour goes on
+  with what the power sensor measured and is not recorded as a peak. A counter that only rested because nothing was imported is
+  not affected. The bound for a believable counter step now follows the own limit (four times the limit, at least 25 kW) instead
+  of 60 kW for every house. **Action `correct_quarter` can also remove:** without a value the quarter hour is taken out of the
+  record and the peaks are worked out again; described in the FAQ. *Deutsch:* Ein Zählersprung nach einer Lücke ist keine Spitze
+  (Issue #4): Meldet der Bezugszähler länger als eine Viertelstunde nichts und bringt dann die Energie der ganzen Lücke auf
+  einmal, zählt dieser Sprung nicht; die Viertelstunde läuft mit dem Wert des Leistungssensors weiter und wird nicht als Spitze
+  verbucht. Ein Zähler, der nur ruht, weil nichts bezogen wurde, ist nicht betroffen. Die Grenze für einen glaubhaften
+  Zählersprung richtet sich jetzt nach der eigenen Grenze (das Vierfache, mindestens 25 kW) statt 60 kW für jedes Haus. Die Aktion
+  `correct_quarter` kann auch löschen: Ohne Wert wird die Viertelstunde aus der Aufzeichnung genommen und die Spitzen werden neu
+  berechnet; beschrieben in den häufigen Fragen.
+- **FAQ:** why the import can get above the limit although the guard runs, and which power sensor to enter for a wallbox (the
+  whole power straight from the wallbox, not one phase, not the car's cloud). *Deutsch:* Häufige Fragen: warum der Bezug trotz
+  Wächter über die Grenze kommen kann, und welcher Leistungssensor bei der Wallbox einzutragen ist (die gesamte Leistung direkt
+  von der Wallbox, nicht eine Phase, nicht die Cloud des Autos).
 - **evcc on its own connection:** the guard talks to evcc on a client session of its own (one per installation) instead of Home Assistant's
   shared one, so evcc's login cookie never reaches other integrations. *Deutsch:* evcc über eine eigene Verbindung: Der Wächter spricht mit
   evcc über eine eigene Sitzung statt über die gemeinsame von Home Assistant, das Anmelde-Cookie von evcc erreicht keine andere Integration.
