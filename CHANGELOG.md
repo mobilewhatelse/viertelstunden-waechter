@@ -4,6 +4,7 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.0 - unreleased
 
+- **Charts full screen with zoom:** the Home Assistant app does not let a dashboard be zoomed with two fingers. Tapping a chart now opens it on a page of its own in the browser, where it can be zoomed and turned sideways; it always shows the current state. The link carries a random key of the installation (no login needed, not guessable) and only shows the charts of this dashboard. **Create the dashboard again** to get the links. *Deutsch:* Grafiken im Vollbild mit Zoom: Die Home-Assistant-App lässt ein Dashboard nicht mit zwei Fingern vergrößern. Ein Tipp auf eine Grafik öffnet sie jetzt auf einer eigenen Seite im Browser, dort lässt sie sich vergrößern und quer ansehen, immer mit dem aktuellen Stand. Der Link enthält einen zufälligen Schlüssel der Installation (keine Anmeldung nötig, nicht zu erraten) und zeigt nur die Grafiken dieses Dashboards. **Dashboard neu erstellen**, damit die Links kommen.
 - **A counter step after a gap is no peak (issue #4):** if the import counter said nothing for longer than a quarter hour (the meter
   or its connection was away) and then brings the energy of the whole gap at once, the step is left out: the quarter hour goes on
   with what the power sensor measured and is not recorded as a peak. A counter that only rested because nothing was imported is
