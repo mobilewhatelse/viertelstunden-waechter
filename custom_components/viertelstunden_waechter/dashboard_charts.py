@@ -117,7 +117,7 @@ def daily(ids: dict[str, str], limit_label: str, legend: str, none_text: str, da
 def sources(ids: dict[str, str], title: str, own: str, evcc: str, counts: str, reserve: str, differ: str, twice: str, down: str) -> str:
     """The grid import from your sensor and from evcc as two bars, which source counts now, and warnings. Export counts as 0."""
     return _fill(
-        "{% set a = states['@ST@'].attributes if states['@ST@'] is defined else {} %}"
+        "{% set a = states['@ST@'].attributes if states['@ST@'] else {} %}"
         "{% set src = a.get('grid_source') %}{% set e = a.get('grid_evcc_kw') %}"
         "{% set s = states('@GP@') | float(none) if '@GP@' else none %}{% set su = state_attr('@GP@', 'unit_of_measurement') if '@GP@' else none %}"
         "{% if s is not none and su == 'W' %}{% set s = s / 1000 %}{% elif s is not none and su == 'MW' %}{% set s = s * 1000 %}{% endif %}"

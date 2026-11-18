@@ -158,6 +158,19 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(build_views(IDS, "en")[0]["title"], "Guard")
 
 
+class MissingSensorTests(unittest.TestCase):
+    """18.11.2026: right after a restart the dashboard drew before the status sensor was back - 'None' has no attribute
+    'attributes' in the log. `is defined` does not help (a missing entity is None, which is defined): the guard must test it."""
+
+    def test_no_unguarded_attribute_access(self):
+        import re
+
+        text = json.dumps(build_views(IDS, "de", evcc=True))
+        self.assertNotIn("is defined else {}", text)
+        bare = [m.group(0) for m in re.finditer(r"states(\[[^\]]+\]|\.[a-z_]+\.[a-z0-9_]+)\.attributes(?! if states)", text)]
+        self.assertEqual(bare, [])
+
+
 if __name__ == "__main__":
     unittest.main()
 
