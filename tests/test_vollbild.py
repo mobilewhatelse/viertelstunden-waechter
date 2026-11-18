@@ -1,5 +1,6 @@
-"""Charts full screen (vollbild.py): every chart of the dashboard links to a page that may be zoomed on the phone."""
+"""Charts full width (vollbild.py): a tap on a chart opens a subview of the dashboard with that card over the whole width."""
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -8,75 +9,69 @@ import sim  # noqa: F401,E402  (puts the integration folder on sys.path)
 import dashboard  # noqa: E402
 import vollbild as vb  # noqa: E402
 
-CHART = "{% set c = state_attr('sensor.x', 'chart') %}{% if c %}![](data:image/svg+xml;utf8,{{ c | urlencode }}){% endif %}"
+CHART = "{% set c = state_attr('sensor.x', 'chart') %}{% if c %}![](data:image/svg+xml;utf8,{{ c | urlencode }}){% endif %}\n\nLegend"
 
 
-class LinkTests(unittest.TestCase):
-    def _views(self):
-        return [{"sections": [{"cards": [{"type": "markdown", "content": CHART},
-                                         {"type": "markdown", "content": "only text"},
-                                         {"type": "tile", "entity": "sensor.y"}]}]}]
+def config():
+    return {"views": [{"path": "main", "sections": [{"cards": [
+        {"type": "heading", "heading": "Ladeplan"},
+        {"type": "markdown", "content": CHART},
+        {"type": "markdown", "content": "only text"},
+        {"type": "tile", "entity": "sensor.y"}]}]}]}
 
-    def test_a_chart_becomes_a_link(self):
-        views = self._views()
-        found = vb.link_charts(views, "/api/viertelstunden_waechter/vollbild", "KEY")
-        self.assertEqual(len(found), 1)
-        cid, tpl = next(iter(found.items()))
-        self.assertEqual(tpl, CHART)   # the page renders the card as it was
-        card = views[0]["sections"][0]["cards"][0]["content"]
-        self.assertIn(f'<a href="/api/viertelstunden_waechter/vollbild/KEY/{cid}" target="_self">![](data:image/svg+xml;utf8,', card)
-        self.assertTrue(card.endswith("</a>{% endif %}"))
+
+def real(language: str = "de") -> dict:
+    ids = {k: f"{d}.guard_{k}" for k, d in dashboard.ENTITY_KEYS.items()}
+    return {"views": dashboard.build_views(ids, language, evcc=True)}
+
+
+class SubviewTests(unittest.TestCase):
+    def test_a_chart_links_to_its_subview(self):
+        c = config()
+        ids = vb.link_charts(c, "de")
+        self.assertEqual(len(ids), 1)
+        card = c["views"][0]["sections"][0]["cards"][1]["content"]
+        self.assertIn(f'<a href="grafik-{ids[0]}">![](data:image/svg+xml;utf8,', card)
+        self.assertNotIn("target=", card)   # a relative link without target: the dashboard switches, the app is not loaded again
+
+    def test_the_subview_shows_the_whole_card_with_its_caption(self):
+        c = config()
+        cid = vb.link_charts(c, "de")[0]
+        sub = c["views"][-1]
+        self.assertEqual(sub["path"], f"grafik-{cid}")
+        self.assertTrue(sub["subview"])
+        self.assertEqual(sub["type"], "panel")
+        self.assertEqual(sub["title"], "Ladeplan")   # the heading above the chart
+        self.assertEqual(sub["cards"], [{"type": "markdown", "content": CHART}])   # chart and legend, no link in it
 
     def test_text_and_other_cards_stay(self):
-        views = self._views()
-        vb.link_charts(views, "/b", "K")
-        self.assertEqual(views[0]["sections"][0]["cards"][1]["content"], "only text")
-        self.assertEqual(views[0]["sections"][0]["cards"][2], {"type": "tile", "entity": "sensor.y"})
+        c = config()
+        vb.link_charts(c)
+        cards = c["views"][0]["sections"][0]["cards"]
+        self.assertEqual(cards[2]["content"], "only text")
+        self.assertEqual(cards[3], {"type": "tile", "entity": "sensor.y"})
 
-    def test_the_same_card_gets_the_same_id(self):
-        a, b = vb.link_charts(self._views(), "/b", "K"), vb.link_charts(self._views(), "/b", "K")
-        self.assertEqual(list(a), list(b))
+    def test_the_same_card_gets_the_same_subview(self):
+        self.assertEqual(vb.link_charts(config()), vb.link_charts(config()))
 
     def test_every_chart_of_the_real_dashboard(self):
-        ids = {k: f"{d}.guard_{k}" for k, d in dashboard.ENTITY_KEYS.items()}
-        views = dashboard.build_views(ids, "de")
-        before = sum(str(v).count("data:image/svg+xml") for v in views)
-        found = vb.link_charts(views, "/api/viertelstunden_waechter/vollbild", "K")
-        self.assertGreaterEqual(len(found), 4)
-        text = str(views)
-        self.assertEqual(text.count('target="_self">![](data:image/svg+xml'), before)
-        for tpl in found.values():
-            self.assertIn("data:image/svg+xml", tpl)
+        c = real()
+        before = json.dumps(c).count("data:image/svg+xml")
+        ids = vb.link_charts(c, "de")
+        subs = [v for v in c["views"] if v.get("subview")]
+        self.assertGreaterEqual(len(subs), 4)
+        self.assertEqual(len(subs), len(ids))
+        main = json.dumps([v for v in c["views"] if not v.get("subview")])
+        self.assertEqual(main.count('<a href=\\"grafik-'), before)
+        for v in subs:
+            self.assertIn("data:image/svg+xml", v["cards"][0]["content"])
+            self.assertTrue(v["title"])
 
-
-class PageTests(unittest.TestCase):
-    def test_extract_the_image(self):
-        self.assertEqual(vb.extract_image("x ![](data:image/svg+xml;utf8,%3Csvg%3E) y"), "%3Csvg%3E")
-        self.assertIsNone(vb.extract_image(""))
-        self.assertIsNone(vb.extract_image("no chart"))
-
-    def test_page_allows_zoom_and_shows_the_image(self):
-        p = vb.page("Viertelstunden-Wächter", "%3Csvg%3E", "de")
-        self.assertIn("user-scalable=yes", p)
-        self.assertIn('<img src="data:image/svg+xml;utf8,%3Csvg%3E"', p)
-        self.assertIn("zwei Fingern", p)
-        self.assertNotIn("<script", p)
-
-    def test_page_without_a_chart(self):
-        self.assertIn("empty right now", vb.page("Viertelstunden-Wächter", None, "en"))
-
-    def test_nothing_from_the_image_can_break_out(self):
-        p = vb.page("<b>", '"><script>x</script>', "en")
-        self.assertNotIn("<script>", p)
-        self.assertNotIn("<b>", p)
-
-    def test_back_to_the_dashboard_it_came_from(self):
-        self.assertEqual(vb.back_path("http://ha.local:8123/plug-when/plugwhen", "ha.local:8123"), "/plug-when/plugwhen")
-        self.assertEqual(vb.back_path("http://other.example/x", "ha.local:8123"), "/")
-        self.assertEqual(vb.back_path(None, "ha.local:8123"), "/")
-        self.assertEqual(vb.back_path("//evil.example/x", "ha.local:8123"), "/")
-        self.assertIn('href="/dash"', vb.page("T", "%3Csvg%3E", "de", "/dash"))
-        self.assertIn("Zurück", vb.page("T", "%3Csvg%3E", "de", "/dash"))
+    def test_no_page_outside_the_dashboard(self):
+        self.assertNotIn("/api/", json.dumps(real()))
+        c = real()
+        vb.link_charts(c)
+        self.assertNotIn("/api/", json.dumps(c))
 
 
 if __name__ == "__main__":

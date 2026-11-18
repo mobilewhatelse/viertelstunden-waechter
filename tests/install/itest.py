@@ -384,17 +384,13 @@ def main():
     dash_text = json.dumps(resp_d)
     log(s == 200 and list(resp_d) == ["views"] and "viertelstunden_wachter_status" in dash_text,
         "Dienst 'Dashboard erstellen' antwortet mit dem Dashboard selbst (nur 'views', mit den eigenen Entitaeten)", f"{len(dash_text)} Zeichen")
-    # every chart opens full screen (zoom on the phone): a page without login, protected by the installation's random key
+    # a tap on a chart opens a subview of the dashboard with that card over the whole width (no reload of the app)
     import re as _re
-    links = sorted(set(_re.findall(r"/api/viertelstunden_waechter/vollbild/[A-Za-z0-9_-]+/[0-9a-f]{16}", dash_text)))
-    pages = [api("GET", u, token=False) for u in links]
-    log(len(links) >= 4 and all(sc == 200 and "user-scalable=yes" in str(body) for sc, body in pages),
-        "Jede Grafik des Dashboards oeffnet eine Vollbild-Seite mit Zoom (ohne Anmeldung)", f"{len(links)} Links, Status {[sc for sc, _ in pages]}")
-    if links:
-        base, cid = links[0].rsplit("/", 1)
-        wrong = api("GET", base.rsplit("/", 1)[0] + "/falsch" + "x" * 30 + "/" + cid, token=False)[0]
-        unknown = api("GET", base + "/0000000000000000", token=False)[0]
-        log(wrong == 404 and unknown == 404, "Falscher Schluessel oder unbekannte Grafik: nicht gefunden", f"{wrong} {unknown}")
+    subs = [v for v in resp_d.get("views", []) if v.get("subview")]
+    paths = {v.get("path") for v in subs}
+    linked = set(_re.findall(r'href=\\"(grafik-[0-9a-f]{16})', dash_text))
+    log(len(subs) >= 4 and linked == paths and all(v.get("type") == "panel" and len(v.get("cards", [])) == 1 for v in subs),
+        "every chart links to its own subview of the dashboard (full width)", f"{len(subs)} subviews, {len(linked)} links")
     s, d = svc("viertelstunden_waechter", "send_week_report", {"current_week": True, "push": False}, resp=True)
     txt = (d.get("service_response") or {}).get("text", "") if isinstance(d, dict) else ""
     log(s == 200 and "Wochenbericht" in txt, "Dienst 'Wochenbericht senden' erzeugt den Bericht", txt.replace("\n", " | ")[:140])

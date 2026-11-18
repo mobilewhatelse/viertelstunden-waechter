@@ -52,14 +52,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry) -> bool:
     await waechter.async_start()
     entry.async_on_unload(entry.add_update_listener(_reload))
     _register_services(hass)
-    try:   # charts full screen (vollbild.py): a page that may be zoomed on the phone
-        from .vollbild_view import async_setup as vollbild_setup
-
-        await vollbild_setup(hass, DOMAIN, "Viertelstunden-Wächter")
-    except Exception as err:  # noqa: BLE001 - never stops the guard
-        import logging
-
-        logging.getLogger(__name__).debug("Guard: full-screen charts not available: %s", err)
     return True
 
 
@@ -228,9 +220,9 @@ async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
     if cfg.get("grid_power"):
         ids["grid_power_sensor"] = cfg["grid_power"]
     config = {"views": build_views(ids, hass.config.language, _planners(hass, entries[0]), evcc=bool(cfg.get("evcc_site_url")))}
-    from .vollbild_view import async_link
+    from .vollbild import link_charts
 
-    await async_link(hass, DOMAIN, config)   # every chart opens full screen (zoom on the phone)
+    link_charts(config, hass.config.language)   # a tap on a chart opens it over the whole width (held sideways: large)
 
     text = ha_yaml.dump(config)
     await hass.services.async_call(
