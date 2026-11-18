@@ -19,9 +19,9 @@ RENDERED = re.compile(r"data:image/svg\+xml;utf8,([^)\s\"'<>]+)")
 
 TEXT = {
     "de": ("Zum Vergrößern mit zwei Fingern ziehen oder das Handy quer halten. Neu laden zeigt den aktuellen Stand.",
-           "Diese Grafik ist gerade leer (noch keine Daten)."),
+           "Diese Grafik ist gerade leer (noch keine Daten).", "← Zurück"),
     "en": ("Pinch with two fingers to zoom, or turn the phone sideways. Reload for the current state.",
-           "This chart is empty right now (no data yet)."),
+           "This chart is empty right now (no data yet).", "← Back"),
 }
 
 
@@ -32,7 +32,8 @@ def chart_id(content: str) -> str:
 
 def link_charts(node: Any, base: str, key: str) -> dict[str, str]:
     """Makes every chart of the dashboard config `node` (changed in place) a link to its full-screen page `base/key/id` and
-    returns {id: card template} for the page to render."""
+    returns {id: card template} for the page to render. `target="_self"`: the app opens the page in itself (a link without a
+    target is taken over by the dashboard's own navigation, `_blank` leaves the app for the browser)."""
     found: dict[str, str] = {}
 
     def walk(n: Any) -> None:
@@ -45,7 +46,7 @@ def link_charts(node: Any, base: str, key: str) -> dict[str, str]:
                 cid = chart_id(content)
                 found[cid] = content
                 href = f"{base}/{key}/{cid}"
-                n["content"] = IMAGE.sub(lambda m: f'<a href="{href}" target="_blank">{m.group(0)}</a>', content)
+                n["content"] = IMAGE.sub(lambda m: f'<a href="{href}" target="_self">{m.group(0)}</a>', content)
             for x in n.values():
                 if isinstance(x, (list, dict)):
                     walk(x)
@@ -60,9 +61,22 @@ def extract_image(rendered: str) -> str | None:
     return m.group(1) if m else None
 
 
-def page(title: str, image: str | None, language: str | None) -> str:
+def back_path(referer: str | None, host: str | None) -> str:
+    """Where "back" leads: the dashboard the chart was opened from (same server only), else the start page."""
+    from urllib.parse import urlsplit
+
+    try:
+        u = urlsplit(referer or "")
+    except ValueError:
+        return "/"
+    if not u.path.startswith("/") or u.path.startswith("//") or (u.netloc and u.netloc != (host or "")):
+        return "/"
+    return u.path + (f"?{u.query}" if u.query else "")
+
+
+def page(title: str, image: str | None, language: str | None, back: str = "/") -> str:
     """The full-screen page: the chart as an image (an SVG image cannot run scripts), zoom allowed, light and dark."""
-    hint, empty = TEXT["de" if str(language or "").lower().startswith("de") else "en"]
+    hint, empty, back_text = TEXT["de" if str(language or "").lower().startswith("de") else "en"]
     body = (f'<img src="data:image/svg+xml;utf8,{html.escape(image, quote=True)}" alt="{html.escape(title)}">' if image
             else f"<p>{html.escape(empty)}</p>")
     return ("<!doctype html><html><head><meta charset='utf-8'>"
@@ -72,4 +86,5 @@ def page(title: str, image: str | None, language: str | None) -> str:
             ":root{color-scheme:light dark}body{margin:0;padding:12px;background:#111827;color:#cbd5e1;font:14px sans-serif}"
             "@media (prefers-color-scheme: light){body{background:#f8fafc;color:#334155}}"
             "img{display:block;width:100%;height:auto}p{margin:12px 0 0;opacity:.8}"
-            f"</style></head><body>{body}<p>{html.escape(hint)}</p></body></html>")
+            "a{display:inline-block;margin:0 0 12px;padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none}"
+            f"</style></head><body><a href=\"{html.escape(back, quote=True)}\">{html.escape(back_text)}</a>{body}<p>{html.escape(hint)}</p></body></html>")

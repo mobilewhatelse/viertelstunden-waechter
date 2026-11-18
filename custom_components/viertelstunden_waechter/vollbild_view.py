@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.template import Template
 
-from .vollbild import extract_image, link_charts, page
+from .vollbild import back_path, extract_image, link_charts, page
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,6 +71,7 @@ class ChartView(HomeAssistantView):
             _LOGGER.debug("%s: full-screen chart %s failed: %s", self.domain, chart, err)
             rendered = ""
         return web.Response(
-            text=page(self.title, extract_image(str(rendered)), hass.config.language), content_type="text/html",
+            text=page(self.title, extract_image(str(rendered)), hass.config.language,
+                      back_path(request.headers.get("Referer"), request.host)), content_type="text/html",
             headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex",
                      "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'"})

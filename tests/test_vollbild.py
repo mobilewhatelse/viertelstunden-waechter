@@ -24,7 +24,7 @@ class LinkTests(unittest.TestCase):
         cid, tpl = next(iter(found.items()))
         self.assertEqual(tpl, CHART)   # the page renders the card as it was
         card = views[0]["sections"][0]["cards"][0]["content"]
-        self.assertIn(f'<a href="/api/viertelstunden_waechter/vollbild/KEY/{cid}" target="_blank">![](data:image/svg+xml;utf8,', card)
+        self.assertIn(f'<a href="/api/viertelstunden_waechter/vollbild/KEY/{cid}" target="_self">![](data:image/svg+xml;utf8,', card)
         self.assertTrue(card.endswith("</a>{% endif %}"))
 
     def test_text_and_other_cards_stay(self):
@@ -44,7 +44,7 @@ class LinkTests(unittest.TestCase):
         found = vb.link_charts(views, "/api/viertelstunden_waechter/vollbild", "K")
         self.assertGreaterEqual(len(found), 4)
         text = str(views)
-        self.assertEqual(text.count('target="_blank">![](data:image/svg+xml'), before)
+        self.assertEqual(text.count('target="_self">![](data:image/svg+xml'), before)
         for tpl in found.values():
             self.assertIn("data:image/svg+xml", tpl)
 
@@ -69,6 +69,14 @@ class PageTests(unittest.TestCase):
         p = vb.page("<b>", '"><script>x</script>', "en")
         self.assertNotIn("<script>", p)
         self.assertNotIn("<b>", p)
+
+    def test_back_to_the_dashboard_it_came_from(self):
+        self.assertEqual(vb.back_path("http://ha.local:8123/plug-when/plugwhen", "ha.local:8123"), "/plug-when/plugwhen")
+        self.assertEqual(vb.back_path("http://other.example/x", "ha.local:8123"), "/")
+        self.assertEqual(vb.back_path(None, "ha.local:8123"), "/")
+        self.assertEqual(vb.back_path("//evil.example/x", "ha.local:8123"), "/")
+        self.assertIn('href="/dash"', vb.page("T", "%3Csvg%3E", "de", "/dash"))
+        self.assertIn("Zurück", vb.page("T", "%3Csvg%3E", "de", "/dash"))
 
 
 if __name__ == "__main__":
