@@ -44,7 +44,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "reserve_on": "Akku-Reserve vor Spitzen", "ai_on": "KI-Erklärer",
         "ai_title": "Erklärung des Tages", "ai_none": "Noch keine Erklärung. Der Erklärer schreibt abends um 21 Uhr, wenn er eingeschaltet und in den Einstellungen eine KI-Aufgabe gewählt ist.",
         "expl_from": "Erklärung vom", "expl_next": "Die Erklärung für heute kommt abends um 21 Uhr.", "expl_error": "Die Erklärung konnte nicht erstellt werden",
-        "predictive": "Vorausschauend drosseln", "prewarn": "Vorwarnung vor Eingriff", "weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
+        "predictive": "Vorausschauend drosseln", "prewarn": "Vorwarnung vor Eingriff", "smooth_on": "Prognose am Anfang glätten","weekly_on": "Wochenbericht (montags)", "weekly": "Letzter Wochenbericht",
         "no_report": "Noch kein Wochenbericht (der erste kommt am Montag, sobald Daten einer Woche da sind).",
         "check_title": "Geräte-Check", "check_state": "Geräte-Check", "check_share": "Anonyme Daten teilen",
         "check_off": "**Geräte-Check ist aus.** Ihnen entgeht eine Meldung, wenn die Wallbox plötzlich nur noch mit 2 Phasen lädt, "
@@ -118,7 +118,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "reserve_on": "Battery reserve before peaks", "ai_on": "AI explainer",
         "ai_title": "Explanation of the day", "ai_none": "No explanation yet. The explainer writes at 21:00 when it is switched on and an AI task is chosen in the settings.",
         "expl_from": "Explanation of", "expl_next": "The explanation for today follows in the evening at 21:00.", "expl_error": "The explanation could not be created",
-        "predictive": "Throttle ahead by forecast", "prewarn": "Warn before an intervention", "weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
+        "predictive": "Throttle ahead by forecast", "prewarn": "Warn before an intervention", "smooth_on": "Smooth forecast at the start","weekly_on": "Weekly report (Mondays)", "weekly": "Last weekly report",
         "no_report": "No weekly report yet (the first comes on Monday once a week of data exists).",
         "check_title": "Device check", "check_state": "Device check", "check_share": "Share anonymous data",
         "check_off": "**Device check is off.** You miss a message when the wallbox suddenly charges on 2 phases only, "
@@ -517,7 +517,8 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 *[_setting(ids[k], x[n]) for k, n in (
                     ("paid_peak", "paid_peak"), ("notify_intervention", "notify"), ("costs_enabled", "costs_on"),
                     ("forecast_enabled", "forecast_on"), ("predictive", "predictive"), ("battery_reserve", "reserve_on"),
-                    ("ai_explainer", "ai_on"), ("prewarn", "prewarn"), ("weekly_report_enabled", "weekly_on"),
+                    ("ai_explainer", "ai_on"), ("prewarn", "prewarn"), ("forecast_smooth", "smooth_on"),
+                    ("weekly_report_enabled", "weekly_on"),
                     ("price_low", "price_low"), ("price_high", "price_high"), ("price_threshold", "threshold"))],
             ]},
             {"type": "grid", "cards": [
@@ -597,7 +598,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
 ENTITY_KEYS: dict[str, str] = {
     "mode": "select", "strategy": "select",
     "limit": "number", "margin": "number", "price_low": "number", "price_high": "number", "price_threshold": "number",
-    "paid_peak": "switch", "notify_intervention": "switch", "prewarn": "switch", "predictive": "switch", "battery_reserve": "switch", "ai_explainer": "switch", "ai_explanation": "sensor", "weekly_report_enabled": "switch", "weekly_report": "sensor", "costs_enabled": "switch", "forecast_enabled": "switch", "weather_enabled": "switch",
+    "paid_peak": "switch", "notify_intervention": "switch", "prewarn": "switch", "forecast_smooth": "switch", "predictive": "switch", "battery_reserve": "switch", "ai_explainer": "switch", "ai_explanation": "sensor", "weekly_report_enabled": "switch", "weekly_report": "sensor", "costs_enabled": "switch", "forecast_enabled": "switch", "weather_enabled": "switch",
     "status": "sensor", "forecast": "sensor", "allowed": "sensor", "quarter_energy": "sensor", "last_quarter": "sensor",
     "today_peak": "sensor", "month_peak": "sensor", "interventions_today": "sensor", "cost_month": "sensor",
     "cost_without": "sensor", "savings_month": "sensor", "savings_year": "sensor", "saved_now": "sensor",

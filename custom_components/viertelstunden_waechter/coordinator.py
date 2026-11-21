@@ -45,7 +45,7 @@ from .pricing import monthly_cost
 from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
-    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS, amps_of, percent_of, pick_option, step_down,
+    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS, amps_of, percent_of, pick_option, smoothed_forecast, step_down,
     POWER_GAP_KEEP, POWER_GAP_MIN_KW, power_gap,
 )
 
@@ -132,6 +132,7 @@ class Waechter:
         self.notify_intervention = True  # message at the first intervention (at most every 30 minutes)
         self.predictive = False          # use the load forecast: lower the wallbox early in a risk quarter hour (default off)
         self.prewarn = False             # message before an intervention: the quarter hour heads for the limit (default off)
+        self.forecast_smooth = False     # display only: the forecast leans on the typical value in the first 2 minutes (default off)
         self.weekly_enabled = True       # weekly report on Monday morning
         self.share_usage = bool(self.cfg.get("share_usage"))   # voluntary anonymous usage statistics, weekly (default off, rueckmeldung.py)
         self.feedback_text = ""          # the text field for a feedback
@@ -780,6 +781,18 @@ class Waechter:
             if not self._proto_failed:
                 self._proto_failed = True
                 _LOGGER.exception("Local log: writing failed")
+
+    def forecast_shown(self) -> float | None:
+        """What the sensor *Quarter-hour forecast* shows. Without the display option the projection of the guard; with it, in
+        the first two minutes of a quarter hour mixed with the typical value of this quarter hour (only when the load forecast
+        is the one of this quarter hour). The control, the early warning and the forecast log keep the projection itself."""
+        v = self.guard.values
+        raw, q = v.get("forecast_kw"), v.get("quarter")
+        if not self.forecast_smooth or raw is None or q is None:
+            return raw
+        f = self.forecast.get("now") or {}
+        typical = f.get("typical") if f.get("t") == q else None
+        return smoothed_forecast(raw, typical, (self.guard._now - q).total_seconds())
 
     def _status(self, locked: bool, needed: bool) -> str:
         if self.mode == MODE_OFF:

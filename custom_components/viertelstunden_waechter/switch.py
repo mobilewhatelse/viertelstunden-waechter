@@ -23,6 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
         OffByDefaultSwitch(w, "battery_reserve", "battery_reserve", "mdi:battery-lock"),
         ExecuteSwitch(w, "ai_explainer", "ai_explainer", "mdi:robot-outline"),
         OffByDefaultSwitch(w, "prewarn", "prewarn", "mdi:bell-alert-outline"),
+        OffByDefaultSwitch(w, "forecast_smooth", "forecast_smooth", "mdi:chart-bell-curve-cumulative"),
         FeatureSwitch(w, "weekly_report_enabled", "weekly_enabled", "mdi:calendar-week"),
         FeatureSwitch(w, "charge_plan_enabled", "plan_enabled", "mdi:ev-station"),
         ExecuteSwitch(w, "charge_plan_execute", "plan_execute", "mdi:play-circle-outline"),

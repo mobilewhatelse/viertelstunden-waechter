@@ -401,6 +401,9 @@
       "prewarn": {
         "name": "Early warning before an intervention"
       },
+      "forecast_smooth": {
+        "name": "Smooth the forecast at the quarter start"
+      },
       "weekly_report_enabled": {
         "name": "Weekly report"
       },

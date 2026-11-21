@@ -401,6 +401,9 @@
       "prewarn": {
         "name": "Vorwarnung vor einem Eingriff"
       },
+      "forecast_smooth": {
+        "name": "Prognose zu Viertelstundenbeginn glätten"
+      },
       "weekly_report_enabled": {
         "name": "Wochenbericht"
       },

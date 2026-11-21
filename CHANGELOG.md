@@ -63,6 +63,18 @@ Format: newest first. German version below each English block is a short summary
   verzögerten Cloud-Werten, z. B. Anker): Eine Abweichung zählt jetzt nur, wenn evcc zu keinem Wert des Sensors aus den
   letzten fünf Minuten passt (ein verzögertes evcc zeigt, was der Sensor kurz vorher zeigte), und nur, wenn sie zehn Minuten
   anhält (bisher zwei). Die Regelung bleibt unverändert, sie arbeitet immer mit dem eigenen Sensor.
+- **New display option *Smooth the forecast at the quarter start* (off by default):** right after a quarter hour began the
+  *Quarter-hour forecast* is nearly the power of this moment, so a kettle shows as a quarter hour of 10 kW (feedback: "the
+  forecast shows 10.96"). Switched on, the sensor mixes the projection in the first two minutes with the typical value of this
+  quarter hour from the load forecast and then shows the projection as before; the attribute `projection_kw` keeps the
+  unsmoothed value. Only the display changes: the control, the limits, the early warning and the forecast log keep working with
+  the projection. Create the dashboard again to see the switch. *Deutsch:* **Neue Anzeige-Option *Prognose zu
+  Viertelstundenbeginn glätten* (Vorgabe aus):** Kurz nach Beginn einer Viertelstunde ist die *Prognose Viertelstunde* fast die
+  Leistung dieses Moments, ein Wasserkocher erscheint dann als Viertelstunde mit 10 kW (Rückmeldung: „Prognose zeigt 10,96“).
+  Eingeschaltet mischt der Sensor in den ersten zwei Minuten die Hochrechnung mit dem typischen Wert dieser Viertelstunde aus
+  der Lastprognose und zeigt danach die Hochrechnung wie bisher; das Attribut `projection_kw` behält den ungeglätteten Wert. Nur
+  die Anzeige ändert sich: Regelung, Grenzen, Vorwarnung und Prognose-Protokoll arbeiten weiter mit der Hochrechnung. Dashboard
+  neu erstellen, damit der Schalter erscheint.
 
 ## 0.15.0 - 2026-11-21
 

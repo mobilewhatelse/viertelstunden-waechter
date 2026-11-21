@@ -20,7 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WaechterEntry, add: AddE
     add([
         StatusSensor(w),
         ValueSensor(w, "quarter_energy", "quarter_energy_kwh", UnitOfEnergy.KILO_WATT_HOUR, SensorDeviceClass.ENERGY, 3),
-        ValueSensor(w, "forecast", "forecast_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
+        QuarterForecastSensor(w, "forecast", "forecast_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
         ValueSensor(w, "allowed", "allowed_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
         ValueSensor(w, "saved_now", "saved_kw", UnitOfPower.KILO_WATT, SensorDeviceClass.POWER, 2),
         CostSensor(w, "cost_month", "cost"),
@@ -152,6 +152,21 @@ class ValueSensor(WaechterEntity, SensorEntity):
     @property
     def last_reset(self):
         return self.waechter.guard.values.get("quarter") if self._value_key == "quarter_energy_kwh" else None
+
+
+class QuarterForecastSensor(ValueSensor):
+    """Quarter-hour forecast: the projection of the guard, or with the display option *smooth at the quarter start* (0.15.1)
+    the smoothed value; then the attribute `projection_kw` keeps the projection itself."""
+
+    @property
+    def native_value(self) -> float | None:
+        return self.waechter.forecast_shown()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if not self.waechter.forecast_smooth:
+            return None
+        return {"projection_kw": self.waechter.guard.values.get("forecast_kw")}
 
 
 PLAN_STATES = ["off", "no_vehicle", "no_data", "no_departure", "not_needed", "planned", "infeasible"]

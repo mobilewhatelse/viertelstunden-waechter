@@ -128,7 +128,7 @@ class DashboardTests(unittest.TestCase):
         """Field 17.11.2026 (phone): in entities rows the names were cut off ('Leistungspreis bis z…'). Now one full-width tile per
         setting with a short name; numbers with +/-, selections with their options, switches toggle on a tap."""
         keys = ("mode", "strategy", "limit", "margin", "paid_peak", "notify_intervention", "costs_enabled", "forecast_enabled",
-                "predictive", "battery_reserve", "ai_explainer", "prewarn", "weekly_report_enabled", "price_low", "price_high",
+                "predictive", "battery_reserve", "ai_explainer", "prewarn", "forecast_smooth", "weekly_report_enabled", "price_low", "price_high",
                 "price_threshold", "weather_enabled", "share_usage", "charge_plan_enabled", "charge_plan_execute")
         for lang in ("de", "en"):
             cards = list(_cards(build_views(IDS, lang)))

@@ -154,6 +154,20 @@ def power_gap(gaps: list[float]) -> float | None:
     return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0
 
 
+FORECAST_SMOOTH_S = 120.0     # display option: in the first two minutes of a quarter hour the forecast leans on the typical value
+
+
+def smoothed_forecast(raw_kw: float | None, typical_kw: float | None, elapsed_s: float) -> float | None:
+    """Only for the display (option *smooth the forecast at the quarter start*, 0.15.1): right after a quarter hour began the
+    projection is nearly the power of this moment (a kettle shows as a quarter hour of 10 kW). In the first FORECAST_SMOOTH_S it
+    is mixed with the typical value of this quarter hour, the weight moving linearly to the measurement. The control never
+    uses this value."""
+    if raw_kw is None or typical_kw is None or elapsed_s >= FORECAST_SMOOTH_S:
+        return raw_kw
+    w = max(0.0, elapsed_s) / FORECAST_SMOOTH_S
+    return round(w * raw_kw + (1.0 - w) * float(typical_kw), 2)
+
+
 def verify_wait(r: Reading | None) -> float:
     """Seconds after a command before the readings must show it: the usual minute, longer for a power sensor
     that reports rarely (one and a half of its intervals plus a cycle), never more than VERIFY_MAX_S."""
