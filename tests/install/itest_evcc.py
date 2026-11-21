@@ -158,8 +158,9 @@ def main():
     log(res is not None, "own sensor plus evcc is accepted", err)
     src = it.wait_for(lambda: status_attr("grid_source") == "sensor", 90, 5)
     log(bool(src), "with both, the own sensor wins", f"source {status_attr('grid_source')}")
-    differ = it.wait_for(lambda: status_attr("sources_differ") is True, 240, 10)
-    log(bool(differ), "a clear difference of the two sources is shown (after two minutes)", f"sources_differ {status_attr('sources_differ')}")
+    # 0.15.1: only a difference that lasts ten minutes and that no delay of evcc (up to five minutes) explains
+    differ = it.wait_for(lambda: status_attr("sources_differ") is True, 900, 15)
+    log(bool(differ), "a clear difference of the two sources is shown (after ten minutes)", f"sources_differ {status_attr('sources_differ')}")
     recent = " | ".join(status_attr("recent") or [])
     log("evcc" in recent, "the difference is written to the log once", recent[:200])
 

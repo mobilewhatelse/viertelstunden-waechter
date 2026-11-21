@@ -29,7 +29,7 @@ from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_L
 from .const import D_ART, D_BATTERY_POWER, D_MAX_CURRENT
 from . import geraete_check as gc
 from . import protokoll as pr
-from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, choose_grid, parse_grid_kw, parse_loadpoint, sources_differ, target_ceiling,
+from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, GridDiffer, choose_grid, parse_grid_kw, parse_loadpoint, target_ceiling,
                    virtual_current)
 from .explain import build_instructions, extract_text, plain_summary
 from .messages import Messages
@@ -169,8 +169,7 @@ class Waechter:
         self.grid_source: str | None = None  # "sensor" or "evcc": where the grid import of this cycle came from
         self.grid_evcc_kw: float | None = None  # what evcc reports (None = not asked or no grid meter there)
         self.sources_differ = False          # sensor and evcc differ clearly (shown, never averaged)
-        self._diff_since: datetime | None = None
-        self._diff_noted = False
+        self._grid_differ = GridDiffer()      # lag-tolerant and only a lasting difference (0.15.1, evcc with cloud values)
         self._on_backup = False
         self.wallbox_twice: str | None = None   # "wallbox name / evcc name" while both seem to be the same wallbox
         self._twice_since: datetime | None = None
@@ -449,16 +448,10 @@ class Waechter:
         elif source == "sensor" and self._on_backup:
             self._on_backup = False
             self._log(Action("", "log", None, self.t("grid_backup_off"), False), False)
-        if sources_differ(sensor_kw, self.grid_evcc_kw):
-            if self._diff_since is None:
-                self._diff_since = now
-            elif (now - self._diff_since).total_seconds() >= SOURCES_DIFFER_AFTER_S:
-                self.sources_differ = True
-                if not self._diff_noted:
-                    self._diff_noted = True
-                    self._log(Action("", "log", None, self.t("grid_differ", a=sensor_kw or 0.0, b=self.grid_evcc_kw or 0.0), False), False)
-        else:
-            self._diff_since, self.sources_differ, self._diff_noted = None, False, False
+        note = self._grid_differ.update(now, sensor_kw, self.grid_evcc_kw)
+        self.sources_differ = self._grid_differ.differ
+        if note:
+            self._log(Action("", "log", None, self.t("grid_differ", a=sensor_kw or 0.0, b=self.grid_evcc_kw or 0.0), False), False)
 
     def _is_on(self, eid: str | None, unknown: bool) -> bool:
         if not eid:

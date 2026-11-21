@@ -56,6 +56,13 @@ Format: newest first. German version below each English block is a short summary
   **Wallbox-Liste „3x16 A“ richtig gelesen:** Ein Eintrag mit Phasen vorne („3x16 A“, „1x16 A“) wurde als 3 bzw. 1 A gelesen (die
   erste Zahl); jetzt zählt der Strom nach dem x. Stehen Einträge für eine und drei Phasen in einer Liste, wählt der Wächter beim
   Absenken den Eintrag mit der Phasenzahl des aktuellen, schaltet also nie die Phasen um.
+- **Note "Grid import: your sensor shows X, evcc shows Y" less touchy** (evcc with delayed cloud values, e.g. Anker): a
+  difference now counts only if evcc fits none of the sensor's values of the last five minutes (a delayed evcc shows what the
+  sensor showed a little earlier) and only if it lasts ten minutes (was two). The control is unchanged; it always works with
+  the own sensor. *Deutsch:* **Meldung „Netzbezug: Ihr Sensor zeigt X, evcc zeigt Y“ weniger empfindlich** (evcc mit
+  verzögerten Cloud-Werten, z. B. Anker): Eine Abweichung zählt jetzt nur, wenn evcc zu keinem Wert des Sensors aus den
+  letzten fünf Minuten passt (ein verzögertes evcc zeigt, was der Sensor kurz vorher zeigte), und nur, wenn sie zehn Minuten
+  anhält (bisher zwei). Die Regelung bleibt unverändert, sie arbeitet immer mit dem eigenen Sensor.
 
 ## 0.15.0 - 2026-11-21
 

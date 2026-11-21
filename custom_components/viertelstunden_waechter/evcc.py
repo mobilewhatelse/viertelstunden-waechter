@@ -194,3 +194,38 @@ def sources_differ(a_kw: float | None, b_kw: float | None) -> bool:
     a_kw, b_kw = max(0.0, a_kw), max(0.0, b_kw)
     diff = abs(a_kw - b_kw)
     return diff > SOURCES_DIFFER_ABS_KW and diff > SOURCES_DIFFER_REL * max(abs(a_kw), abs(b_kw))
+
+
+GRID_DIFFER_LAG_S = 300.0        # evcc may lag behind the sensor this long (evcc with cloud values, e.g. Anker, 0.15.1)
+GRID_DIFFER_AFTER_S = 600.0      # the grid import must differ this long before the note is written (was two minutes)
+
+
+class GridDiffer:
+    """Own sensor against the grid import of evcc. A difference counts only if evcc fits none of the sensor's values of the
+    last GRID_DIFFER_LAG_S (a delayed evcc shows what the sensor showed a few minutes ago: that is no difference), and only
+    if it lasts GRID_DIFFER_AFTER_S. `update` returns True once per episode, when the note is due."""
+
+    def __init__(self) -> None:
+        self.recent: list[tuple[Any, float]] = []
+        self.since: Any = None
+        self.differ = False
+        self.noted = False
+
+    def update(self, now: Any, sensor_kw: float | None, evcc_kw: float | None) -> bool:
+        if sensor_kw is not None:
+            self.recent.append((now, sensor_kw))
+        self.recent = [(t, v) for t, v in self.recent if (now - t).total_seconds() <= GRID_DIFFER_LAG_S]
+        apart = sensor_kw is not None and evcc_kw is not None and bool(self.recent) and all(
+            sources_differ(v, evcc_kw) for _t, v in self.recent)
+        if not apart:
+            self.since, self.differ, self.noted = None, False, False
+            return False
+        if self.since is None:
+            self.since = now
+        if (now - self.since).total_seconds() < GRID_DIFFER_AFTER_S:
+            return False
+        self.differ = True
+        if self.noted:
+            return False
+        self.noted = True
+        return True

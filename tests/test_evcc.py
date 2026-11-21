@@ -239,5 +239,61 @@ class GridSourceTest(unittest.TestCase):
             self.assertIsNone(parse_grid_kw(st))
 
 
+class GridDifferTest(unittest.TestCase):
+    """0.15.1 (case Anker: evcc with cloud values, delayed): the note 'your sensor shows X, evcc shows Y' only for a lasting
+    difference that no delay of evcc explains."""
+
+    @staticmethod
+    def _run(sensor, evcc, minutes, step_s=20):
+        """`sensor(t)`, `evcc(t)` in kW for t seconds; returns (seconds at which the note came or None, differ at the end)."""
+        from datetime import datetime, timedelta
+        w, t0, noted = _evcc.GridDiffer(), datetime(2026, 11, 21, 12, 0), None
+        for i in range(int(minutes * 60 / step_s) + 1):
+            s = i * step_s
+            if w.update(t0 + timedelta(seconds=s), sensor(s), evcc(s)) and noted is None:
+                noted = s
+        return noted, w.differ
+
+    @staticmethod
+    def _house(s):   # a house whose import changes every 4 minutes: 0.8, 6, 2.5, 9, 4 kW ...
+        return (0.8, 6.0, 2.5, 9.0, 4.0)[(s // 240) % 5]
+
+    def test_a_delayed_evcc_is_no_difference(self):
+        for lag in (60, 120, 180, 240):
+            noted, differ = self._run(self._house, lambda s, lag=lag: self._house(max(0, s - lag)), 120)
+            self.assertIsNone(noted, lag)
+            self.assertFalse(differ, lag)
+
+    def test_before_the_lag_tolerance_a_delay_of_two_minutes_was_noted(self):
+        # what the field saw with 0.15.0: two minutes of difference after every change were enough
+        house = lambda s: 1.0 if s < 600 else 6.0  # noqa: E731
+        old = (_evcc.GRID_DIFFER_LAG_S, _evcc.GRID_DIFFER_AFTER_S)
+        _evcc.GRID_DIFFER_LAG_S, _evcc.GRID_DIFFER_AFTER_S = 0.0, 120.0
+        try:
+            noted, _ = self._run(house, lambda s: house(max(0, s - 180)), 30)
+        finally:
+            _evcc.GRID_DIFFER_LAG_S, _evcc.GRID_DIFFER_AFTER_S = old
+        self.assertIsNotNone(noted)
+
+    def test_a_lasting_difference_is_still_noted_once(self):
+        # the sensor sees only one phase: always a third of what evcc shows
+        noted, differ = self._run(lambda s: self._house(s) / 3.0, self._house, 60)
+        self.assertIsNotNone(noted)
+        self.assertGreaterEqual(noted, _evcc.GRID_DIFFER_AFTER_S)
+        self.assertTrue(differ)
+
+    def test_a_short_difference_is_not_noted(self):
+        noted, differ = self._run(lambda s: 2.0, lambda s: 5.0 if 300 <= s < 780 else 2.0, 30)
+        self.assertIsNone(noted)
+        self.assertFalse(differ)
+
+    def test_a_missing_value_is_no_difference(self):
+        noted, differ = self._run(lambda s: None, lambda s: 5.0, 30)
+        self.assertIsNone(noted)
+        noted, differ = self._run(lambda s: 2.0, lambda s: None, 30)
+        self.assertIsNone(noted)
+        self.assertFalse(differ)
+
+
 if __name__ == "__main__":
     unittest.main()
