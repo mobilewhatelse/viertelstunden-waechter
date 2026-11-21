@@ -335,7 +335,12 @@
         "name": "Savings this year (estimate)"
       },
       "forecast_now": {
-        "name": "Typical import now (forecast)"
+        "name": "Typical import now (forecast)",
+        "state_attributes": {
+          "protocol_days": {
+            "name": "Forecast log (days, stays local)"
+          }
+        }
       },
       "forecast_peak": {
         "name": "Expected peak in 24 h (forecast)"

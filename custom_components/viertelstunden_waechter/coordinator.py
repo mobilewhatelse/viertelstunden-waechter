@@ -28,6 +28,7 @@ from .const import (
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
 from .const import D_ART, D_BATTERY_POWER, D_MAX_CURRENT
 from . import geraete_check as gc
+from . import protokoll as pr
 from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, choose_grid, parse_grid_kw, parse_loadpoint, sources_differ, target_ceiling,
                    virtual_current)
 from .explain import build_instructions, extract_text, plain_summary
@@ -215,6 +216,14 @@ class Waechter:
         # the first check after a start comes 5 to 60 minutes later (spreads the requests of all installations)
         import random
         self._check_next: datetime = dt_util.now() + timedelta(minutes=random.uniform(5, 60))
+        # local log (0.15.1): forecast against result per quarter hour and the starts of devices; stays here, never sent
+        self.protokoll = pr.Protokoll()
+        self.anlauf = pr.Anlauf(float(self.cfg.get(CONF_VOLTAGE, 230.0)))
+        self._proto_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.protokoll")          # all days, about once a day
+        self._proto_recent_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.protokoll_neu")  # last days, every 15 min
+        self._proto_dirty = False
+        self._proto_saved: datetime | None = None
+        self._proto_failed = False
         self._model_store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.model")
         self._store: Store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self._unsub = None
@@ -252,6 +261,11 @@ class Waechter:
         self.check = gc.DeviceCheck.from_dict(await self._check_store.async_load(), float(self.cfg.get(CONF_VOLTAGE, 230.0)))
         self.check.forget(set(self.raw_devices))
         self._check_synced = False   # the repairs of stored warnings only after the first cycle knows sharing and consent
+        try:
+            self.protokoll = pr.Protokoll.from_store(await self._proto_store.async_load(), await self._proto_recent_store.async_load())
+        except Exception:  # noqa: BLE001 - an unreadable log must never stop the guard: it starts again empty
+            _LOGGER.exception("Local log not readable, starting a new one")
+            self.protokoll = pr.Protokoll()
         self.explanation = data.get("explanation", {})
         self._ai_calls = data.get("ai_calls", {})
         self._usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
@@ -302,6 +316,9 @@ class Waechter:
         await self._quarters_store.async_save({"rows": self.quarters})
         await self._model_store.async_save(self._model_data())
         await self._check_store.async_save(self.check.to_dict())
+        await self._proto_recent_store.async_save(self.protokoll.recent_data())
+        if self.protokoll.archive_due():
+            await self._proto_store.async_save(self.protokoll.archive_data())
 
     async def async_set_mode(self, mode: str) -> None:
         self.mode = mode
@@ -714,6 +731,7 @@ class Waechter:
                 self.last_quarter_kw = None   # began with a guess (the guard started in its middle): no peak, nothing learned
             elif self.guard.finished_quarter_kw is not None:
                 self._quarter_done(self.guard.finished_quarter_kw, self.guard.finished_unguarded_kw, now)
+            self._protokoll_step(now, readings, grid is not None)
             self._maybe_bootstrap()
             self._update_forecast(now)
             await self._update_plan(now)
@@ -724,6 +742,51 @@ class Waechter:
             self.status = self._status(locked, needed)
             self._store.async_delay_save(self._data, 10)
         async_dispatcher_send(self.hass, self.signal)
+
+    def _protokoll_step(self, now: datetime, readings: dict[str, Reading], has_grid: bool) -> None:
+        """Local log (0.15.1, protokoll.py): only written down here, it changes nothing in the control and is never sent.
+        Saved bundled: the small store at most every 15 minutes, the big one when a day is done (and when the guard stops)."""
+        try:
+            p, g = self.protokoll, self.guard
+            changed = p.close_stale(now)
+            if g.finished_quarter_kw is not None and g.quarter is not None:
+                changed = p.quarter_end(g.quarter - timedelta(minutes=15), g.finished_quarter_kw, g.finished_estimated) or changed
+            q = g.values.get("quarter")
+            if q is not None and has_grid and g.state != "no_data":
+                typ = hoch = h_typ = h_hoch = None
+                if p.needs_forecast(q):
+                    f = self.forecast.get("now") or {}
+                    if f.get("t") == q:   # the forecast is worked out every 5 minutes: wait until it is the one of this quarter hour
+                        typ, hoch = f.get("typical"), f.get("high")
+                    if self.forecast_enabled:
+                        a = self._wx_args()
+                        house = self.model.predict(q, a["temp_at"](q) if a else None, a.get("curve"))
+                        if house is not None:
+                            h_typ, h_hoch = house[0], house[1]
+                p.quarter_tick(now, q, g.values.get("forecast_kw"), typ, hoch, h_typ, h_hoch,
+                               eingriff=self.executing and bool(g.interventions), geschaetzt=g.quarter_estimated)
+            for dev_id, r in readings.items():
+                d = self.raw_devices.get(dev_id, {})
+                kind = d.get(D_KIND)
+                if kind not in pr.RUN_KINDS:
+                    continue
+                st = self._state(d.get(D_POWER)) if d.get(D_POWER) else None
+                run = self.anlauf.sample(dev_id, str(kind), now, r.power_w, r.current_a, r.phases,
+                                         self.executing and dev_id in g.interventions, st.last_changed if st is not None else None,
+                                         r.power_gap_s)
+                if run is not None:
+                    p.add_run(dev_id, run)
+                    changed = True
+            self._proto_dirty = self._proto_dirty or changed
+            if self._proto_dirty and (self._proto_saved is None or now - self._proto_saved >= timedelta(minutes=15)):
+                self._proto_saved, self._proto_dirty = now, False
+                self._proto_recent_store.async_delay_save(p.recent_data, 1)
+                if p.archive_due():
+                    self._proto_store.async_delay_save(p.archive_data, 5)
+        except Exception:  # noqa: BLE001 - the local log must never stop the guard (said once, not every cycle)
+            if not self._proto_failed:
+                self._proto_failed = True
+                _LOGGER.exception("Local log: writing failed")
 
     def _status(self, locked: bool, needed: bool) -> str:
         if self.mode == MODE_OFF:
@@ -1309,6 +1372,7 @@ class Waechter:
             "netzsensor": ent_text(self.cfg[CONF_GRID_POWER]) if self.cfg.get(CONF_GRID_POWER) else None,
             "prognose": bool(self.forecast_enabled), "vorausschauend": bool(self.predictive), "akku_reserve": bool(self.battery_reserve),
             "ladeplan": (self.plan or {}).get("status"), "ladeplan_ausfuehren": bool(self.plan_execute),
+            "protokoll_tage": self.protokoll.days_count(),   # only how many days: the rows (times of day, load) stay local
         }
         verlauf = []
         for x in self.log[:fb.MAX_LINES]:

@@ -335,7 +335,12 @@
         "name": "Ersparnis dieses Jahr (Schätzung)"
       },
       "forecast_now": {
-        "name": "Typischer Bezug jetzt (Prognose)"
+        "name": "Typischer Bezug jetzt (Prognose)",
+        "state_attributes": {
+          "protocol_days": {
+            "name": "Prognose-Protokoll (Tage, bleibt lokal)"
+          }
+        }
       },
       "forecast_peak": {
         "name": "Erwartete Spitze in 24 h (Prognose)"

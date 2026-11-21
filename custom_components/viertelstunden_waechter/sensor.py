@@ -220,7 +220,8 @@ class ForecastNowSensor(WaechterEntity, SensorEntity):
         now = f.get("now") or {}
         return {"high_kw": now.get("high"), "samples_here": now.get("n"), "samples_total": f.get("samples"),
                 "learned_slots": f.get("slots"), "history_read": self.waechter._bootstrapped,
-                "profile": f.get("profile", []), "weather": f.get("weather", {}), "car_plan": f.get("car_plan", {})}
+                "profile": f.get("profile", []), "weather": f.get("weather", {}), "car_plan": f.get("car_plan", {}),
+                "protocol_days": self.waechter.protokoll.days_count()}
 
 
 class ForecastPeakSensor(WaechterEntity, SensorEntity):

@@ -23,4 +23,5 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: Waechte
         "month_peak": w.month_peak,
         "day_peaks": w.day_peaks,
         "log": w.log[:50],
+        "protocol_days": w.protokoll.days_count(),   # the local log itself is not part of the diagnostics
     }

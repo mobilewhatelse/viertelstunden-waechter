@@ -2,6 +2,38 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.15.1 - unreleased
+
+- **Local forecast log (stays in your Home Assistant, nothing is sent):** per quarter hour the guard now writes down what its
+  *Quarter-hour forecast* said after 1, 3, 5 and 10 minutes, *typical* and *high* of the load forecast (with the car plan, and
+  for the house alone), the end value of the quarter hour and whether the guard reduced a device or the value was estimated.
+  Kept for 400 days in a compact form (about 1.5 MB for a full year); written at most every 15 minutes, the large part about
+  once a day. It is the ground for checking the forecast later and for a proposal of the safety margin; it cannot be collected
+  afterwards. The control, the limits and the forecast itself are unchanged. The bug report and the diagnostics only say how
+  many days the log holds. The statistics page shows a line *Forecast log: N days* (create the dashboard again).
+  *Deutsch:* **Lokales Prognose-Protokoll (bleibt in Ihrem Home Assistant, nichts wird gesendet):** Je Viertelstunde schreibt
+  der Wächter mit, was die *Prognose Viertelstunde* nach 1, 3, 5 und 10 Minuten sagte, *typisch* und *hoch* der Lastprognose
+  (mit Auto-Plan und für das Haus allein), den Endwert der Viertelstunde und ob der Wächter eingegriffen hat oder der Wert
+  geschätzt war. 400 Tage, kompakt (etwa 1,5 MB für ein ganzes Jahr), gespeichert höchstens alle 15 Minuten, der große Teil etwa
+  einmal am Tag. Grundlage, um die Prognose später zu prüfen und einen Sicherheitsabstand vorzuschlagen; nicht nachholbar.
+  Regelung, Grenzen und Prognose selbst bleiben unverändert. Fehlerbericht und Diagnose nennen nur die Zahl der Tage. Die Seite
+  *Statistik und Prognose* zeigt eine Zeile *Prognose-Protokoll: N Tage* (Dashboard neu erstellen).
+- **Local start log (only written down, nothing is switched):** per run of a switchable device, a heat pump (*Change
+  setting*) or a wallbox: the highest power in the first three minutes, the steady power, the seconds until it stays steady and
+  at a wallbox the seconds until it reaches what the current setting allows. Same rules as the forecast log (400 days, local,
+  not in the bug report). Ground for a later *block a device before it starts* (issue #5), which is not part of this version.
+  With a power sensor that reports only every 30 seconds or more the start is marked as coarse. *Deutsch:* **Lokales
+  Anlauf-Protokoll (nur Mitschreiben, es wird nichts geschaltet):** je Lauf eines schaltbaren Geräts, einer Wärmepumpe
+  (*Einstellung ändern*) oder einer Wallbox: die höchste Leistung in den ersten drei Minuten, die Dauerleistung, die Sekunden
+  bis stabil und bei der Wallbox die Sekunden bis zur Vorgabe des eingestellten Stroms. Gleiche Regeln wie beim
+  Prognose-Protokoll (400 Tage, lokal, nicht im Fehlerbericht). Grundlage für das spätere vorsorgliche Sperren vor dem Anlauf
+  (Issue #5), das nicht Teil dieser Version ist. Meldet der Leistungssensor nur alle 30 Sekunden oder seltener, ist der Anlauf als
+  grob markiert.
+- **Same feedback module as Plugwhen:** `rueckmeldung.py` now holds the functions of both integrations under the same names
+  (`katalog_fassung`, `katalog_fehlt` next to `katalog`, `zustimmung_merken`); nothing changes in what is sent or when.
+  *Deutsch:* Gleiches Rückmeldungs-Modul wie Plugwhen: `rueckmeldung.py` enthält die Funktionen beider Integrationen unter
+  denselben Namen; an dem, was wann gesendet wird, ändert sich nichts.
+
 ## 0.15.0 - 2026-11-21
 
 - **After the update: create the dashboard again** (action `create_dashboard`). New in the dashboard: the card *Goes well with: Plugwhen*, the settings as full-width tiles, no template error after a restart. Without it the old dashboard stays as it is. *Deutsch:* **Nach dem Update das Dashboard neu erstellen** (Aktion `create_dashboard`). Neu im Dashboard: die Karte *Passt dazu: Plugwhen*, die Einstellungen als Kacheln über die ganze Breite, kein Template-Fehler nach einem Neustart. Ohne das bleibt das alte Dashboard, wie es ist.

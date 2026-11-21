@@ -87,6 +87,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "planned_word": "Geplant", "not_needed": "Es muss nichts geladen werden.",
         "from_sun": "davon Sonne/verfügbar", "car_plan": "Auto-Plan in der Prognose", "car_plan_windows": "Ladefenster", "until": "bis",
         "car_plan_off": "nicht verbunden", "car_plan_unused": "verbunden, derzeit ohne gültigen Plan",
+        "protocol": "Prognose-Protokoll (bleibt in Ihrem Home Assistant)", "protocol_days": "Tage",
     },
     "en": {
         "view_main": "Guard", "view_stats": "Statistics and forecast",
@@ -160,6 +161,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "planned_word": "Planned", "not_needed": "Nothing needs to be charged.",
         "from_sun": "of it sun/available", "car_plan": "Car plan in the forecast", "car_plan_windows": "charging windows", "until": "until",
         "car_plan_off": "not connected", "car_plan_unused": "connected, no valid plan right now",
+        "protocol": "Forecast log (stays in your Home Assistant)", "protocol_days": "days",
     },
 }
 
@@ -350,6 +352,9 @@ def _next_risk_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{{ a.strftime('%H:%M') }}–{{ e.strftime('%H:%M') }}, " + x["risk_up_to"] + " "
         "{{ '%.1f' | format(state_attr(s, 'high_kw') | float(0)) }} kW"
         "{% else %}**" + x["next_risk"] + ":** " + x["risk_none"] + "{% endif %}"
+        # 0.15.1: how many days the local forecast log holds (nothing shown before the first day or while the sensor is away)
+        "{% set n = state_attr('" + ids["forecast_now"] + "', 'protocol_days') | int(0) %}"
+        "{% if n > 0 %}\n\n*" + x["protocol"] + ": {{ n }} " + x["protocol_days"] + "*{% endif %}"
     )
 
 
