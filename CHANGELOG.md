@@ -33,6 +33,29 @@ Format: newest first. German version below each English block is a short summary
   (`katalog_fassung`, `katalog_fehlt` next to `katalog`, `zustimmung_merken`); nothing changes in what is sent or when.
   *Deutsch:* Gleiches Rückmeldungs-Modul wie Plugwhen: `rueckmeldung.py` enthält die Funktionen beider Integrationen unter
   denselben Namen; an dem, was wann gesendet wird, ändert sich nichts.
+- **A counter that reports only every 20 to 30 minutes is no outage:** since 0.15.0 a step of the import counter after more
+  than 20 minutes of silence was taken for the backlog of an outage (issue #4), and the quarter hour counted as estimated. With
+  a cloud counter that always reports so rarely nearly every quarter hour was estimated, did not count as a peak, and the real
+  peaks were too low. The guard now learns the usual interval of the counter (median of the last gaps, as with the power
+  sensor) and takes a step for a backlog only after a gap clearly longer than that (2.5 times, at least 20 minutes); while the
+  interval is not known yet, only if the power sensor had no value in the gap either. A normal step that began in the quarter
+  hour before is shared by time: only the part after the quarter start counts for the running one. The outage of issue #4
+  (counter 2628.5 kWh at 02:00, 2632.9 kWh at 06:15, no power value in between) stays no peak. *Deutsch:* **Ein Zähler, der nur
+  alle 20 bis 30 Minuten meldet, ist kein Ausfall:** Seit 0.15.0 galt ein Schritt des Bezugszählers nach mehr als 20 Minuten
+  Stille als Nachholen nach einem Ausfall (Issue #4), die Viertelstunde als geschätzt. Bei einem Cloud-Zähler, der immer so
+  selten meldet, war damit fast jede Viertelstunde geschätzt, zählte nicht als Spitze, und die echten Spitzen erschienen zu
+  niedrig. Der Wächter lernt jetzt den üblichen Abstand der Zählerwerte (Median der letzten Abstände, wie beim
+  Leistungssensor) und hält einen Schritt nur nach einer Lücke deutlich darüber (das 2,5-Fache, mindestens 20 Minuten) für
+  Nachholen; solange der Abstand noch nicht bekannt ist, nur wenn auch der Leistungssensor in der Lücke nichts geliefert hat.
+  Ein normaler Schritt, der in der Viertelstunde davor begann, wird nach der Zeit geteilt: nur der Teil nach dem
+  Viertelstundenbeginn zählt für die laufende. Der Ausfall aus Issue #4 (Zähler 2628,5 kWh um 2:00, 2632,9 kWh um 6:15, kein
+  Leistungswert dazwischen) bleibt keine Spitze.
+- **Wallbox list "3x16 A" read right:** an entry with the phases in front ("3x16 A", "1x16 A") was read as 3 or 1 A (the first
+  number); now the current after the x counts. With entries for one and three phases in one list the guard picks, when it
+  lowers the current, the entry with the phase count of the present one, so it never switches the phases. *Deutsch:*
+  **Wallbox-Liste „3x16 A“ richtig gelesen:** Ein Eintrag mit Phasen vorne („3x16 A“, „1x16 A“) wurde als 3 bzw. 1 A gelesen (die
+  erste Zahl); jetzt zählt der Strom nach dem x. Stehen Einträge für eine und drei Phasen in einer Liste, wählt der Wächter beim
+  Absenken den Eintrag mit der Phasenzahl des aktuellen, schaltet also nie die Phasen um.
 
 ## 0.15.0 - 2026-11-21
 
