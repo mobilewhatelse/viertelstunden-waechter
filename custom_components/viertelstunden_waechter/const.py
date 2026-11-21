@@ -97,6 +97,7 @@ D_ART = "device_type"                     # optional: heat pump, water heater, p
 D_START_KW = "start_kw"                   # power of the device at its start (kW)
 D_START_MAX = "start_max_min"             # a precautionary lock never lasts longer than this (min, default 30)
 D_START_GAP = "start_gap_min"             # at least this long between two changes of the device (min, default 3)
+D_START_DAY = "start_day_h"               # at most this many hours locked per calendar day (h, default 4, 0 = no daily limit)
 D_RUNNING = "running_entity"              # optional: on = the device runs (else its power sensor against min_power_w)
 PRECAUTION_ENTITIES = (D_POWER, D_RUNNING)  # entities of a setting device that only the precautionary lock uses
 

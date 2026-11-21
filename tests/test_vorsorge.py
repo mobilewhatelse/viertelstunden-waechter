@@ -65,7 +65,8 @@ class PrecautionTests(unittest.TestCase):
         self.assertLess(locks[0][0], 1.0, "locked right away")
         self.assertIn("Vorsorgliche Sperre: Wärmepumpe gesperrt (Spielraum 2.0 kW, Anlauf 5.0 kW)", locks[0][1].text)
         self.assertEqual(len(frees), 1, texts(log))
-        self.assertTrue(10.0 <= frees[0][0] <= 11.5, frees[0][0])
+        # 2 kW from minute 10: the 60-s average needs about a minute, then the headroom must hold 120 s (as the normal control)
+        self.assertTrue(12.0 <= frees[0][0] <= 13.5, frees[0][0])
         self.assertIn("freigegeben (Spielraum 5.5 kW)", frees[0][1].text)
         self.assertFalse(pump.locked)
         self.assertFalse(guard.interventions, "the normal control is not involved")
@@ -103,6 +104,73 @@ class PrecautionTests(unittest.TestCase):
         locks = [t for t, a in log if a.kind == "battery_release"]
         self.assertEqual(len(locks), 1, texts(log))
         self.assertGreaterEqual(locks[0], 3.0 - 1 / 3 - 0.01, "locked again only 3 minutes after the release")
+
+    def test_released_only_after_120_s_of_lasting_headroom(self):
+        guard, pump = engine.Guard([hp(start_gap_min=0)]), Pump()
+        # room for 1 min 40 s (minute 5 to 6:40 after the average follows), then the house is up again for a minute: no release
+        house = lambda t: 2.0 if 4.0 <= t < 6.67 else 5.5 if t < 10 else 2.0
+        log = drive(guard, pump, house, 16)
+        frees = [t for t, a in log if a.kind == "battery_restore"]
+        self.assertEqual(len(frees), 1, texts(log))
+        self.assertGreaterEqual(frees[0], 12.0, "the short room before was not enough")
+        ok_at = 10.0 + 1.0   # about when the 60-s average shows the room
+        self.assertGreaterEqual(frees[0] - ok_at, 1.9)
+
+    def test_daily_limit_and_a_new_day_at_midnight(self):
+        guard, pump = engine.Guard([hp(start_max_min=240, start_day_h=1)]), Pump()
+        log = drive(guard, pump, lambda t: 5.5, 7.5 * 60)   # 17:00 to 00:30
+        locks = [t for t, a in log if a.kind == "battery_release"]
+        frees = [(t, a) for t, a in log if a.kind == "battery_restore"]
+        self.assertEqual(frees[0][0], 60.0, texts(log)[:5])
+        self.assertIn("Tagesgrenze (1 h) erreicht, heute keine weitere vorsorgliche Sperre", frees[0][1].text)
+        self.assertEqual(sum("Tagesgrenze" in x for x in texts(log)), 1, "said once")
+        self.assertEqual(len(locks), 2, "no further lock until the next day")
+        self.assertEqual(locks[1], 7 * 60.0, "the new day begins at midnight")
+
+    def test_a_lock_over_midnight_counts_for_each_day_its_part(self):
+        start = START.replace(hour=23, minute=40)
+        guard, pump = engine.Guard([hp(start_max_min=240, start_day_h=1)]), Pump()
+        log = drive(guard, pump, lambda t: 5.5, 90, start=start)
+        frees = [t for t, a in log if a.kind == "battery_restore"]
+        self.assertEqual(frees[0], 80.0, "01:00: one hour of the new day, the 20 minutes before midnight count for the old one")
+        self.assertAlmostEqual(guard.day_state()["hp"]["s"], 3600.0, delta=20)
+
+    def test_daily_sum_survives_a_restart(self):
+        guard, pump = engine.Guard([hp(start_max_min=240, start_day_h=1)]), Pump()
+        drive(guard, pump, lambda t: 5.5, 40)
+        guard.release_all(START + timedelta(minutes=40), {"hp": pump.reading()}, "Neustart")
+        pump.apply([engine.Action("hp", "battery_restore")])
+        saved = guard.day_state()
+        self.assertAlmostEqual(saved["hp"]["s"], 40 * 60, delta=20)
+        fresh = engine.Guard([hp(start_max_min=240, start_day_h=1)])
+        fresh.load_day(saved)
+        fresh.forget()   # as at the start of the coordinator: the day goes on counting
+        log = drive(fresh, pump, lambda t: 5.5, 30, start=START + timedelta(minutes=41))
+        frees = [t for t, a in log if a.kind == "battery_restore"]
+        self.assertTrue(19.0 <= frees[0] <= 21.0, frees)
+        self.assertTrue(any("Tagesgrenze" in x for x in texts(log)))
+
+    def test_daily_limit_field_default_and_off(self):
+        f = engine.DeviceConfig.from_dict
+        base = {"id": "hp", "kind": "setting"}
+        self.assertEqual(f(base).start_day_h, 4.0)
+        self.assertEqual(f({**base, "start_day_h": 0}).start_day_h, 0.0)
+        self.assertEqual(f({**base, "start_day_h": 30}).start_day_h, 24.0)
+        guard, pump = engine.Guard([hp(start_max_min=240, start_day_h=0)]), Pump()
+        log = drive(guard, pump, lambda t: 5.5, 200)
+        self.assertEqual([t for t, a in log if a.kind == "battery_restore"], [], "0 = no daily limit (the maximum duration holds)")
+        self.assertFalse(any("Tagesgrenze" in x for x in texts(log)))
+        self.assertEqual(engine.Guard([hp()]).day_state(), {}, "nothing to store without a lock")
+
+    def test_observed_locks_never_limit_the_real_ones(self):
+        guard, pump = engine.Guard([hp(start_max_min=240, start_day_h=1)]), Pump()
+        guard.real_effect = False
+        drive(guard, pump, lambda t: 5.5, 70)
+        self.assertEqual(guard.day_state(), {}, "observed time is not stored")
+        guard.forget()
+        guard.real_effect = True
+        log = drive(guard, pump, lambda t: 5.5, 2, start=START + timedelta(minutes=71))
+        self.assertTrue(any(a.kind == "battery_release" for _, a in log))
 
     def test_a_running_pump_is_never_locked_in_advance(self):
         guard, pump = engine.Guard([hp()]), Pump(wants=True)
@@ -266,7 +334,10 @@ class CoordinatorTests(unittest.TestCase):
         self.assertIn("'precaution': data.get('precaution') or {}", start)
         self.assertIn("release_all", start)
         self.assertIn("self.guard.interventions or self.guard.precaution", ast.unparse(_coordinator_method("async_stop")))
+        self.assertIn("self.guard.load_day(data.get('precaution_day'))", start)
+        self.assertLess(start.index("self.guard.forget()"), start.index("load_day"), "loaded after forget, else it would be lost")
         data = ast.unparse(_coordinator_method("_data"))
+        self.assertIn("'precaution_day': day", data)
         self.assertIn("if self.executing and self.guard.precaution else {}", data)
 
     def test_nothing_new_is_sent(self):
@@ -314,7 +385,7 @@ class ConfigFlowTests(unittest.TestCase):
         node.returns = None
         node.args.args[0].annotation = None
         ns = {"D_START_KW": "start_kw", "D_POWER": "power_entity", "D_RUNNING": "running_entity",
-              "D_RESTORE_ORIG": "restore_original", "D_OFF_SCRIPT": "off_script"}
+              "D_RESTORE_ORIG": "restore_original", "D_OFF_SCRIPT": "off_script", "D_START_DAY": "start_day_h"}
         exec(compile(ast.Module(body=[node], type_ignores=[]), "config_flow.py", "exec"), ns)  # noqa: S102
         return ns["_precaution_errors"], pkg
 
@@ -322,6 +393,9 @@ class ConfigFlowTests(unittest.TestCase):
         import json
         fn, pkg = self._fn()
         self.assertEqual(fn({"start_kw": 0}), {})
+        self.assertEqual(fn({"start_kw": 0, "start_day_h": 25}), {"start_day_h": "start_day_range"})
+        self.assertEqual(fn({"start_kw": 0, "start_day_h": -1}), {"start_day_h": "start_day_range"})
+        self.assertEqual(fn({"start_kw": 5, "power_entity": "sensor.wp", "start_day_h": 0}), {}, "0 = no daily limit")
         self.assertEqual(fn({"start_kw": 5}), {"start_kw": "start_needs_sensor"})
         self.assertEqual(fn({"start_kw": 5, "power_entity": "sensor.wp"}), {})
         self.assertEqual(fn({"start_kw": 5, "running_entity": "binary_sensor.wp", "restore_original": False}),
@@ -330,11 +404,12 @@ class ConfigFlowTests(unittest.TestCase):
         for f in ("strings.json", "translations/de.json", "translations/en.json"):
             s = json.loads((pkg / f).read_text(encoding="utf-8"))["config_subentries"]["setting"]
             for step in ("user", "reconfigure"):
-                for key in ("start_kw", "power_entity", "power_invert", "min_power_w", "running_entity", "start_max_min", "start_gap_min"):
+                for key in ("start_kw", "power_entity", "power_invert", "min_power_w", "running_entity", "start_max_min", "start_gap_min", "start_day_h"):
                     self.assertIn(key, s["step"][step]["data"], (f, step, key))
                     self.assertIn(key, s["step"][step]["data_description"], (f, step, key))
             self.assertIn("start_needs_sensor", s["error"])
             self.assertIn("start_needs_restore", s["error"])
+            self.assertIn("start_day_range", s["error"])
             other = json.loads((pkg / f).read_text(encoding="utf-8"))["config_subentries"]["switch"]["step"]["user"]["data"]
             self.assertNotIn("start_kw", other, "only at the kind change a setting for now")
 

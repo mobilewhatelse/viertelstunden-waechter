@@ -76,6 +76,8 @@ PC_MAX_MIN = 30.0             # a precautionary lock never lasts longer than thi
 PC_GAP_MIN = 3.0              # at least this long between two changes of the same device (lock, release; compressor protection)
 PC_HYST_KW = 0.2              # released only with this much more headroom than the start needs (no flapping at the border)
 PC_VERIFY_S = 90              # a lock that does not show in the readings after this long is given up (setting did not change)
+PC_DAY_H = 4.0                # at most this many hours of precautionary lock per calendar day and device (0 = no daily limit)
+PC_OBSERVED = "~beobachtet"   # key suffix of the daily sum of locks that were only observed (not stored, never limits real ones)
 
 
 def plausible_kw(limit_kw: float | None) -> float:
@@ -111,6 +113,7 @@ class DeviceConfig:
     start_kw: float = 0.0         # precautionary lock (draft): power at the start in kW; 0 = off (the behaviour of before)
     start_max_min: float = PC_MAX_MIN  # ... never locked longer than this
     start_gap_min: float = PC_GAP_MIN  # ... at least this long between two of its changes
+    start_day_h: float = PC_DAY_H      # ... at most this many hours locked per calendar day (0 = no daily limit)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -135,6 +138,7 @@ class DeviceConfig:
             start_kw=max(0.0, float(d.get("start_kw") or 0.0)),
             start_max_min=max(1.0, float(d.get("start_max_min") or PC_MAX_MIN)),
             start_gap_min=max(0.0, float(d.get("start_gap_min", PC_GAP_MIN) or 0.0)),
+            start_day_h=min(24.0, max(0.0, float(PC_DAY_H if d.get("start_day_h") is None else d["start_day_h"]))),
         )
 
 
@@ -306,8 +310,27 @@ class Guard:
         self._pc_last: dict[str, datetime] = {}           # last change of the device by the guard (lock or release, both logics)
         self._pc_rest: dict[str, datetime] = {}           # no new precautionary lock before this (after the maximum time)
         self._pc_noted: set[str] = set()                  # notes said once per device (no sensor to tell whether it runs)
+        self._pc_ok: dict[str, datetime] = {}             # since when the headroom for the start holds (release after 120 s)
+        # daily limit: key -> {"day": "YYYY-MM-DD", "s": seconds locked that day, "noted": bool}; the real ones survive a restart
+        self._pc_day: dict[str, dict[str, Any]] = {}
+        self._pc_at: dict[str, datetime] = {}             # when the daily sum was last counted up (only while locked)
 
     # ---------- persistence ----------
+
+    def day_state(self) -> dict[str, Any]:
+        """The daily sums of the precautionary locks that were really carried out (empty without any): saved like the marker."""
+        return {k: dict(v) for k, v in self._pc_day.items() if not k.endswith(PC_OBSERVED) and v.get("s")}
+
+    def load_day(self, d: Any) -> None:
+        """The daily sums from before a restart (a sum of another day is reset by the first count of the new day)."""
+        if not isinstance(d, dict):
+            return
+        for k, v in d.items():
+            if k in self.devices and isinstance(v, dict) and isinstance(v.get("day"), str):
+                try:
+                    self._pc_day[k] = {"day": v["day"], "s": max(0.0, float(v.get("s") or 0.0)), "noted": bool(v.get("noted"))}
+                except (TypeError, ValueError):
+                    continue
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {"interventions": self.interventions}
@@ -545,14 +568,44 @@ class Guard:
         shadow = not self.real_effect or dev.observe_only
         self.precaution[dev.id] = {"since": now.isoformat(), "room": round(room, 2), "shadow": shadow}
         self._pc_last[dev.id] = now
+        self._pc_at[self._pc_key(dev.id, shadow)] = now   # the daily sum counts from here
         text = self.t("pc_would_lock" if shadow else "pc_lock", name=dev.name, room=max(0.0, room), kw=dev.start_kw)
         # extension point: KIND_SETTING locks with the release values of its settings (the same command as the normal control,
         # so the value for "locked" is the one of the device setting); a switch would be "turn_off", a throttle "set_value"
         return Action(dev.id, "log" if shadow else "battery_release", None, text, False)
 
+    @staticmethod
+    def _pc_key(dev_id: str, shadow: bool) -> str:
+        return dev_id + PC_OBSERVED if shadow else dev_id
+
+    def _pc_today(self, dev_id: str, shadow: bool, now: datetime) -> dict[str, Any]:
+        """The daily sum of this device for the calendar day of `now` (a sum of another day starts again at 0)."""
+        key, day = self._pc_key(dev_id, shadow), now.strftime("%Y-%m-%d")
+        b = self._pc_day.get(key)
+        if b is None or b.get("day") != day:
+            b = self._pc_day[key] = {"day": day, "s": 0.0, "noted": False}
+        return b
+
+    def _pc_count(self, dev_id: str, shadow: bool, now: datetime) -> dict[str, Any]:
+        """Count the time locked since the last count into the sum of today (at most one minute per count: a gap in the cycles,
+        e.g. Home Assistant was busy, is not counted as locked time). At midnight the new day begins with what came after it."""
+        key = self._pc_key(dev_id, shadow)
+        at = self._pc_at.get(key)
+        if at is not None and at.date() != now.date():
+            at = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        b = self._pc_today(dev_id, shadow, now)
+        if at is not None:
+            b["s"] += max(0.0, min(60.0, (now - at).total_seconds()))
+        self._pc_at[key] = now
+        return b
+
     def _pc_free(self, dev: DeviceConfig, now: datetime, text: str) -> Action:
         st = self.precaution.pop(dev.id, None) or {}
         self._pc_last[dev.id] = now
+        self._pc_ok.pop(dev.id, None)
+        if st:
+            self._pc_count(dev.id, bool(st.get("shadow")), now)
+            self._pc_at.pop(self._pc_key(dev.id, bool(st.get("shadow"))), None)
         if st.get("shadow"):
             return Action(dev.id, "log", None, text, False)
         # battery_restore puts back only the settings that still hold the release value (coordinator: _battery_restore), so a
@@ -599,6 +652,9 @@ class Guard:
             return None
         if _secs(self._pc_last.get(dev.id), now) < dev.start_gap_min * 60:
             return None
+        shadow = not self.real_effect or dev.observe_only
+        if dev.start_day_h > 0 and self._pc_today(dev.id, shadow, now)["s"] >= dev.start_day_h * 3600:
+            return None   # daily limit reached: no further precautionary lock until the next day (said once, when reached)
         return self._pc_lock(dev, room, now)
 
     def _pc_held(self, dev: DeviceConfig, r: Reading | None, st: dict[str, Any], room: float, now: datetime) -> Action | None:
@@ -612,8 +668,17 @@ class Guard:
         if age >= dev.start_max_min * 60:
             self._pc_rest[dev.id] = now + timedelta(minutes=dev.start_max_min)
             return self._pc_free(dev, now, self.t("pc_max", name=dev.name, min=dev.start_max_min))
+        day = self._pc_count(dev.id, shadow, now)
+        if dev.start_day_h > 0 and day["s"] >= dev.start_day_h * 3600:
+            noted, day["noted"] = day["noted"], True
+            act = self._pc_free(dev, now, self.t("pc_day", name=dev.name, h=dev.start_day_h))
+            if noted:   # the note only once a day (e.g. reached again after a restart): freed all the same
+                act.text = self.t("pc_back", name=dev.name)
+            return act
         if dev.id in self.interventions:   # the normal control holds it now: its release puts the settings back
             self.precaution.pop(dev.id, None)
+            self._pc_at.pop(self._pc_key(dev.id, shadow), None)
+            self._pc_ok.pop(dev.id, None)
             return None
         if r is None or not r.available:
             return None   # keep, the maximum time still holds
@@ -627,7 +692,12 @@ class Guard:
         if not shadow and r.releasable and age >= PC_VERIFY_S:
             self._pc_rest[dev.id] = now + timedelta(minutes=MISS_REST_MIN)
             return self._pc_free(dev, now, self.t("pc_not_followed", name=dev.name, min=MISS_REST_MIN))
-        if room >= dev.start_kw + PC_HYST_KW and _secs(self._pc_last.get(dev.id), now) >= dev.start_gap_min * 60:
+        if room < dev.start_kw + PC_HYST_KW:
+            self._pc_ok.pop(dev.id, None)
+            return None
+        # released only after the headroom held 120 s, like the normal control gives back (cookers and kettles cycle)
+        ok = self._pc_ok.setdefault(dev.id, now)
+        if _secs(ok, now) >= ROOM_SUSTAIN_S and _secs(self._pc_last.get(dev.id), now) >= dev.start_gap_min * 60:
             key = "pc_would_free" if shadow else "pc_free"
             return self._pc_free(dev, now, self.t(key, name=dev.name, room=room))
         return None
@@ -1196,3 +1266,7 @@ class Guard:
         self.precaution = {}
         self._pc_last = {}
         self._pc_rest = {}
+        self._pc_ok = {}
+        self._pc_at = {}
+        # the daily sums of real locks stay (a change of the mode does not give a new day); observed ones are dropped
+        self._pc_day = {k: v for k, v in self._pc_day.items() if not k.endswith(PC_OBSERVED)}

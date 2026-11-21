@@ -31,7 +31,7 @@ from .const import (
     D_REL2_VALUE, D_RESTORE_ORIG, D_RESTORE_STEPWISE, D_SOC_STEP, D_RECHARGE_AT, D_RECHARGE_ENTITY, D_RECHARGE_VALUE, D_SOC, D_STEP, D_VALUE,
 )
 from .const import D_ART, D_BATTERY_POWER
-from .const import D_RUNNING, D_START_GAP, D_START_KW, D_START_MAX
+from .const import D_RUNNING, D_START_DAY, D_START_GAP, D_START_KW, D_START_MAX
 from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
 from .geraete_check import ARTS
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
@@ -281,6 +281,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_RUNNING, d)] = _ent(ON_OFF_DOMAINS)
         s[vol.Required(D_START_MAX, default=d.get(D_START_MAX, 30))] = _num(1, 240, 1, "min")
         s[vol.Required(D_START_GAP, default=d.get(D_START_GAP, 3))] = _num(0, 60, 1, "min")
+        s[vol.Required(D_START_DAY, default=d.get(D_START_DAY, 4))] = _num(0, 24, 0.5, "h")
     elif kind == KIND_THROTTLE:
         s[vol.Required(D_VALUE, default=d.get(D_VALUE, vol.UNDEFINED))] = _ent(["number", "input_number"])
         s[vol.Required(D_MAX_VALUE, default=d.get(D_MAX_VALUE, 100))] = _num(0, 100000, 0.1)
@@ -701,6 +702,12 @@ class SettingFlow(_DeviceFlow):
 def _precaution_errors(u: dict[str, Any]) -> dict[str, str]:
     """Precautionary lock (draft): it must be able to tell whether the device runs, and a lock must be given back (the values
     from before, or the script), else a lock would stay."""
+    try:
+        day = float(u.get(D_START_DAY, 4))
+    except (TypeError, ValueError):
+        day = -1.0
+    if not 0 <= day <= 24:   # hours per calendar day (0 = no daily limit)
+        return {D_START_DAY: "start_day_range"}
     if float(u.get(D_START_KW) or 0) <= 0:
         return {}
     if not u.get(D_POWER) and not u.get(D_RUNNING):

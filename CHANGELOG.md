@@ -10,25 +10,32 @@ Format: newest first. German version below each English block is a short summary
   kind *Change setting* now has an optional field **Start power** (kW, 0 = off): while the device is not running (its power
   below *Counts as running above*, or its optional *Running entity* off) and the headroom `min(allowed, target) - grid import`
   is smaller than the start power, the guard keeps it locked with the same values as its normal intervention (value for
-  "lowered") and frees it as soon as the start fits. Safety nets: never a device that runs (that stays with the normal
-  control), never longer than the **maximum duration** (default 30 minutes, then freed with a note and not locked in advance
-  again for the same time), at least the **minimum gap** between two changes (default 3 minutes), never while the comfort value
+  "lowered") and frees it once the start fits for 120 seconds without a break (as the normal control gives back). Safety nets:
+  never a device that runs (that stays with the normal control), never longer than the **maximum duration** (default 30
+  minutes, then freed with a note and not locked in advance again for the same time), at most the **daily limit** of locked
+  hours per calendar day and device (default 4 h, 0 to 24, 0 = none; when reached freed with one note and no further
+  precautionary lock until midnight; the daily sum survives a restart), at least the **minimum gap** between two changes
+  (default 3 minutes), never while the comfort value
   is below its minimum, never over a lock that was already there (the utility, the user), given back on a restart, a change of
   the mode, missing readings and when the integration stops. Observe mode (and *Observe only* at the device) sends nothing and
   logs "would have been locked" and, when the device then starts, "a lock would have put this start off". The status sensor
   (attribute `precaution`) shows the measured start peak of the local start log as a suggestion ("Measured start peak: 4.6 kW
   (median of N runs)"); it is never taken over by itself. A card on the main page when a device has a start power (create the
   dashboard again). New optional fields at *Change setting*: power sensor, running entity. Nothing new is sent: the device check
-  and the overview of the setup leave out these two entities. Other kinds of devices may follow after feedback.
+  and the overview of the setup leave out these two entities. Many heat pumps wait by themselves after a utility lock (restart
+  delay); the guard does not know that time, so test in observe mode first. Other kinds of devices may follow after feedback.
   *Deutsch:* **Vorsorgliche Sperre vor dem Anlauf (Entwurf zum Testen, Standard aus, Issue #5):** Eine Wärmepumpe mit
   EVU-Sperrkontakt (als *Einstellung ändern* eingetragen) zieht beim Anlauf sofort 4 bis 5 kW; liegt das Haus schon bei 5 bis 6
   kW, war die Viertelstunde sofort über der Grenze, und der Wächter sperrte die Wärmepumpe erst nach dem Start (kurzer Takt für
   den Verdichter). Ein Gerät vom Typ *Einstellung ändern* hat jetzt ein optionales Feld **Anlaufleistung** (kW, 0 = aus): Solange
   das Gerät nicht läuft (Leistung unter *Läuft ab* oder die optionale *Läuft-Entität* aus) und der Spielraum
   `min(erlaubt, Ziel) − Netzbezug` kleiner als die Anlaufleistung ist, hält der Wächter es mit denselben Werten wie bei seinem
-  normalen Eingriff (Wert für „gesenkt“) gesperrt und gibt es frei, sobald der Anlauf passt. Sicherheitsnetze: nie ein Gerät, das
-  läuft (das bleibt bei der normalen Regelung), nie länger als die **Höchstdauer** (Standard 30 Minuten, danach Freigabe mit
-  Hinweis und für dieselbe Zeit keine neue vorsorgliche Sperre), mindestens der **Mindestabstand** zwischen zwei Änderungen
+  normalen Eingriff (Wert für „gesenkt“) gesperrt und gibt es frei, sobald der Anlauf 120 Sekunden ohne Unterbrechung passt (wie
+  die normale Regelung beim Zurückgeben). Sicherheitsnetze: nie ein Gerät, das läuft (das bleibt bei der normalen Regelung), nie
+  länger als die **Höchstdauer** (Standard 30 Minuten, danach Freigabe mit Hinweis und für dieselbe Zeit keine neue vorsorgliche
+  Sperre), höchstens die **Tagesgrenze** gesperrter Stunden je Kalendertag und Gerät (Standard 4 h, 0 bis 24, 0 = keine; bei
+  Erreichen Freigabe mit einem Hinweis und bis Mitternacht keine weitere vorsorgliche Sperre; die Tagessumme überlebt einen
+  Neustart), mindestens der **Mindestabstand** zwischen zwei Änderungen
   (Standard 3 Minuten), nie unter dem Komfort-Minimum, nie über eine schon bestehende Sperre (EVU, Nutzer), Rücknahme bei
   Neustart, Wechsel der Betriebsart, fehlenden Messwerten und Beenden der Integration. Im Modus *Beobachten* (und bei *Nur
   beobachten* am Gerät) wird nichts gesendet, das Protokoll sagt „hätte vorsorglich gesperrt“ und beim folgenden Anlauf „eine
@@ -36,7 +43,9 @@ Format: newest first. German version below each English block is a short summary
   lokalen Anlauf-Protokoll als Vorschlag („Gemessene Anlaufspitze: 4.6 kW (Median aus N Läufen)“), übernommen wird sie nie von
   selbst. Eine Karte auf der Hauptseite, wenn ein Gerät eine Anlaufleistung hat (Dashboard neu erstellen). Neue optionale Felder
   bei *Einstellung ändern*: Leistungssensor, Läuft-Entität. Es wird nichts Neues gesendet: Geräte-Check und
-  Einrichtungsübersicht lassen diese beiden Entitäten weg. Andere Gerätetypen können nach Rückmeldungen folgen.
+  Einrichtungsübersicht lassen diese beiden Entitäten weg. Viele Wärmepumpen warten nach einer EVU-Sperre von selbst
+  (Wiederanlaufzeit); der Wächter kennt diese Zeit nicht, deshalb zuerst im Modus *Beobachten* testen. Andere Gerätetypen können
+  nach Rückmeldungen folgen.
 
 ## 0.15.1 - unreleased
 

@@ -289,6 +289,7 @@ class Waechter:
             await self._poll_evcc()
             await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_restart")), True)
         self.guard.forget()
+        self.guard.load_day(data.get("precaution_day"))   # precautionary lock (draft): the hours locked today go on counting
         self.guard.resume_quarter(data.get("quarter"))   # a reload or restart within a quarter hour continues it instead of guessing
         self._unsub = async_track_time_interval(self.hass, self._tick, UPDATE_INTERVAL)
 
@@ -2261,6 +2262,7 @@ class Waechter:
             "quarter": self.guard.quarter_state(),
             # precautionary lock (draft): only while one is held, so the store stays as before without it
             **({"precaution": self.guard.precaution} if self.executing and self.guard.precaution else {}),
+            **({"precaution_day": day} if (day := self.guard.day_state()) else {}),   # daily limit, only with real locks
         }
 
     # ---------- for the entities ----------

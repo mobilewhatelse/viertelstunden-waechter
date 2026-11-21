@@ -782,7 +782,8 @@
             "min_power_w": "Counts as running above",
             "running_entity": "Running entity (optional)",
             "start_max_min": "Precautionary lock: maximum duration",
-            "start_gap_min": "Precautionary lock: minimum gap"
+            "start_gap_min": "Precautionary lock: minimum gap",
+            "start_day_h": "Precautionary lock: daily limit"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -805,7 +806,8 @@
             "min_power_w": "Above this power the device counts as running: a running device is never locked in advance.",
             "running_entity": "Optional, wins over the power sensor: on = the device is running.",
             "start_max_min": "A precautionary lock never lasts longer. Then the device is freed and not locked in advance again for the same time.",
-            "start_gap_min": "At least this long between two changes of the device (lock, release), against short cycles of the compressor."
+            "start_gap_min": "At least this long between two changes of the device (lock, release), against short cycles of the compressor.",
+            "start_day_h": "At most this many hours of precautionary lock per calendar day (0 = no daily limit). When reached, no further precautionary lock until the next day."
           }
         },
         "reconfigure": {
@@ -835,7 +837,8 @@
             "min_power_w": "Counts as running above",
             "running_entity": "Running entity (optional)",
             "start_max_min": "Precautionary lock: maximum duration",
-            "start_gap_min": "Precautionary lock: minimum gap"
+            "start_gap_min": "Precautionary lock: minimum gap",
+            "start_day_h": "Precautionary lock: daily limit"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -858,11 +861,13 @@
             "min_power_w": "Above this power the device counts as running: a running device is never locked in advance.",
             "running_entity": "Optional, wins over the power sensor: on = the device is running.",
             "start_max_min": "A precautionary lock never lasts longer. Then the device is freed and not locked in advance again for the same time.",
-            "start_gap_min": "At least this long between two changes of the device (lock, release), against short cycles of the compressor."
+            "start_gap_min": "At least this long between two changes of the device (lock, release), against short cycles of the compressor.",
+            "start_day_h": "At most this many hours of precautionary lock per calendar day (0 = no daily limit). When reached, no further precautionary lock until the next day."
           }
         }
       },
       "error": {
+        "start_day_range": "Daily limit: between 0 and 24 hours.",
         "start_needs_sensor": "The precautionary lock needs a power sensor or a running entity of the device.",
         "start_needs_restore": "The precautionary lock must be able to give the lock back: switch on Put the previous values back, or choose a script.",
         "pair": "Setting and value belong together.",

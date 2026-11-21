@@ -782,7 +782,8 @@
             "min_power_w": "Läuft ab",
             "running_entity": "Läuft-Entität (optional)",
             "start_max_min": "Vorsorgliche Sperre: Höchstdauer",
-            "start_gap_min": "Vorsorgliche Sperre: Mindestabstand"
+            "start_gap_min": "Vorsorgliche Sperre: Mindestabstand",
+            "start_day_h": "Vorsorgliche Sperre: Tagesgrenze"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -805,7 +806,8 @@
             "min_power_w": "Ab dieser Leistung gilt das Gerät als laufend: Ein laufendes Gerät wird nie vorsorglich gesperrt.",
             "running_entity": "Optional, hat Vorrang vor dem Leistungssensor: an = das Gerät läuft.",
             "start_max_min": "Länger dauert eine vorsorgliche Sperre nie. Danach wird das Gerät freigegeben und für dieselbe Zeit nicht wieder vorsorglich gesperrt.",
-            "start_gap_min": "Mindestens so lange zwischen zwei Änderungen am Gerät (Sperre, Freigabe), gegen kurzes Takten des Verdichters."
+            "start_gap_min": "Mindestens so lange zwischen zwei Änderungen am Gerät (Sperre, Freigabe), gegen kurzes Takten des Verdichters.",
+            "start_day_h": "Höchstens so viele Stunden vorsorgliche Sperre je Kalendertag (0 = keine Tagesgrenze). Danach keine weitere vorsorgliche Sperre bis zum nächsten Tag."
           }
         },
         "reconfigure": {
@@ -835,7 +837,8 @@
             "min_power_w": "Läuft ab",
             "running_entity": "Läuft-Entität (optional)",
             "start_max_min": "Vorsorgliche Sperre: Höchstdauer",
-            "start_gap_min": "Vorsorgliche Sperre: Mindestabstand"
+            "start_gap_min": "Vorsorgliche Sperre: Mindestabstand",
+            "start_day_h": "Vorsorgliche Sperre: Tagesgrenze"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -858,11 +861,13 @@
             "min_power_w": "Ab dieser Leistung gilt das Gerät als laufend: Ein laufendes Gerät wird nie vorsorglich gesperrt.",
             "running_entity": "Optional, hat Vorrang vor dem Leistungssensor: an = das Gerät läuft.",
             "start_max_min": "Länger dauert eine vorsorgliche Sperre nie. Danach wird das Gerät freigegeben und für dieselbe Zeit nicht wieder vorsorglich gesperrt.",
-            "start_gap_min": "Mindestens so lange zwischen zwei Änderungen am Gerät (Sperre, Freigabe), gegen kurzes Takten des Verdichters."
+            "start_gap_min": "Mindestens so lange zwischen zwei Änderungen am Gerät (Sperre, Freigabe), gegen kurzes Takten des Verdichters.",
+            "start_day_h": "Höchstens so viele Stunden vorsorgliche Sperre je Kalendertag (0 = keine Tagesgrenze). Danach keine weitere vorsorgliche Sperre bis zum nächsten Tag."
           }
         }
       },
       "error": {
+        "start_day_range": "Tagesgrenze: zwischen 0 und 24 Stunden.",
         "start_needs_sensor": "Die vorsorgliche Sperre braucht einen Leistungssensor oder eine Läuft-Entität des Geräts.",
         "start_needs_restore": "Die vorsorgliche Sperre muss die Sperre zurücknehmen können: Vorherige Werte wiederherstellen einschalten oder ein Skript wählen.",
         "pair": "Einstellung und Wert gehören zusammen.",

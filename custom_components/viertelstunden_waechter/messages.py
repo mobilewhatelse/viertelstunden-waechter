@@ -61,6 +61,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "pc_no_sensor": "Vorsorgliche Sperre: {name} hat keinen Leistungssensor und keine Läuft-Entität, ohne sie wird nie vorsorglich gesperrt",
         "pc_off": "Vorsorgliche Sperre: {name} freigegeben (Anlaufleistung ist 0)",
         "pc_back": "Vorsorgliche Sperre: {name} freigegeben",
+        "pc_day": "Vorsorgliche Sperre: {name} freigegeben, Tagesgrenze ({h:g} h) erreicht, heute keine weitere vorsorgliche Sperre",
         "pc_suggest": "Gemessene Anlaufspitze: {kw:.1f} kW (Median aus {n} Läufen)",
         # confirmation
         "unreachable": "Gerät nicht erreichbar",
@@ -158,6 +159,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "pc_no_sensor": "Precautionary lock: {name} has no power sensor and no running entity, without one it is never locked in advance",
         "pc_off": "Precautionary lock: {name} released (start power is 0)",
         "pc_back": "Precautionary lock: {name} released",
+        "pc_day": "Precautionary lock: {name} released, daily limit ({h:g} h) reached, no further precautionary lock today",
         "pc_suggest": "Measured start peak: {kw:.1f} kW (median of {n} runs)",
         "unreachable": "device not reachable",
         "cur_not": "current is {cur:g} A instead of {want} A",
