@@ -219,8 +219,10 @@ async def _create_dashboard(hass: HomeAssistant) -> dict[str, Any]:
     cfg = {**entries[0].data, **entries[0].options}
     if cfg.get("grid_power"):
         ids["grid_power_sensor"] = cfg["grid_power"]
+    w = getattr(entries[0], "runtime_data", None)   # precautionary lock (draft): its card only when a device uses it
+    precaution = bool(w is not None and any(float(d.get("start_kw") or 0) > 0 for d in getattr(w, "raw_devices", {}).values()))
     config = {"views": build_views(ids, hass.config.language, _planners(hass, entries[0]), evcc=bool(cfg.get("evcc_site_url")),
-                                   plugwhen=is_installed(hass.config_entries.async_entries("plugwhen")))}
+                                   plugwhen=is_installed(hass.config_entries.async_entries("plugwhen")), precaution=precaution)}
 
     text = ha_yaml.dump(config)
     await hass.services.async_call(

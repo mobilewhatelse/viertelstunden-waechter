@@ -27,6 +27,7 @@ from .const import (
 )
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
 from .const import D_ART, D_BATTERY_POWER, D_MAX_CURRENT
+from .const import D_RUNNING, D_START_KW, PRECAUTION_ENTITIES
 from . import geraete_check as gc
 from . import protokoll as pr
 from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, GridDiffer, choose_grid, parse_grid_kw, parse_loadpoint, target_ceiling,
@@ -282,9 +283,9 @@ class Waechter:
         if (self._bootstrapped and int(model_data.get("model_version") or 1) < MODEL_VERSION and self._has_wallbox()
                 and self.cfg.get(CONF_GRID_ENERGY)):
             self._bootstrapped, self._rebuild = False, True
-        if data.get("executing") and data.get("interventions"):
-            # Home Assistant restarted while the guard had changed devices: give them back first
-            self.guard.load({"interventions": data["interventions"]})
+        if data.get("executing") and (data.get("interventions") or data.get("precaution")):
+            # Home Assistant restarted while the guard had changed devices: give them back first (precautionary locks too)
+            self.guard.load({"interventions": data.get("interventions") or {}, "precaution": data.get("precaution") or {}})
             await self._poll_evcc()
             await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_restart")), True)
         self.guard.forget()
@@ -299,7 +300,7 @@ class Waechter:
         async with self._lock:
             self.plan_execute = False
             await self._execute_plan(dt_util.now())  # resume a charging the plan had paused
-            if self.executing and self.guard.interventions:
+            if self.executing and (self.guard.interventions or self.guard.precaution):   # precautionary locks too (draft)
                 await self._run(self.guard.release_all(dt_util.now(), self._readings(), self.t("r_unload")), True)
             await self._end_reserve_all(self.t("r_unload"))
             for dev_id in list(self._ratchet):   # reload or removal: the old minimum back (a restart continues instead)
@@ -474,8 +475,10 @@ class Waechter:
             kind = d.get(D_KIND)
             bw = self._power_kw(d.get(D_BATTERY_POWER)) if kind == KIND_BATTERY else None
             max_a = d.get(D_MAX_CURRENT)
+            # a setting device had no power sensor before the precautionary lock (draft): the check stays as it was without one
             out[dev_id] = gc.Sample(
-                kind=str(kind), art=d.get(D_ART) or None, power_w=r.power_w, current_a=r.current_a, phases=r.phases,
+                kind=str(kind), art=d.get(D_ART) or None, power_w=None if kind == KIND_SETTING else r.power_w,
+                current_a=r.current_a, phases=r.phases,
                 max_current=float(max_a) if isinstance(max_a, (int, float)) else None, is_on=r.is_on,
                 soc=car_soc if kind in WALLBOX_KINDS else r.soc, battery_w=bw * 1000.0 if bw is not None else None,
                 intervened=self.executing and dev_id in self.guard.interventions)
@@ -489,6 +492,8 @@ class Waechter:
         out: dict[str, dict[str, Any]] = {}
         for dev_id, d in self.raw_devices.items():
             for key in (D_POWER, D_SWITCH, D_CURRENT, D_SOC, D_VALUE):
+                if key in PRECAUTION_ENTITIES and d.get(D_KIND) == KIND_SETTING:
+                    continue   # only for the precautionary lock (draft): the check sends nothing new
                 e = ents.async_get(d.get(key) or "")
                 dev = devs.async_get(e.device_id) if e and e.device_id else None
                 if dev and (dev.manufacturer or dev.model):
@@ -676,6 +681,9 @@ class Waechter:
                 pairs = self._battery_pairs(d)
                 r.available = any(self._state(e) is not None for e, _ in pairs)
                 r.releasable = any(self._state(e) is not None and not _same_value(self._state(e).state, v) for e, v in pairs)
+                if kind == KIND_SETTING and d.get(D_RUNNING):   # precautionary lock (draft): "running" entity, if set
+                    st = self._state(d.get(D_RUNNING))
+                    r.running = None if st is None else st.state in ("on", "true", "running", "1")
             out[dev_id] = r
         return out
 
@@ -1155,7 +1163,8 @@ class Waechter:
         ids: list[str] = [x for x in (self.cfg.get(CONF_GRID_POWER), self.cfg.get(CONF_GRID_ENERGY)) if x]
         for d in self.raw_devices.values():
             kinds[d[D_KIND]] = kinds.get(d[D_KIND], 0) + 1
-            ids += [v for k, v in d.items() if str(k).endswith("_entity") and isinstance(v, str)]
+            ids += [v for k, v in d.items() if str(k).endswith("_entity") and isinstance(v, str)
+                    and not (d[D_KIND] == KIND_SETTING and k in PRECAUTION_ENTITIES)]   # draft: nothing new is sent
 
         def platform(eid: str) -> str | None:
             ent = reg.async_get(eid)
@@ -2250,6 +2259,8 @@ class Waechter:
             "executing": self.executing,
             "interventions": self.guard.interventions if self.executing else {},
             "quarter": self.guard.quarter_state(),
+            # precautionary lock (draft): only while one is held, so the store stays as before without it
+            **({"precaution": self.guard.precaution} if self.executing and self.guard.precaution else {}),
         }
 
     # ---------- for the entities ----------
@@ -2313,6 +2324,30 @@ class Waechter:
 
     def recent_lines(self, limit: int = 6) -> list[str]:
         return self.log_lines(limit)
+
+    def precaution_info(self) -> list[dict[str, Any]]:
+        """Precautionary lock (draft 0.15.2), per device of the kind *change a setting* that has a start power or measured starts:
+        what is set, whether it is held now, and the measured start peak of the local log as a suggestion (never taken over)."""
+        out: list[dict[str, Any]] = []
+        now = dt_util.now()
+        for dev_id, d in self.raw_devices.items():
+            if d.get(D_KIND) != KIND_SETTING:   # extension point: other kinds once they can be locked in advance
+                continue
+            kw = float(d.get(D_START_KW) or 0.0)
+            try:
+                sug = self.protokoll.start_peak(dev_id, now)
+            except Exception:  # noqa: BLE001 - the local log must never break the status
+                sug = None
+            if kw <= 0 and sug is None:
+                continue
+            held = self.guard.precaution.get(dev_id)
+            out.append({
+                "name": d.get(D_NAME, dev_id), "start_kw": kw or None,
+                "locked": bool(held), "observed": bool(held and held.get("shadow")),
+                "suggestion_kw": sug["kw"] if sug else None, "runs": sug["n"] if sug else 0,
+                "suggestion": self.t("pc_suggest", kw=sug["kw"], n=sug["n"]) if sug else None,
+            })
+        return out
 
     def intervention_names(self) -> list[str]:
         return [self.raw_devices[i].get("name", i) for i in self.guard.interventions if i in self.raw_devices]

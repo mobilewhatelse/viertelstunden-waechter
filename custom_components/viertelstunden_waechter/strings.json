@@ -775,7 +775,14 @@
             "off_script": "Script after taking back",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "device_type": "Type of device (optional)"
+            "device_type": "Type of device (optional)",
+            "start_kw": "Start power (precautionary lock, draft)",
+            "power_entity": "Power sensor (optional)",
+            "power_invert": "Turn the sign round (power sensor)",
+            "min_power_w": "Counts as running above",
+            "running_entity": "Running entity (optional)",
+            "start_max_min": "Precautionary lock: maximum duration",
+            "start_gap_min": "Precautionary lock: minimum gap"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -791,7 +798,14 @@
             "off_script": "Optional script that runs after taking back.",
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy.",
+            "start_kw": "Draft for testing, 0 = off. The power the device draws right after its start (e.g. 5 kW for a heat pump). While it is not running and the headroom up to the limit is smaller, the guard keeps it locked in advance (with the value for \"lowered\" above) and frees it as soon as the start fits. Needs a power sensor or a running entity. The status sensor shows the measured start peak as a suggestion.",
+            "power_entity": "Power of the device. Used only by the precautionary lock: it tells whether the device is running and records its start peaks locally.",
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "min_power_w": "Above this power the device counts as running: a running device is never locked in advance.",
+            "running_entity": "Optional, wins over the power sensor: on = the device is running.",
+            "start_max_min": "A precautionary lock never lasts longer. Then the device is freed and not locked in advance again for the same time.",
+            "start_gap_min": "At least this long between two changes of the device (lock, release), against short cycles of the compressor."
           }
         },
         "reconfigure": {
@@ -814,7 +828,14 @@
             "off_script": "Script after taking back",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "device_type": "Type of device (optional)"
+            "device_type": "Type of device (optional)",
+            "start_kw": "Start power (precautionary lock, draft)",
+            "power_entity": "Power sensor (optional)",
+            "power_invert": "Turn the sign round (power sensor)",
+            "min_power_w": "Counts as running above",
+            "running_entity": "Running entity (optional)",
+            "start_max_min": "Precautionary lock: maximum duration",
+            "start_gap_min": "Precautionary lock: minimum gap"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -830,11 +851,20 @@
             "off_script": "Optional script that runs after taking back.",
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy."
+            "device_type": "For the device check: a heat pump is compared by outdoor temperature, a water heater by its daily energy.",
+            "start_kw": "Draft for testing, 0 = off. The power the device draws right after its start (e.g. 5 kW for a heat pump). While it is not running and the headroom up to the limit is smaller, the guard keeps it locked in advance (with the value for \"lowered\" above) and frees it as soon as the start fits. Needs a power sensor or a running entity. The status sensor shows the measured start peak as a suggestion.",
+            "power_entity": "Power of the device. Used only by the precautionary lock: it tells whether the device is running and records its start peaks locally.",
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "min_power_w": "Above this power the device counts as running: a running device is never locked in advance.",
+            "running_entity": "Optional, wins over the power sensor: on = the device is running.",
+            "start_max_min": "A precautionary lock never lasts longer. Then the device is freed and not locked in advance again for the same time.",
+            "start_gap_min": "At least this long between two changes of the device (lock, release), against short cycles of the compressor."
           }
         }
       },
       "error": {
+        "start_needs_sensor": "The precautionary lock needs a power sensor or a running entity of the device.",
+        "start_needs_restore": "The precautionary lock must be able to give the lock back: switch on Put the previous values back, or choose a script.",
         "pair": "Setting and value belong together.",
         "value_number": "This setting is a number: enter a number.",
         "value_onoff": "A switch needs the value on or off.",

@@ -70,6 +70,12 @@ COUNTER_JUMP_FACTOR = 1.5     #     running quarter hour (a counter that reports
 COUNTER_GAP_KEEP = 15         # gaps between new counter values remembered (the usual interval of the counter, as power_gap)
 COUNTER_GAP_FACTOR = 2.5      # a gap counts as an outage only if it is this much longer than the usual interval (a cloud counter
                               # that reports every 20 to 30 minutes is no outage, review 20.11.2026)
+# precautionary lock (draft 0.15.2, issue #5): a device that is not running is kept locked while its start would not fit
+PC_KINDS = (KIND_SETTING,)    # extension point: other kinds (switch: keep off; throttle: keep low) need their own lock/release
+PC_MAX_MIN = 30.0             # a precautionary lock never lasts longer than this (default of the device setting)
+PC_GAP_MIN = 3.0              # at least this long between two changes of the same device (lock, release; compressor protection)
+PC_HYST_KW = 0.2              # released only with this much more headroom than the start needs (no flapping at the border)
+PC_VERIFY_S = 90              # a lock that does not show in the readings after this long is given up (setting did not change)
 
 
 def plausible_kw(limit_kw: float | None) -> float:
@@ -102,6 +108,9 @@ class DeviceConfig:
     hold_min: float = 0.0         # minimum time an intervention is kept (0 = general default of 5 minutes)
     pause_min: float = 0.0        # minimum pause after taking back before the next intervention (compressor protection)
     observe_only: bool = False    # only say what would be done with it; never a lever, nothing is sent
+    start_kw: float = 0.0         # precautionary lock (draft): power at the start in kW; 0 = off (the behaviour of before)
+    start_max_min: float = PC_MAX_MIN  # ... never locked longer than this
+    start_gap_min: float = PC_GAP_MIN  # ... at least this long between two of its changes
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -123,6 +132,9 @@ class DeviceConfig:
             hold_min=float(d.get("hold_min", 0.0)),
             pause_min=float(d.get("pause_min", 0.0)),
             observe_only=bool(d.get("observe_only", False)),
+            start_kw=max(0.0, float(d.get("start_kw") or 0.0)),
+            start_max_min=max(1.0, float(d.get("start_max_min") or PC_MAX_MIN)),
+            start_gap_min=max(0.0, float(d.get("start_gap_min", PC_GAP_MIN) or 0.0)),
         )
 
 
@@ -143,6 +155,7 @@ class Reading:
     value: float | None = None    # throttle: current value of the number
     current_steps: tuple[int, ...] | None = None  # wallbox with a list of currents (select): the amps it offers, else any whole amp
     power_gap_s: float | None = None  # typical seconds between new values of the power sensor (None: not measured yet)
+    running: bool | None = None   # precautionary lock: the "running" entity of the device (None = none, the power decides)
 
 
 def power_gap(gaps: list[float]) -> float | None:
@@ -288,14 +301,25 @@ class Guard:
         self._smooth = False               # forecast-based step: no phase switching
         self.misses = 0                    # interventions that never showed in the readings (since start)
         self._now = datetime.min
+        # precautionary lock (draft 0.15.2): kept apart from `interventions`, so the release order of the normal control is untouched
+        self.precaution: dict[str, dict[str, Any]] = {}   # device -> {"since", "room", "shadow"} while the guard holds it locked
+        self._pc_last: dict[str, datetime] = {}           # last change of the device by the guard (lock or release, both logics)
+        self._pc_rest: dict[str, datetime] = {}           # no new precautionary lock before this (after the maximum time)
+        self._pc_noted: set[str] = set()                  # notes said once per device (no sensor to tell whether it runs)
 
     # ---------- persistence ----------
 
     def to_dict(self) -> dict[str, Any]:
-        return {"interventions": self.interventions}
+        out: dict[str, Any] = {"interventions": self.interventions}
+        if self.precaution:
+            out["precaution"] = self.precaution
+        return out
 
     def load(self, d: dict[str, Any]) -> None:
         self.interventions = {k: v for k, v in (d.get("interventions") or {}).items() if k in self.devices}
+        # a precautionary lock from before a restart: only to be given back by release_all (never continued)
+        self.precaution = {k: v for k, v in (d.get("precaution") or {}).items()
+                           if k in self.devices and isinstance(v, dict) and not v.get("shadow")}
 
     # ---------- quarter-hour accounting ----------
 
@@ -466,7 +490,7 @@ class Guard:
 
         if not enabled:
             self.state = "idle"
-            return self.release_all(now, readings, self.t("r_not_needed")) if self.interventions else []
+            return self.release_all(now, readings, self.t("r_not_needed")) if self.interventions or self.precaution else []
 
         # headroom that fits permanently (not the rest budget near :15): average of the last two minutes,
         # counted only since the last change, so a release is judged on the situation after the previous one
@@ -501,7 +525,112 @@ class Guard:
                 actions = self._release(now, room, readings)
         self._register(now, readings, actions)
         self.state = "intervening" if self.interventions else "ready"
-        return checks + actions
+        if not any(d.start_kw > 0 for d in self.devices.values()) and not self.precaution:
+            return checks + actions   # no device with a start power: exactly the behaviour of before
+        pc = self._precaution_step(now, readings, min(allowed, target) - p, checks + actions)
+        self.values["precaution"] = sorted(self.precaution)
+        return checks + actions + pc
+
+    # ---------- precautionary lock (draft 0.15.2, issue #5) ----------
+
+    def _pc_running(self, dev: DeviceConfig, r: Reading) -> bool | None:
+        """Whether the device runs: its "running" entity if it has one, else its power against min_power_w; None = unknown."""
+        if r.running is not None:
+            return r.running
+        if r.power_w is None:
+            return None
+        return r.power_w >= dev.min_power_w
+
+    def _pc_lock(self, dev: DeviceConfig, room: float, now: datetime) -> Action:
+        shadow = not self.real_effect or dev.observe_only
+        self.precaution[dev.id] = {"since": now.isoformat(), "room": round(room, 2), "shadow": shadow}
+        self._pc_last[dev.id] = now
+        text = self.t("pc_would_lock" if shadow else "pc_lock", name=dev.name, room=max(0.0, room), kw=dev.start_kw)
+        # extension point: KIND_SETTING locks with the release values of its settings (the same command as the normal control,
+        # so the value for "locked" is the one of the device setting); a switch would be "turn_off", a throttle "set_value"
+        return Action(dev.id, "log" if shadow else "battery_release", None, text, False)
+
+    def _pc_free(self, dev: DeviceConfig, now: datetime, text: str) -> Action:
+        st = self.precaution.pop(dev.id, None) or {}
+        self._pc_last[dev.id] = now
+        if st.get("shadow"):
+            return Action(dev.id, "log", None, text, False)
+        # battery_restore puts back only the settings that still hold the release value (coordinator: _battery_restore), so a
+        # lock of the utility (EVU) or of the user that came meanwhile is not lifted by the guard's own
+        return Action(dev.id, "battery_restore", None, text, False)
+
+    def _precaution_step(self, now: datetime, readings: dict[str, Reading], room: float, acts: list[Action]) -> list[Action]:
+        """Keep a device that is not running locked while its start would not fit: `room` = min(allowed, target) - import.
+
+        Safety nets: never a device that runs or that the normal control holds; never longer than start_max_min (then free and
+        a pause of the same length); at least start_gap_min between two changes; given back by release_all (no data, not needed,
+        mode changed, restart, integration stopped). In observe mode (or with observe only at the device) nothing is sent: the
+        log says what would have been done, and when the device then starts, that the start would have been put off."""
+        out: list[Action] = []
+        touched = {a.device_id for a in acts if a.kind != "log"}
+        for dev_id, dev in self.devices.items():
+            if a := self._pc_device(dev, readings.get(dev_id), room, now, dev_id in touched):
+                out.append(a)
+        # a change of the normal control counts for the gap too (no lock right after it gave the device back)
+        for a in acts:
+            if a.kind in ("battery_release", "battery_restore") and a.device_id in self.devices and self.devices[a.device_id].start_kw > 0:
+                self._pc_last[a.device_id] = now
+        return out
+
+    def _pc_device(self, dev: DeviceConfig, r: Reading | None, room: float, now: datetime, touched: bool) -> Action | None:
+        st = self.precaution.get(dev.id)
+        if st is not None:
+            return self._pc_held(dev, r, st, room, now)
+        if dev.kind not in PC_KINDS or dev.start_kw <= 0:
+            return None
+        if touched or dev.id in self.interventions or now < self._pc_rest.get(dev.id, now):
+            return None
+        if r is None or not r.available or not r.allowed or not r.releasable:
+            return None   # not reachable, the condition entity says no, or already locked (by the utility, the user, the guard)
+        if r.soc is not None and r.soc < dev.min_soc:
+            return None   # the comfort value (room, hot water) is below its minimum: never kept from starting
+        running = self._pc_running(dev, r)
+        if running is None:
+            if dev.id not in self._pc_noted:
+                self._pc_noted.add(dev.id)
+                return Action(dev.id, "log", None, self.t("pc_no_sensor", name=dev.name), False)
+            return None
+        if running or room >= dev.start_kw:
+            return None
+        if _secs(self._pc_last.get(dev.id), now) < dev.start_gap_min * 60:
+            return None
+        return self._pc_lock(dev, room, now)
+
+    def _pc_held(self, dev: DeviceConfig, r: Reading | None, st: dict[str, Any], room: float, now: datetime) -> Action | None:
+        try:
+            age = (now - datetime.fromisoformat(str(st.get("since")))).total_seconds()
+        except (TypeError, ValueError):
+            age = 1e9
+        shadow = bool(st.get("shadow"))
+        if dev.kind not in PC_KINDS or dev.start_kw <= 0:   # the field was set to 0 meanwhile
+            return self._pc_free(dev, now, self.t("pc_off", name=dev.name))
+        if age >= dev.start_max_min * 60:
+            self._pc_rest[dev.id] = now + timedelta(minutes=dev.start_max_min)
+            return self._pc_free(dev, now, self.t("pc_max", name=dev.name, min=dev.start_max_min))
+        if dev.id in self.interventions:   # the normal control holds it now: its release puts the settings back
+            self.precaution.pop(dev.id, None)
+            return None
+        if r is None or not r.available:
+            return None   # keep, the maximum time still holds
+        running = self._pc_running(dev, r)
+        if running:
+            if shadow:
+                return self._pc_free(dev, now, self.t("pc_would_start", name=dev.name, room=max(0.0, room), kw=dev.start_kw))
+            return self._pc_free(dev, now, self.t("pc_running", name=dev.name))
+        if not r.allowed or (r.soc is not None and r.soc < dev.min_soc):   # condition says no, or the comfort value too low
+            return self._pc_free(dev, now, self.t("pc_free", name=dev.name, room=max(0.0, room)))
+        if not shadow and r.releasable and age >= PC_VERIFY_S:
+            self._pc_rest[dev.id] = now + timedelta(minutes=MISS_REST_MIN)
+            return self._pc_free(dev, now, self.t("pc_not_followed", name=dev.name, min=MISS_REST_MIN))
+        if room >= dev.start_kw + PC_HYST_KW and _secs(self._pc_last.get(dev.id), now) >= dev.start_gap_min * 60:
+            key = "pc_would_free" if shadow else "pc_free"
+            return self._pc_free(dev, now, self.t(key, name=dev.name, room=room))
+        return None
 
     # ---------- confirmation: did the device really follow? ----------
 
@@ -1046,6 +1175,12 @@ class Guard:
         acts: list[Action] = []
         for dev_id in sorted(list(self.interventions), key=lambda i: -self.devices[i].priority):
             acts += self._release_one(self.devices[dev_id], readings.get(dev_id) or Reading(available=False), 99.0, now, True)
+        for dev_id in list(self.precaution):   # precautionary locks too (empty without a device with a start power)
+            dev = self.devices.get(dev_id)
+            if dev is None:
+                self.precaution.pop(dev_id, None)
+                continue
+            acts.append(self._pc_free(dev, now, self.t("pc_back", name=dev.name)))
         if acts and reason:
             acts.insert(0, Action("", "log", None, self.t("all_free", reason=reason), False))
         for t in self._wb.values():
@@ -1058,3 +1193,6 @@ class Guard:
         self._pending = {}
         self._wb = {}
         self._last_action = self._last_release = None
+        self.precaution = {}
+        self._pc_last = {}
+        self._pc_rest = {}

@@ -62,7 +62,7 @@ class DeviceCheckSensor(WaechterEntity, SensorEntity):
 
 
 class StatusSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text", "precaution"})
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = STATUS_OPTIONS
     _attr_icon = "mdi:shield-half-full"
@@ -92,6 +92,8 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "sources_differ": w.sources_differ,
             "wallbox_twice": w.wallbox_twice,
             "configuration": w.configuration(),
+            # precautionary lock (draft): only when a setting device has a start power or measured starts
+            **({"precaution": pc} if (pc := w.precaution_info()) else {}),
         }
 
 

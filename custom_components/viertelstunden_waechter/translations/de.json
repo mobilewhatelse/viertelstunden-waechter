@@ -775,7 +775,14 @@
             "off_script": "Skript nach dem Zurücknehmen",
             "allow_entity": "Eingriff nur, solange",
             "observe_only": "Nur beobachten",
-            "device_type": "Art des Geräts (optional)"
+            "device_type": "Art des Geräts (optional)",
+            "start_kw": "Anlaufleistung (vorsorgliche Sperre, Entwurf)",
+            "power_entity": "Leistungssensor (optional)",
+            "power_invert": "Vorzeichen umdrehen (Leistungssensor)",
+            "min_power_w": "Läuft ab",
+            "running_entity": "Läuft-Entität (optional)",
+            "start_max_min": "Vorsorgliche Sperre: Höchstdauer",
+            "start_gap_min": "Vorsorgliche Sperre: Mindestabstand"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -791,7 +798,14 @@
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie.",
+            "start_kw": "Entwurf zum Testen, 0 = aus. Die Leistung, die das Gerät direkt nach dem Start zieht (z. B. 5 kW bei einer Wärmepumpe). Solange es nicht läuft und der Spielraum bis zur Grenze kleiner ist, hält der Wächter es vorsorglich gesperrt (mit dem Wert für „gesenkt“ oben) und gibt es frei, sobald der Anlauf passt. Braucht einen Leistungssensor oder eine Läuft-Entität. Der Status-Sensor zeigt die gemessene Anlaufspitze als Vorschlag.",
+            "power_entity": "Leistung des Geräts. Nur für die vorsorgliche Sperre: Daran sieht der Wächter, ob das Gerät läuft, und zeichnet die Anlaufspitzen lokal auf.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "min_power_w": "Ab dieser Leistung gilt das Gerät als laufend: Ein laufendes Gerät wird nie vorsorglich gesperrt.",
+            "running_entity": "Optional, hat Vorrang vor dem Leistungssensor: an = das Gerät läuft.",
+            "start_max_min": "Länger dauert eine vorsorgliche Sperre nie. Danach wird das Gerät freigegeben und für dieselbe Zeit nicht wieder vorsorglich gesperrt.",
+            "start_gap_min": "Mindestens so lange zwischen zwei Änderungen am Gerät (Sperre, Freigabe), gegen kurzes Takten des Verdichters."
           }
         },
         "reconfigure": {
@@ -814,7 +828,14 @@
             "off_script": "Skript nach dem Zurücknehmen",
             "allow_entity": "Eingriff nur, solange",
             "observe_only": "Nur beobachten",
-            "device_type": "Art des Geräts (optional)"
+            "device_type": "Art des Geräts (optional)",
+            "start_kw": "Anlaufleistung (vorsorgliche Sperre, Entwurf)",
+            "power_entity": "Leistungssensor (optional)",
+            "power_invert": "Vorzeichen umdrehen (Leistungssensor)",
+            "min_power_w": "Läuft ab",
+            "running_entity": "Läuft-Entität (optional)",
+            "start_max_min": "Vorsorgliche Sperre: Höchstdauer",
+            "start_gap_min": "Vorsorgliche Sperre: Mindestabstand"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -830,11 +851,20 @@
             "off_script": "Optionales Skript nach dem Zurücknehmen.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie."
+            "device_type": "Für den Geräte-Check: eine Wärmepumpe wird nach Außentemperatur verglichen, ein Boiler nach seiner Tagesenergie.",
+            "start_kw": "Entwurf zum Testen, 0 = aus. Die Leistung, die das Gerät direkt nach dem Start zieht (z. B. 5 kW bei einer Wärmepumpe). Solange es nicht läuft und der Spielraum bis zur Grenze kleiner ist, hält der Wächter es vorsorglich gesperrt (mit dem Wert für „gesenkt“ oben) und gibt es frei, sobald der Anlauf passt. Braucht einen Leistungssensor oder eine Läuft-Entität. Der Status-Sensor zeigt die gemessene Anlaufspitze als Vorschlag.",
+            "power_entity": "Leistung des Geräts. Nur für die vorsorgliche Sperre: Daran sieht der Wächter, ob das Gerät läuft, und zeichnet die Anlaufspitzen lokal auf.",
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "min_power_w": "Ab dieser Leistung gilt das Gerät als laufend: Ein laufendes Gerät wird nie vorsorglich gesperrt.",
+            "running_entity": "Optional, hat Vorrang vor dem Leistungssensor: an = das Gerät läuft.",
+            "start_max_min": "Länger dauert eine vorsorgliche Sperre nie. Danach wird das Gerät freigegeben und für dieselbe Zeit nicht wieder vorsorglich gesperrt.",
+            "start_gap_min": "Mindestens so lange zwischen zwei Änderungen am Gerät (Sperre, Freigabe), gegen kurzes Takten des Verdichters."
           }
         }
       },
       "error": {
+        "start_needs_sensor": "Die vorsorgliche Sperre braucht einen Leistungssensor oder eine Läuft-Entität des Geräts.",
+        "start_needs_restore": "Die vorsorgliche Sperre muss die Sperre zurücknehmen können: Vorherige Werte wiederherstellen einschalten oder ein Skript wählen.",
         "pair": "Einstellung und Wert gehören zusammen.",
         "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
         "value_onoff": "Ein Schalter braucht den Wert on oder off.",

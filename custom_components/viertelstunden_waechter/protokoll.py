@@ -51,6 +51,8 @@ BAND_SHARE = 0.10             # steady = within 10 % of the steady power ...
 BAND_MIN_W = 50.0             # ... but at least 50 W
 TARGET_SHARE = 0.90           # wallbox: the setting counts as reached at 90 % of amps x phases x voltage
 COARSE_GAP_S = 30.0
+SUGGEST_DAYS = 30             # suggestion for the start power (precautionary lock): runs of the last 30 days ...
+SUGGEST_MIN_RUNS = 3          # ... and at least this many
 
 
 def _c(kw: Any) -> int | None:
@@ -261,6 +263,21 @@ class Protokoll:
             d["flags"] = d["flags"] or 0
             out.append(d)
         return out
+
+    def start_peak(self, dev_id: str, now: datetime, days: int = SUGGEST_DAYS, min_runs: int = SUGGEST_MIN_RUNS) -> dict[str, Any] | None:
+        """Suggestion for the field *start power* of the precautionary lock (draft 0.15.2): the median of the peaks in the first
+        minutes of the runs of the last `days` days, in kW, and how many runs. None with fewer than `min_runs`. Only shown, never
+        taken over by itself."""
+        if dev_id not in self.devs:
+            return None
+        first = (now - timedelta(days=days)).strftime("%Y-%m-%d")
+        last = now.strftime("%Y-%m-%d")
+        # a power sensor that reports every 30 s or more does not see the peak (A_GROB): such runs would suggest too little
+        peaks = [r["spitze_w"] for day in sorted(self.days) if first <= day <= last
+                 for r in self.runs(day) if r["device"] == dev_id and r.get("spitze_w") and not r["flags"] & A_GROB]
+        if len(peaks) < max(1, min_runs):
+            return None
+        return {"kw": round(median(peaks) / 1000.0, 1), "n": len(peaks)}
 
 
 class Anlauf:

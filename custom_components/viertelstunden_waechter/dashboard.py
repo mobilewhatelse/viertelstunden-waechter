@@ -29,6 +29,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "src_title": "Quellen im Vergleich", "src_own": "Ihr Sensor", "src_evcc": "evcc", "src_counts": "es gilt",
         "src_reserve": "Reserve", "src_differ": "Ihr Sensor und evcc zeigen deutlich verschiedenen Bezug. Der Wächter regelt mit Ihrem Sensor.",
         "src_twice": "Eine Wallbox scheint doppelt eingetragen (als Wallbox und als evcc-Ladepunkt).", "src_down": "evcc liefert gerade keinen Netzbezug.",
+        "pc_title": "Vorsorgliche Sperre (Entwurf)", "pc_set": "Anlauf", "pc_locked": "jetzt vorsorglich gesperrt",
+        "pc_observed": "wäre jetzt gesperrt (beobachtet)", "pc_unset": "Anlaufleistung nicht eingetragen",
+        "pc_none": "Kein Gerät mit Anlaufleistung (oder die Werte fehlen noch).",
         "now": "Jetzt", "costs": "Kosten und Ersparnis", "forecast": "Prognose 24 Stunden",
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
         "mode": "Betriebsart", "strategy": "Strategie", "limit": "Grenze (kW)", "margin": "Sicherheitsabstand (kW)",
@@ -103,6 +106,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "src_title": "Sources compared", "src_own": "Your sensor", "src_evcc": "evcc", "src_counts": "counts now",
         "src_reserve": "reserve", "src_differ": "Your sensor and evcc show clearly different import. The guard works with your sensor.",
         "src_twice": "A wallbox seems to be entered twice (as wallbox and as evcc loadpoint).", "src_down": "evcc is not delivering a grid import right now.",
+        "pc_title": "Precautionary lock (draft)", "pc_set": "start", "pc_locked": "locked in advance now",
+        "pc_observed": "would be locked now (observed)", "pc_unset": "start power not entered",
+        "pc_none": "No device with a start power (or the values are not there yet).",
         "now": "Now", "costs": "Cost and savings", "forecast": "24-hour forecast",
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
         "mode": "Mode", "strategy": "Strategy", "limit": "Limit (kW)", "margin": "Safety margin (kW)",
@@ -499,11 +505,27 @@ def plugwhen_section(lang: str | None) -> dict[str, Any]:
         {"type": "markdown", "content": text}]}
 
 
+def _precaution_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """Precautionary lock (draft 0.15.2): per device the start power, whether it is held now and the measured start peak as a
+    suggestion. Robust: without the attribute (older version, no device) a plain line."""
+    s = ids["status"]
+    return (
+        "{% set p = state_attr('" + s + "', 'precaution') or [] %}"
+        "{% for d in p %}- **{{ d['name'] }}**: "
+        "{% if d['start_kw'] %}" + x["pc_set"] + " {{ '%.1f' | format(d['start_kw'] | float(0)) }} kW"
+        "{% if d['locked'] %} · {{ '" + x["pc_observed"] + "' if d['observed'] else '" + x["pc_locked"] + "' }}{% endif %}"
+        "{% else %}" + x["pc_unset"] + "{% endif %}"
+        "{% if d['suggestion'] %} · {{ d['suggestion'] }}{% endif %}\n"
+        "{% else %}" + x["pc_none"] + "{% endfor %}"
+    )
+
+
 def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, Any]] | None = None,
-                evcc: bool = False, plugwhen: bool | None = None) -> list[dict[str, Any]]:
+                evcc: bool = False, plugwhen: bool | None = None, precaution: bool = False) -> list[dict[str, Any]]:
     """Three views: the daily overview, the compact view for the phone ("today") and statistics with forecast.
     `planners`: charge plans of a car planner (each {name, plan, ready}); then those are shown instead of the own plan.
-    `plugwhen`: False = known not installed, then a quiet card points to it (True or None: no card)."""
+    `plugwhen`: False = known not installed, then a quiet card points to it (True or None: no card).
+    `precaution`: a device has a start power (precautionary lock, draft): its card in the section "now" (else none)."""
     x = _t(lang)
     main = {
         "title": x["view_main"], "path": "waechter", "type": "sections", "max_columns": 3,
@@ -527,7 +549,8 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 _tile(ids["today_peak"], x["peak_today"]), _tile(ids["month_peak"], x["peak_month"]),
                 _tile(ids["interventions_today"], x["iv_today"]),
             ] + ([{"type": "markdown", "content": charts.sources(ids, x["src_title"], x["src_own"], x["src_evcc"], x["src_counts"],
-                                                            x["src_reserve"], x["src_differ"], x["src_twice"], x["src_down"])}] if evcc else [])},
+                                                            x["src_reserve"], x["src_differ"], x["src_twice"], x["src_down"])}] if evcc else [])
+              + ([{"type": "markdown", "title": x["pc_title"], "content": _precaution_markdown(ids, x)}] if precaution else [])},
             {"type": "grid", "cards": [
                 {"type": "heading", "heading": x["costs"], "icon": "mdi:currency-eur"},
                 _tile(ids["cost_month"], x["cost_month"]),

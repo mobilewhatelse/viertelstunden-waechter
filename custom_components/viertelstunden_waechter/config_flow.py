@@ -31,6 +31,7 @@ from .const import (
     D_REL2_VALUE, D_RESTORE_ORIG, D_RESTORE_STEPWISE, D_SOC_STEP, D_RECHARGE_AT, D_RECHARGE_ENTITY, D_RECHARGE_VALUE, D_SOC, D_STEP, D_VALUE,
 )
 from .const import D_ART, D_BATTERY_POWER
+from .const import D_RUNNING, D_START_GAP, D_START_KW, D_START_MAX
 from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
 from .geraete_check import ARTS
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
@@ -272,6 +273,14 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
         s[vol.Required(D_RESTORE_ORIG, default=d.get(D_RESTORE_ORIG, True))] = BooleanSelector()
         s[_opt(D_OFF_SCRIPT, d)] = _ent("script")
+        # precautionary lock (draft 0.15.2, issue #5): start power 0 = off. Extension point: the same block for KIND_SWITCH
+        # (keep off) or KIND_THROTTLE (keep low) once the engine can lock them in advance (engine.PC_KINDS)
+        s[vol.Required(D_START_KW, default=d.get(D_START_KW, 0))] = _num(0, 50, 0.1, "kW")
+        s[_opt(D_POWER, d)] = _ent("sensor")
+        s[vol.Required(D_MIN_POWER, default=d.get(D_MIN_POWER, 100))] = _num(0, 20000, 10, "W")
+        s[_opt(D_RUNNING, d)] = _ent(ON_OFF_DOMAINS)
+        s[vol.Required(D_START_MAX, default=d.get(D_START_MAX, 30))] = _num(1, 240, 1, "min")
+        s[vol.Required(D_START_GAP, default=d.get(D_START_GAP, 3))] = _num(0, 60, 1, "min")
     elif kind == KIND_THROTTLE:
         s[vol.Required(D_VALUE, default=d.get(D_VALUE, vol.UNDEFINED))] = _ent(["number", "input_number"])
         s[vol.Required(D_MAX_VALUE, default=d.get(D_MAX_VALUE, 100))] = _num(0, 100000, 0.1)
@@ -339,6 +348,8 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
         return f"Ladeplan · {d.get(D_NAME, '?')} · bis {int(d.get(D_TARGET_SOC, 80))} % zur Abfahrt"
     elif kind == KIND_SETTING:
         what = f"Einstellung ändern, ≈ {int(d.get(D_POWER_W, 0))} W"
+        if float(d.get(D_START_KW) or 0) > 0:
+            what += f", vorsorglich ab {float(d[D_START_KW]):g} kW Anlauf"
     elif kind == KIND_THROTTLE:
         what = f"{d.get(D_MAX_VALUE, 100):g}→{d.get(D_MIN_VALUE, 0):g}, Schritt {d.get(D_STEP, 5):g}"
     elif kind == KIND_BATTERY:
@@ -684,7 +695,19 @@ class SettingFlow(_DeviceFlow):
     kind = KIND_SETTING
 
     def _validate(self, u: dict[str, Any]) -> dict[str, str]:
-        return _validate_pairs(self.hass, u)
+        return _validate_pairs(self.hass, u) or _precaution_errors(u)
+
+
+def _precaution_errors(u: dict[str, Any]) -> dict[str, str]:
+    """Precautionary lock (draft): it must be able to tell whether the device runs, and a lock must be given back (the values
+    from before, or the script), else a lock would stay."""
+    if float(u.get(D_START_KW) or 0) <= 0:
+        return {}
+    if not u.get(D_POWER) and not u.get(D_RUNNING):
+        return {D_START_KW: "start_needs_sensor"}
+    if not u.get(D_RESTORE_ORIG, True) and not u.get(D_OFF_SCRIPT):
+        return {D_START_KW: "start_needs_restore"}
+    return {}
 
 
 class ThrottleFlow(_DeviceFlow):
