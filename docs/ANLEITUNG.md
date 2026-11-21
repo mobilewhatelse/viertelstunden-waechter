@@ -870,7 +870,8 @@ Eingriff* an ist, als Meldung.
 **Was gesendet wird:** je Gerät Art, Hersteller und Modell (aus der Geräteliste von Home Assistant) und gerundete Messwerte der
 höchstens letzten 120 Tage. Statt eines Datums steht nur „vor so vielen Tagen“. Keine Namen, keine Entitäts-IDs, keine Kennung der
 Installation; die Gerätenummern gelten nur in dieser einen Anfrage. Der Dienst speichert die Anfrage nicht, er behält nur anonyme
-Werte abgeschlossener Tage ohne Datum.
+Werte abgeschlossener Tage ohne Datum. Ab 0.15.1, mit Zustimmung zum Datenkatalog: in der ersten Prüfung danach einmal je Gerät
+`neu: true` (Gerätezähler); der Dienst zählt damit nur die Geräte je Art, Hersteller und Modell.
 
 **Wer schon vor 0.15 geteilt hat**, findet unter Reparaturen einmal den Eintrag *Geräte-Check: einmal bestätigen*. Der Schalter
 dort steht auf „weiter teilen“; *Senden* startet den Check. Bis dahin läuft die Wochenstatistik wie bisher und der Geräte-Check

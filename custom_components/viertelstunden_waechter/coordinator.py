@@ -564,7 +564,8 @@ class Waechter:
     async def _check_send(self, now: datetime) -> None:
         try:
             v, _ = self._version()
-            body = self.check.request(now, self._check_info(), v)
+            # device counter (K4): `neu` once per device, only with consent to the data catalogue
+            body = self.check.request(now, self._check_info(), v, count=self.consent_catalog() >= 1)
             async with asyncio.timeout(15):
                 async with async_get_clientsession(self.hass).post(
                         gc.SERVICE_URL, json=body, headers={"User-Agent": f"{DOMAIN}/{v}"}) as r:

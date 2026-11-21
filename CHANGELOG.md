@@ -75,6 +75,17 @@ Format: newest first. German version below each English block is a short summary
   der Lastprognose und zeigt danach die Hochrechnung wie bisher; das Attribut `projection_kw` behält den ungeglätteten Wert. Nur
   die Anzeige ändert sich: Regelung, Grenzen, Vorwarnung und Prognose-Protokoll arbeiten weiter mit der Hochrechnung. Dashboard
   neu erstellen, damit der Schalter erscheint.
+- **Device counter (data catalogue K4, announced in the catalogue and on the privacy page):** with consent to the data
+  catalogue, the device check marks each device once with `neu: true`, in the first check after the consent (a device entered
+  later, or deleted and entered again, gets its own once). The service only counts how many devices of a kind, maker and model
+  there are, so that the comparison with the same devices can start from 5 devices per model. Nothing else is sent; which
+  devices were counted is kept only in your Home Assistant and is not in the bug report or the diagnostics. *Deutsch:*
+  **Gerätezähler (Datenkatalog K4, angekündigt im Katalog und auf der Datenschutzseite):** Mit Zustimmung zum Datenkatalog
+  kennzeichnet der Geräte-Check jedes Gerät einmal mit `neu: true`, in der ersten Prüfung nach der Zustimmung (ein später
+  eingetragenes oder gelöschtes und neu angelegtes Gerät bekommt sein eigenes einmal). Der Dienst zählt nur, wie viele Geräte je
+  Art, Hersteller und Modell es gibt, damit der Vergleich mit gleichen Geräten ab 5 Geräten je Modell beginnen kann. Sonst wird
+  nichts gesendet; welche Geräte gezählt sind, bleibt nur in Ihrem Home Assistant und steht nicht im Fehlerbericht oder in der
+  Diagnose.
 
 ## 0.15.0 - 2026-11-21
 

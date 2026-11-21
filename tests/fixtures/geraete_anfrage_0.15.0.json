@@ -1,0 +1,148 @@
+{
+ "quelle": "energie-cloud tests/vertraege/viertelstunden_waechter_0.15.0.json, Fall Geraete-Check mit Wallbox, Hausakku, Pumpe (Tag v0.15.0)",
+ "anfrage": {
+  "schema": 1,
+  "integration": "viertelstunden_waechter",
+  "version": "0.15.0",
+  "geraete": [
+   {
+    "nr": 0,
+    "geraet": "wallbox",
+    "art": null,
+    "hersteller": "go-e",
+    "modell": "Gemini",
+    "ladungen": [
+     [
+      4,
+      0.969,
+      10.7
+     ],
+     [
+      3,
+      0.661,
+      7.3
+     ],
+     [
+      2,
+      0.661,
+      7.3
+     ],
+     [
+      1,
+      0.661,
+      7.3
+     ]
+    ],
+    "tage": [
+     [
+      7.074,
+      5.0
+     ],
+     [
+      4.826,
+      5.0
+     ],
+     [
+      4.826,
+      5.0
+     ]
+    ]
+   },
+   {
+    "nr": 1,
+    "geraet": "battery",
+    "art": null,
+    "hersteller": "Huawei",
+    "modell": "LUNA2000",
+    "grund": [
+     [
+      10.278,
+      1,
+      80
+     ],
+     [
+      10.285,
+      -1,
+      78
+     ]
+    ],
+    "huebe": [],
+    "nennkapazitaet_kwh": 10.0,
+    "alter_halbjahre": 0,
+    "tage": []
+   },
+   {
+    "nr": 2,
+    "geraet": "switch",
+    "art": "pump",
+    "hersteller": null,
+    "modell": null,
+    "laeufe": [
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0,
+     800.0
+    ],
+    "zog_wenn_an": 1.0,
+    "an_ohne_strom_min": 0,
+    "tage": [
+     [
+      5.453,
+      10.0
+     ]
+    ]
+   }
+  ],
+  "neue_tage": [
+   {
+    "nr": 0,
+    "kwh": 7.074,
+    "max_kw": 10.7,
+    "laufzeit_h": 0.66,
+    "temp_c": 5.0,
+    "anteil_vorgabe": 0.969
+   },
+   {
+    "nr": 0,
+    "kwh": 4.826,
+    "max_kw": 7.3,
+    "laufzeit_h": 0.66,
+    "temp_c": 5.0,
+    "anteil_vorgabe": 0.661
+   },
+   {
+    "nr": 0,
+    "kwh": 4.826,
+    "max_kw": 7.3,
+    "laufzeit_h": 0.66,
+    "temp_c": 5.0,
+    "anteil_vorgabe": 0.661
+   },
+   {
+    "nr": 2,
+    "kwh": 5.453,
+    "max_kw": 0.8,
+    "laufzeit_h": 6.82,
+    "temp_c": 10.0
+   }
+  ]
+ }
+}

@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
-from geraete_check import ART_HEAT_PUMP, ART_WATER_HEATER, DeviceCheck, Sample, text
+from geraete_check import ART_HEAT_PUMP, ART_PUMP, ART_WATER_HEATER, DeviceCheck, Sample, text
 
 TZ = timezone(timedelta(hours=1))
 T0 = datetime(2027, 1, 4, 8, 0, tzinfo=TZ)
@@ -274,6 +275,150 @@ class AnswerTests(unittest.TestCase):
     def test_forget_removed_device(self):
         self.c.forget({"wb"})
         self.assertEqual(set(self.c.dev), {"wb"})
+
+
+FIXTURE_0150 = Path(__file__).resolve().parent / "fixtures" / "geraete_anfrage_0.15.0.json"
+PKG = Path(__file__).resolve().parents[1] / "custom_components" / "viertelstunden_waechter"
+
+
+def contract_request(c: DeviceCheck, count: bool = False) -> dict:
+    """The measured values of the contract test of the service (energie-cloud tests/vertraege/erzeugen.py, version 0.15.0)."""
+    tz = timezone(timedelta(hours=1))
+    t0 = datetime(2026, 11, 2, 8, 0, tzinfo=tz)
+
+    def charge_(start, minutes, power_w):
+        t = start
+        for _ in range(int(minutes * 3)):
+            c.step(t, {"wb": Sample("wallbox", power_w=power_w, current_a=16, phases=3, soc=50, max_current=16)}, 5.0)
+            t += STEP
+        for _ in range(60):
+            c.step(t, {"wb": Sample("wallbox", power_w=0.0, current_a=16, phases=3, soc=50, max_current=16)}, 5.0)
+            t += STEP
+        return t
+
+    t = charge_(t0, 40, 10700)
+    for d in range(1, 4):
+        t = charge_(t0 + timedelta(days=d), 40, 7300)
+    soc, up = 10.0, True
+    for _ in range(3):
+        to = 90.0 if up else 10.0
+        for i in range(361):
+            c.step(t, {"bat": Sample("battery", soc=soc + (to - soc) * i / 360, battery_w=4000 if up else -4000)}, 5.0)
+            t += STEP
+        soc, up = to, not up
+    for _ in range(22):
+        for _ in range(90):
+            c.step(t, {"pool": Sample("switch", art=ART_PUMP, power_w=800.0, is_on=True)}, 10.0)
+            t += STEP
+        for _ in range(30):
+            c.step(t, {"pool": Sample("switch", art=ART_PUMP, power_w=0.0, is_on=False)}, 10.0)
+            t += STEP
+    info = {"wb": {"hersteller": "go-e", "modell": "Gemini"},
+            "bat": {"hersteller": "Huawei", "modell": "LUNA2000", "nennkapazitaet_kwh": 10.0}}
+    return c.request(t, info, "0.15.0", count=count)
+
+
+def answered(c: DeviceCheck, r: dict) -> None:
+    """The service answers the request."""
+    c.apply(T0, {"geraete": [{"nr": g["nr"], "status": "learning"} for g in r["geraete"]]})
+
+
+def new_nrs(r: dict) -> list:
+    return [g["nr"] for g in r["geraete"] if g.get("neu") is True]
+
+
+class DeviceCounterTests(unittest.TestCase):
+    """Device counter K4: `neu: true` once per device and installation, in the first check after the consent to the catalogue."""
+
+    def setUp(self):
+        self.c = DeviceCheck()
+        charge(self.c, T0, 40, 7300)
+        runs(self.c, T0 + timedelta(hours=3), 2, 600)   # devices wb (nr 0) and pool (nr 1)
+        self.now = T0 + timedelta(days=1)
+        self.info = {"wb": {"hersteller": "go-e", "modell": "Gemini"}}
+
+    def ask(self, info=None, count=True, now=None):
+        return self.c.request(now or self.now, self.info if info is None else info, "x", count=count)
+
+    def test_first_request_new_second_not(self):
+        r = self.ask()
+        self.assertEqual(new_nrs(r), [0, 1])
+        answered(self.c, r)
+        r2 = self.ask()
+        self.assertTrue(all("neu" not in g for g in r2["geraete"]))
+
+    def test_failed_request_sends_new_again(self):
+        self.assertEqual(new_nrs(self.ask()), [0, 1])   # no answer: apply is not called
+        self.assertEqual(self.c.counted, {})
+        r = self.ask()
+        self.assertEqual(new_nrs(r), [0, 1])
+        answered(self.c, r)
+        self.assertEqual(new_nrs(self.ask()), [])
+
+    def test_bad_answer_does_not_mark(self):
+        self.ask()
+        with self.assertRaises(AttributeError):
+            self.c.apply(self.now, "kaputt")   # in the coordinator caught; the next try sends `neu` again
+        self.assertEqual(self.c.counted, {})
+
+    def test_no_new_without_consent_to_catalogue(self):
+        r = self.ask(count=False)
+        self.assertEqual(new_nrs(r), [])
+        answered(self.c, r)
+        self.assertEqual(self.c.counted, {})   # not counted: the first check with consent sends it
+        self.assertEqual(new_nrs(self.ask()), [0, 1])
+
+    def test_device_added_later(self):
+        answered(self.c, self.ask())
+        self.c.step(self.now, {"akku": Sample("battery", soc=50, battery_w=0)}, 5.0)
+        r = self.ask()
+        self.assertEqual(new_nrs(r), [2])
+        answered(self.c, r)
+        self.assertEqual(new_nrs(self.ask()), [])
+
+    def test_deleted_and_entered_again_is_new(self):
+        answered(self.c, self.ask())
+        self.c.forget({"pool"})                     # wallbox deleted
+        self.assertEqual(set(self.c.counted), {"pool"})
+        charge(self.c, T0 + timedelta(days=2), 40, 7300)   # entered again under the same id
+        r = self.ask(now=self.now + timedelta(days=2))
+        self.assertEqual([g["geraet"] for g in r["geraete"] if g.get("neu")], ["wallbox"])
+
+    def test_other_model_under_same_id_is_new(self):
+        answered(self.c, self.ask())
+        self.assertEqual(new_nrs(self.ask({"wb": {"hersteller": "Fronius", "modell": "Wattpilot"}})), [0])
+
+    def test_survives_restart(self):
+        answered(self.c, self.ask())
+        c2 = DeviceCheck.from_dict(json.loads(json.dumps(self.c.to_dict())))
+        self.assertEqual(new_nrs(c2.request(self.now, self.info, "x", count=True)), [])
+        old = self.c.to_dict()
+        old.pop("counted")                          # store of 0.15.0: nothing counted yet
+        self.assertEqual(new_nrs(DeviceCheck.from_dict(old).request(self.now, self.info, "x", count=True)), [0, 1])
+
+    def test_mark_and_ids_stay_local(self):
+        raw = json.dumps(self.ask())
+        self.assertNotIn("pool", raw)
+        self.assertNotIn("counted", raw)
+        self.assertNotIn("|", raw)
+
+    def test_request_format_as_in_0_15_0(self):
+        want = json.loads(FIXTURE_0150.read_text(encoding="utf-8"))["anfrage"]
+        self.assertEqual(contract_request(DeviceCheck()), want)   # without consent: exactly as 0.15.0
+        got = contract_request(DeviceCheck(), count=True)
+        self.assertEqual([g.get("neu") for g in got["geraete"]], [True, True, True])
+        for g in got["geraete"]:
+            self.assertEqual(list(g)[-1], "neu")
+            del g["neu"]
+        self.assertEqual(got, want)                 # nothing else changed: same fields, order and values
+
+    def test_coordinator_counts_only_with_catalogue_and_reports_nothing(self):
+        src = (PKG / "coordinator.py").read_text(encoding="utf-8")
+        self.assertIn("count=self.consent_catalog() >= 1", src)
+        for name in ("diagnostics.py", "fehlerbericht.py"):
+            s = (PKG / name).read_text(encoding="utf-8")
+            self.assertNotIn("counted", s)
+            self.assertNotIn("check.to_dict", s)
 
 
 class TextTests(unittest.TestCase):

@@ -159,13 +159,17 @@ class DeviceCheck:
         self.checked_at: str | None = None
         self.new_days: list[dict[str, Any]] = []     # finished days not sent yet (anonymous, without date)
         self.changed = False                          # something new was measured since the last check
+        # device counter (data catalogue K4): device id -> "kind|art|maker|model" of the device whose one-time `neu` the service
+        # has answered; local only, never sent. Another kind or model under the same id, or a device entered anew, counts as new.
+        self.counted: dict[str, str] = {}
+        self._pending_new: dict[str, str] = {}
         self._last: datetime | None = None
 
     # ---------- persistence ----------
 
     def to_dict(self) -> dict[str, Any]:
         return {"dev": self.dev, "result": self.result, "checked_at": self.checked_at, "new_days": self.new_days[-KEEP_DAYS:],
-                "changed": self.changed}
+                "changed": self.changed, "counted": self.counted}
 
     @classmethod
     def from_dict(cls, d: dict[str, Any] | None, voltage: float = 230.0) -> DeviceCheck:
@@ -176,12 +180,20 @@ class DeviceCheck:
         c.checked_at = d.get("checked_at")
         c.new_days = list(d.get("new_days") or [])
         c.changed = bool(d.get("changed"))
+        counted = d.get("counted")
+        c.counted = {str(k): str(v) for k, v in counted.items()} if isinstance(counted, dict) else {}
         return c
 
     def forget(self, keep: set[str]) -> None:
-        """Drop devices that are no longer entered."""
+        """Drop devices that are no longer entered (a device entered again later counts as new for the device counter)."""
         self.dev = {k: v for k, v in self.dev.items() if k in keep}
         self.result = {k: v for k, v in self.result.items() if k in keep}
+        self.counted = {k: v for k, v in self.counted.items() if k in keep}
+
+    @staticmethod
+    def _sign(st: dict[str, Any], i: dict[str, Any]) -> str:
+        """What the device counter counts a device as: kind, type, maker and model (as sent in the request)."""
+        return "|".join("" if x is None else str(x) for x in (st.get("kind"), st.get("art"), i.get("hersteller"), i.get("modell")))
 
     # ---------- measuring ----------
 
@@ -381,12 +393,14 @@ class DeviceCheck:
 
     # ---------- what is sent and what comes back ----------
 
-    def request(self, now: datetime, info: dict[str, dict[str, Any]], version: str) -> dict[str, Any]:
+    def request(self, now: datetime, info: dict[str, dict[str, Any]], version: str, count: bool = False) -> dict[str, Any]:
         """The check request: per device its kind, type, maker and model (from `info`) and the measured values. Days are given
-        as 'days ago', the history of days only as a list in order; no date, time of day or id of the installation."""
+        as 'days ago', the history of days only as a list in order; no date, time of day or id of the installation.
+        With `count` (consent to the data catalogue) a device not counted yet also gets `neu: true`, once (device counter K4)."""
         today = now.strftime("%Y-%m-%d")
         out: list[dict[str, Any]] = []
         self._ids = list(self.dev)
+        self._pending_new = {}
         for nr, dev_id in enumerate(self._ids):
             st = self.dev[dev_id]
             i = info.get(dev_id, {})
@@ -414,6 +428,11 @@ class DeviceCheck:
                 if fit is not None and _span(recent) >= CURVE_SPAN_K and fit[0] + fit[1] * 10.0 > 0.1:
                     g["form_kalt_mild"] = round((fit[0]) / (fit[0] + fit[1] * 10.0), 3)   # kWh at 0 deg C against 10 deg C
             g["tage"] = [[r[1], r[4]] for r in st.get("days", [])[-SEND_DAYS:]]
+            if count:
+                sign = self._sign(st, i)
+                if self.counted.get(dev_id) != sign:
+                    g["neu"] = True
+                    self._pending_new[dev_id] = sign   # marked as counted only when the service has answered (apply)
             out.append(g)
         nr = {dev_id: i for i, dev_id in enumerate(self._ids)}
         self._sent_days = len(self.new_days)   # apply() removes only these; days closed while the request waits stay
@@ -439,6 +458,8 @@ class DeviceCheck:
         sent = getattr(self, "_sent_days", len(self.new_days))
         self.new_days = self.new_days[sent:]
         self._sent_days = 0
+        self.counted.update(getattr(self, "_pending_new", {}))
+        self._pending_new = {}
         self.changed = bool(self.new_days)
 
     def clear(self) -> None:
