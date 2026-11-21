@@ -16,9 +16,9 @@ die Hilfe der Community brauchen. *Stand der Prüfung: 25.10.2026, Integrationsv
 | ❌ | **Keine passende Entität gefunden** (nichts Schreibbares, das die Leistung senkt oder den Modus ändert). Skript oder Ein/Aus-Schalter verwenden. |
 
 **„Getestet“ heißt:** mindestens ein Abend im Modus **Aktiv** mit einem echten Eingriff **und** beobachtetem
-echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher haben der Wattpilot (durch die Autoren, 25.10.2026), die Anker SOLIX V1 und die Anker Solarbank 3 Pro (beide durch einen Nutzer, 15.11.2026)
-diese Stufe erreicht; die anderen Gerätetypen – Leistung drosseln, Einstellung ändern – noch nicht.
-Seien Sie der Erste – siehe „So melden Sie einen Test“.
+echtem Zurücknehmen, auf echter Hardware, gemeldet mit Versionsnummer. Bisher haben der Wattpilot (durch die Autoren, 25.10.2026), die Anker SOLIX V1 und die Anker Solarbank 3 Pro
+(beide durch einen Nutzer, 15.11.2026) diese Stufe erreicht; die anderen Gerätetypen – Leistung drosseln, Einstellung ändern – noch nicht.
+Melden Sie Ihr Gerät – siehe „So melden Sie einen Test“.
 
 ## Bei anderen im Einsatz (aus der freiwilligen Statistik)
 

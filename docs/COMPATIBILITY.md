@@ -16,9 +16,9 @@ community. *State of the check: 2026-10-25, integration version 0.12.0 (the Watt
 | ❌ | **No suitable entity found** in the source check (nothing writable that lowers power or changes the mode). Use a script or an on/off switch. |
 
 **"Tested" means:** at least one evening in the mode **Active** with a real intervention *and* the real take-back
-observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25), the Anker SOLIX V1 and the Anker Solarbank 3 Pro (both by a user, 2026-11-15)
-have reached this level; the other device types - throttle power, change settings - have not.
-Please be the first - see "How to report a test" below.
+observed, on real hardware, reported with the version number. So far the Wattpilot (by the authors, 2026-10-25), the Anker SOLIX V1 and the Anker Solarbank 3 Pro
+(both by a user, 2026-11-15) have reached this level; the other device types - throttle power, change settings - have not.
+Please report your device - see "How to report a test" below.
 
 ## In use by others (from the voluntary statistic)
 
