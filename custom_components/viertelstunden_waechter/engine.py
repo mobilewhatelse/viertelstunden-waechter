@@ -67,6 +67,9 @@ PLAUSIBLE_LIMITS = 4.0        # an average of more than this many times the own 
 COUNTER_SILENT_S = 1200.0     # a counter that said nothing for longer than a quarter hour and then steps: the step is the backlog
 COUNTER_JUMP_KWH = 0.1        # ... if it is this much more than (half as much again as) the power sensor measured in the
 COUNTER_JUMP_FACTOR = 1.5     #     running quarter hour (a counter that reports every quarter hour is never meant)
+COUNTER_GAP_KEEP = 15         # gaps between new counter values remembered (the usual interval of the counter, as power_gap)
+COUNTER_GAP_FACTOR = 2.5      # a gap counts as an outage only if it is this much longer than the usual interval (a cloud counter
+                              # that reports every 20 to 30 minutes is no outage, review 20.11.2026)
 
 
 def plausible_kw(limit_kw: float | None) -> float:
@@ -184,9 +187,28 @@ def _clamp(v: int, lo: int, hi: int) -> int:
 
 
 def amps_of(option: Any) -> int | None:
-    """The current in a list entry of a wallbox: '8 A', '8A', '8', '8,0 A' -> 8; None when there is no number."""
-    m = re.search(r"\d+(?:[.,]\d+)?", str(option))
-    return int(float(m.group(0).replace(",", "."))) if m else None
+    """The current in a list entry of a wallbox: '8 A', '8A', '8', '8,0 A' -> 8; with phases in front ('3x16 A', '1 x 16 A',
+    '3×16A') the current after the x, not the phase count; None when there is no number."""
+    s = str(option)
+    m = _PHASES_X_AMPS.search(s) or re.search(r"(\d+(?:[.,]\d+)?)", s)
+    return int(float(m.group(m.lastindex or 0).replace(",", "."))) if m else None
+
+
+_PHASES_X_AMPS = re.compile(r"\b([123])\s*[xX×*]\s*(\d+(?:[.,]\d+)?)")
+
+
+def phases_of(option: Any) -> int | None:
+    """The phase count written in a list entry ('3x16 A' -> 3, '1x16 A' -> 1); None without one ('16 A')."""
+    m = _PHASES_X_AMPS.search(str(option))
+    return int(m.group(1)) if m else None
+
+
+def pick_option(options: list[Any], amps: int, current: Any = None) -> Any:
+    """The list entry with `amps`; with entries for one and three phases ('1x16 A', '3x16 A') the one with the phase count of
+    the present entry, so lowering the current never switches the phases. None if there is no entry with these amps."""
+    hits = [o for o in options if amps_of(o) == amps]
+    same = [o for o in hits if phases_of(o) == phases_of(current)]
+    return (same or hits or [None])[0]
 
 
 def percent_of(value: Any) -> float | None:
@@ -231,6 +253,8 @@ class Guard:
         self._counter_at_q: float | None = None
         self._counter_seen: float | None = None        # the last counter value and when it last changed: a counter that
         self._counter_changed: datetime | None = None  # stood still and then steps brings the backlog of the whole gap
+        self._counter_gaps: list[float] = []           # seconds between the last new counter values (its usual interval)
+        self._power_hole = False                       # the power sensor had no value since the counter last changed
         self.max_plausible_kw = MAX_PLAUSIBLE_KW       # set from the limit in step()
         self._last_t: datetime | None = None
         self._last_p = 0.0
@@ -328,6 +352,8 @@ class Guard:
             dt = max(0.0, min(60.0, (now - self._last_t).total_seconds()))
             self.energy_kwh += self._last_p * dt / 3600.0
             self.saved_kwh += self._last_saved * dt / 3600.0
+        if grid_kw is None:
+            self._power_hole = True
         if counter_kwh is not None:
             if self._counter_at_q is None:
                 self._counter_at_q = counter_kwh - self.energy_kwh
@@ -344,20 +370,33 @@ class Guard:
         brings the energy of the whole gap at once. That is not the import of the running quarter hour (issue #4: no values
         from 02:00 to 06:15, then 5 kWh in one step, recorded as a peak of 20 kW). The step is left out, the quarter hour goes on
         with what the power sensor measured and counts as estimated: it is not recorded as a peak. A counter that only stood
-        still because nothing was imported (the sun covered the house) steps by what the power sensor saw too: nothing happens."""
+        still because nothing was imported (the sun covered the house) steps by what the power sensor saw too: nothing happens.
+        A counter that always reports rarely (a cloud counter every 20 to 30 minutes, review 20.11.2026) is no outage: the gap
+        must be clearly longer than its usual interval (median of the last gaps, like power_gap); while that is not known yet,
+        only a gap in which the power sensor had no value either counts. Such a normal step that began before the running quarter
+        hour is shared by time: only the part after the quarter start belongs to it (the rest was the quarter hour before)."""
         seen, changed = self._counter_seen, self._counter_changed
         if seen is None or changed is None:
             self._counter_seen, self._counter_changed = counter_kwh, now
+            self._power_hole = False
             return
         if counter_kwh == seen:
             return
         step = counter_kwh - seen
+        silent = (now - changed).total_seconds()
+        hole, self._power_hole = self._power_hole, False
+        usual = power_gap(self._counter_gaps)
+        self._counter_gaps = (self._counter_gaps + [silent])[-COUNTER_GAP_KEEP:]
         self._counter_seen, self._counter_changed = counter_kwh, now
-        if (now - changed).total_seconds() < COUNTER_SILENT_S or changed >= q:
+        if changed >= q:
             return
-        if step > COUNTER_JUMP_FACTOR * self.energy_kwh + COUNTER_JUMP_KWH:
+        outage = silent >= COUNTER_SILENT_S and (silent >= COUNTER_GAP_FACTOR * usual if usual is not None else hole)
+        if outage and step > COUNTER_JUMP_FACTOR * self.energy_kwh + COUNTER_JUMP_KWH:
             self._counter_at_q = counter_kwh - self.energy_kwh
             self.quarter_estimated = True
+        elif step > 0.0 and silent > 0.0:
+            share = max(0.0, min(1.0, (now - q).total_seconds() / silent))
+            self._counter_at_q = counter_kwh - step * share
 
     # ---------- main step ----------
 

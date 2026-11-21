@@ -45,7 +45,7 @@ from .pricing import monthly_cost
 from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
-    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS, amps_of, percent_of, step_down,
+    DeviceConfig, Guard, Reading, KIND_EVCC, WALLBOX_KINDS, amps_of, percent_of, pick_option, step_down,
     POWER_GAP_KEEP, POWER_GAP_MIN_KW, power_gap,
 )
 
@@ -2138,7 +2138,7 @@ class Waechter:
                 options = list(st.attributes.get("options") or []) if st else []
                 _cur, steps = self._wallbox_current(eid)
                 want = step_down(int(float(a.value)), steps)
-                option = next((o for o in options if amps_of(o) == want), None)
+                option = pick_option(options, want, st.state if st else None)
                 if option is None:
                     raise ValueError(f"no entry with {want} A in {eid}")
                 await self._call(domain, "select_option", {"entity_id": eid, "option": option})

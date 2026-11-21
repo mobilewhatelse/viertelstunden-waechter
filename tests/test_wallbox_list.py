@@ -14,6 +14,24 @@ class WallboxListTests(unittest.TestCase):
         for text, amps in (("8 A", 8), ("8A", 8), ("16", 16), ("10,0 A", 10), ("6.0 A", 6), ("Max 32 A", 32), ("aus", None)):
             self.assertEqual(engine.amps_of(text), amps, text)
 
+    def test_phases_in_front_are_not_the_current(self):   # 0.15.1: '3x16 A' gave 3 (the first number)
+        for text, amps, phases in (("6 A", 6, None), ("8 A", 8, None), ("3x16 A", 16, 3), ("1x16 A", 16, 1), ("16A", 16, None),
+                                   ("3 x 10 A", 10, 3), ("3×16A", 16, 3), ("1X6 A", 6, 1), ("3x6,0 A", 6, 3)):
+            self.assertEqual(engine.amps_of(text), amps, text)
+            self.assertEqual(engine.phases_of(text), phases, text)
+
+    def test_a_list_with_phases_offers_the_currents(self):
+        options = ["1x6 A", "1x10 A", "1x16 A", "3x6 A", "3x10 A", "3x16 A"]
+        self.assertEqual(sorted({engine.amps_of(o) for o in options}), [6, 10, 16])
+
+    def test_lowering_keeps_the_phase_count_of_the_present_entry(self):
+        options = ["1x6 A", "1x10 A", "1x16 A", "3x6 A", "3x10 A", "3x16 A"]
+        self.assertEqual(engine.pick_option(options, 10, "3x16 A"), "3x10 A")
+        self.assertEqual(engine.pick_option(options, 6, "1x16 A"), "1x6 A")
+        self.assertEqual(engine.pick_option(options, 10, None), "1x10 A")       # unknown: the first entry, as before
+        self.assertEqual(engine.pick_option(["6 A", "8 A", "16 A"], 8, "16 A"), "8 A")
+        self.assertIsNone(engine.pick_option(options, 8, "3x16 A"))
+
     def test_target_from_a_list_or_number(self):   # Fordpass: select '50'..'100', shown as '80%'; 'Unsupported' without target
         for text, pct in (("80", 80.0), ("80.0", 80.0), ("80%", 80.0), ("80 %", 80.0), ("72,5", 72.5), ("100", 100.0),
                           ("Unsupported", None), ("unknown", None), ("0", None), ("150", None), ("", None)):

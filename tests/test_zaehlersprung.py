@@ -72,13 +72,13 @@ class CounterBacklogTest(unittest.TestCase):
         self.assertAlmostEqual(kw, 1.2, delta=0.1)
 
     def test_without_the_fix_it_was_a_peak(self):
-        # the same run with the detection switched off: this is what the reporter saw
-        old = engine.COUNTER_SILENT_S
-        engine.COUNTER_SILENT_S = 10 ** 9
+        # the same run with the detection switched off (as in 0.14: the step is taken as it comes): what the reporter saw
+        old = engine.Guard._counter_backlog
+        engine.Guard._counter_backlog = lambda *_a: None
         try:
             r = self._issue4("held")
         finally:
-            engine.COUNTER_SILENT_S = old
+            engine.Guard._counter_backlog = old
         kw, estimated = r.done["06:30"]
         self.assertFalse(estimated)
         self.assertGreater(kw, 15.0)
@@ -124,6 +124,78 @@ class CounterBacklogTest(unittest.TestCase):
         self.assertTrue(r.done["11:15"][1])
         self.assertFalse(r.done["11:30"][1])
         self.assertAlmostEqual(r.done["11:30"][0], 3.0, delta=0.3)
+
+
+class RareCounterTest(unittest.TestCase):
+    """Review 20.11.2026: a counter that always reports only every 20 to 30 minutes (cloud) is no outage. Before, every step of
+    it was taken for a backlog: nearly every quarter hour counted as estimated (no peak), so the real peaks were too low."""
+
+    @staticmethod
+    def _rare(start: datetime, until: datetime, kw: float, gaps_min=(20, 30, 25), counter: float = 3000.0):
+        g = engine.Guard(devices())
+        t, true, shown, done = start, counter, counter, {}
+        nxt, i = start, 0
+        while t < until:
+            t += STEP
+            true += kw * STEP.total_seconds() / 3600.0
+            if t >= nxt:
+                shown, nxt, i = true, t + timedelta(minutes=gaps_min[i % len(gaps_min)]), i + 1
+            g._account(t, kw, shown)
+            if g.finished_quarter_kw is not None:
+                done[t.strftime("%H:%M")] = (g.finished_quarter_kw, g.finished_estimated)
+        return g, done
+
+    def test_a_step_of_a_rare_counter_is_no_backlog(self):
+        _g, done = self._rare(at(8, 0), at(14, 0), 4.0)
+        self.assertGreater(len(done), 20)
+        for q, (kw, estimated) in done.items():
+            self.assertFalse(estimated, q)
+            self.assertAlmostEqual(kw, 4.0, delta=0.3, msg=q)
+
+    def test_a_rare_counter_every_25_minutes_keeps_its_peak(self):
+        r = Run(at(8, 0))
+        r.go(at(10, 0), 1.0, every=1500)
+        r.go(at(10, 30), 8.0, every=1500)       # the real peak of the day
+        r.go(at(12, 0), 1.0, every=1500)
+        self.assertFalse(r.done["10:15"][1])
+        self.assertFalse(r.done["10:30"][1])
+        self.assertAlmostEqual(r.done["10:15"][0], 8.0, delta=0.3)
+        self.assertAlmostEqual(max(kw for kw, est in r.done.values() if not est), 8.0, delta=0.3)
+
+    def test_without_the_learned_interval_it_was_taken_for_a_backlog(self):
+        old = engine.COUNTER_GAP_FACTOR
+        engine.COUNTER_GAP_FACTOR = 0.0       # every gap over 20 minutes counts as an outage, as in 0.15.0
+        try:
+            r = Run(at(8, 0))
+            r.go(at(12, 0), 4.0, every=1500)
+        finally:
+            engine.COUNTER_GAP_FACTOR = old
+        self.assertTrue(any(est for _kw, est in r.done.values()))
+
+    def test_a_rare_counter_that_really_fails_is_still_a_backlog(self):
+        # learned: about every 25 minutes; then away for three hours while the power sensor goes on
+        r = Run(at(6, 0))
+        r.go(at(9, 0), 1.0, every=1500)
+        r.go(at(12, 10), 1.0, counter="held")
+        r.go(at(13, 0), 1.0, every=20)            # back at 12:10 with the backlog, from then on every 20 seconds
+        self.assertTrue(r.done["12:15"][1], "the backlog of three hours must not be a peak")
+        self.assertFalse(r.done["12:45"][1])
+        self.assertLess(max(kw for kw, est in r.done.values() if not est), 1.5)
+
+    def test_issue4_with_the_numbers_of_the_report(self):
+        """Issue #4: the counter stood at 2628.5 kWh at 02:00 and at 2632.9 kWh at 06:15, without any power value in between;
+        the quarter hour was recorded with 20.23 kW. It must not count as a peak any more."""
+        r = Run(at(1, 30), counter=2628.5 - 1.2 * 0.5)
+        r.go(at(2, 0), 1.2)
+        self.assertAlmostEqual(r.true_counter, 2628.5, places=3)
+        r.go(at(6, 15), None, real_kw=4.4 / 4.25, counter="held")    # 02:00 .. 06:15: no power, the counter holds 2628.5
+        r.go(at(6, 30), None, real_kw=1.0)                            # the counter is back with 2632.9 kWh, still no power
+        r.go(at(7, 0), 1.0)
+        self.assertAlmostEqual(r._shown, r.true_counter, places=3)
+        kw, estimated = r.done["06:30"]
+        self.assertTrue(estimated, "the quarter hour with the backlog of 4.4 kWh must not be recorded as a peak")
+        self.assertLess(kw, 2.0)
+        self.assertLess(max(v for v, est in r.done.values() if not est), 2.0)
 
 
 class PlausibleTest(unittest.TestCase):
