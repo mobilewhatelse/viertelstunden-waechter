@@ -23,14 +23,14 @@ Seien Sie der Erste – siehe „So melden Sie einen Test“.
 ## Bei anderen im Einsatz (aus der freiwilligen Statistik)
 
 Wer *Anonyme Daten teilen* eingeschaltet hat, sendet, aus welchen Integrationen seine Netzsensoren und Geräte kommen
-(nur der Name der Integration, sonst nichts). Stand 14.11.2026, aus 44 Installationen, sind diese mit dem Wächter im
+(nur der Name der Integration, sonst nichts). Stand 21.11.2026, aus 73 Installationen (63 in Österreich, 8 in Deutschland, je 1 in der Schweiz und Slowenien; 64 davon beobachtend, 9 eingreifend), sind diese mit dem Wächter im
 Einsatz. **Im Einsatz heißt nicht getestet:** Wir wissen nicht, ob der Wächter dort eingegriffen hat, nur dass er eingerichtet ist.
 
-- **Wechselrichter und Zähler:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus (auch Multi), Kostal Plenticore, GoodWe, Victron GX, HomeWizard, Tibber
-- **Wallboxen:** Fronius Wattpilot, go-e Charger (`goecharger_api2` und `goecharger_mqtt`), Charge Amps und jede Wallbox über **evcc** (der häufigste Weg, auch mit der evcc-Integration `evcc_intg`)
-- **Hausakkus:** sonnenBatterie, Anker Solix, Jackery
-- **Autos:** FordPass, Mercedes (`mbapi2020`), MySkoda, VW-Gruppe (`vag_connect`)
-- **Sonstige:** ESPHome, Tuya Local
+- **Wechselrichter und Zähler:** Fronius, Huawei Solar, Shelly (auch Shelly Cloud DIY), SolarEdge Modbus (auch Multi), Kostal Plenticore, GoodWe, Victron GX, HomeWizard, Tibber, FoxESS Modbus, SolaX Modbus, SunSpec, Solar Manager, EcoTracker, Powerfox, EDL21 (Smart-Meter-Leser)
+- **Wallboxen:** Fronius Wattpilot, go-e Charger (`goecharger_api2` und `goecharger_mqtt`), Charge Amps, NRGkick, openWB (MQTT), Tuya EV Charger und jede Wallbox über **evcc** (der häufigste Weg, auch mit der evcc-Integration `evcc_intg`)
+- **Hausakkus:** sonnenBatterie, Anker Solix (auch die offizielle Integration), Jackery
+- **Autos:** FordPass, Mercedes (`mbapi2020`), MySkoda und Škoda, VW-Gruppe (`vag_connect`), BYD, Tesla Fleet
+- **Sonstige:** Tuya Local, Sonoff, Matter
 
 Allgemeine Bausteine (Template, MQTT, Verbrauchszähler, Integral, Min/Max, Gruppe) sind weggelassen. Sie nutzen den Wächter
 mit einem dieser Geräte? Ein kurzer Bericht in den Issues hilft allen, siehe „So melden Sie einen Test“ unten.
@@ -42,7 +42,7 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 | Integration | Ladestrom | Status |
 |---|---|---|
 | Wattpilot (Community, `wattpilot-HA`) | `number` „Max Charging Current“, Phasenwahl | ✅ Autoren, 25.10.2026, 0.11.0: Auto lädt mit 11 kW, Herd und Backrohr dazu; in Stufen 16 → 12 → 10 → 8 → 6 A gesenkt, schrittweise wieder angehoben, „wieder 16 A“ protokolliert; Laden nie gestoppt, Viertelstunde unter dem Ziel. Noch nicht gesehen: Umschalten auf 1 Phase |
-| Anker SOLIX V1 Smart EV Charger (Community, Anker Solix) | Ladestrom als Auswahlliste („6 A“, „8 A“ …), seit 0.14.3 | ✅ Nutzer, 15.11.2026, 0.14.4: Auto lädt, Backrohr, Warmwasser und Wärmepumpe dazu; auf 8 A gedrosselt, bei mehr Luft auf 9 A zurück, „wieder frei (9 A)“ protokolliert, also genau auf den Wert vor dem Eingriff; der Ladestrom ändert sich in der App. **Hinweis:** Die Leistung kommt über die Anker-Cloud, die ohne MQTT nur alle 60 bis 300 Sekunden aktualisiert. Ab 0.15 misst der Wächter diesen Abstand und wartet entsprechend, bevor er „nicht umgesetzt“ meldet |
+| Anker SOLIX V1 Smart EV Charger (Community, Anker Solix) | Ladestrom als Auswahlliste („6 A“, „8 A“ …), seit 0.14.3 | ✅ Nutzer, 15.11.2026, 0.14.4: Auto lädt, Backrohr, Warmwasser und Wärmepumpe dazu; auf 8 A gedrosselt, bei mehr Luft auf 9 A zurück, „wieder frei (9 A)“ protokolliert, also genau auf den Wert vor dem Eingriff; der Ladestrom ändert sich in der App. Am 20.11.2026 noch einmal bestätigt (Nutzer: „funktioniert“, Version nicht genannt): von 12 A auf 10 A (3-phasig, 0,7 kW zu viel) und nach vier Minuten wieder auf 12 A („wieder frei“). **Hinweis:** Die Leistung kommt über die Anker-Cloud, die ohne MQTT nur alle 60 bis 300 Sekunden aktualisiert. Ab 0.15 misst der Wächter diesen Abstand und wartet entsprechend, bevor er „nicht umgesetzt“ meldet |
 | Wallbox (Home Assistant) | `number` „Maximum charging current“ | 🔍 |
 | OpenEVSE (Home Assistant) | `number` „Charge rate“ (A) | 🔍 |
 | Zaptec (Community) | `number` „charger_max_current“ | 🔍 |
@@ -52,7 +52,7 @@ Braucht einen Leistungssensor und einen einstellbaren Ladestrom (`number`, A).
 | KEBA (Home Assistant), Easee (Community) | nur ein Dienst, keine Zahl | 🔍 über Hilfsgröße (`input_number` + Automation) |
 | Ohme, Blue Current (Home Assistant), myenergi | keine Strom-Zahl | ❌ |
 | evcc (jede Wallbox, die evcc steuert) | eigener Gerätetyp *evcc-Ladepunkt*: der Wächter setzt den maximalen Ladestrom des Ladepunkts über die REST-Schnittstelle von evcc (keine Integration nötig). Getestet am 09.11.2026 gegen einen Demo-evcc 0.319.0 mit simulierter Wallbox, nicht an Hardware | 🔍 experimentell |
-| go-e Charger (Community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, Schritt 1); Phasenmodus als `select` `psm`. Im Quellcode geprüft am 05.11.2026, nicht an Hardware getestet | 🔍 |
+| go-e Charger (Community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, Schritt 1); Phasenmodus als `select` `psm`. Im Quellcode geprüft am 05.11.2026. Am 19.11.2026 von einem Nutzer bestätigt (Rückmeldung aus der freiwilligen Statistik, Version 0.14.4, Betriebsart *Aktiv*, `goecharger_api2`): „positiver Praxistest“. **Hinweis des Nutzers:** Die Anzahl der Phasen muss mit einem eigenen Helfer aus den Phasenströmen ermittelt werden | ✅ |
 | openWB, Tesla Wall Connector, andere | | ❔ |
 
 ## Hausbatterien und Wechselrichter (Gerätetyp *Batterie* oder *Einstellung ändern*)
@@ -64,7 +64,7 @@ Braucht einen Ladestand-Sensor.
 | Integration | Schreibbare Entitäten (gefunden) | Idee für „freigegeben“ | Status |
 |---|---|---|---|
 | Jackery (Installation der Autoren) | `select` Auto-Standby-Modus, `number` maximale Ausgangsleistung (Netz), `sensor` Ladestand | Modus `on`, Leistung `800` | 🟡 |
-| Anker Solarbank 3 Pro (Community, Anker Solix) | Einstellungen der Solarbank | Ausgabe ins Haus freigeben | ✅ Nutzer, 15.11.2026, 0.14.4: „Batterie freigegeben (1.4 kW zu viel, Ladestand 30 %)“, nach 14 Minuten „wieder wie vorher“ protokolliert; das Abgabelimit wurde dabei von 100 auf 350 W gestellt und wieder zurück (vom Nutzer in der App gesehen, bestätigt 17.11.2026). Als Balkonkraftwerk-Speicher gibt sie höchstens 800 W ab, die Wirkung gegen eine Spitze ist also klein |
+| Anker Solarbank 3 Pro (Community, Anker Solix) | Einstellungen der Solarbank | Ausgabe ins Haus freigeben | ✅ Nutzer, 15.11.2026, 0.14.4: „Batterie freigegeben (1.4 kW zu viel, Ladestand 30 %)“, nach 14 Minuten „wieder wie vorher“ protokolliert; das Abgabelimit wurde dabei von 100 auf 350 W gestellt und wieder zurück (vom Nutzer in der App gesehen, bestätigt 17.11.2026). Am 20.11.2026 noch einmal (Nutzer: „funktioniert“): drei Freigaben innerhalb einer Stunde, jeweils nach zwei bis drei Minuten zurückgegeben, die Ausgabe ging von 100 auf 350 W. Als Balkonkraftwerk-Speicher gibt sie höchstens 800 W ab, die Wirkung gegen eine Spitze ist also klein |
 | Fronius (Home Assistant) | `number` Entladeleistungs-Limit (+ Aktivierungs-Schalter), Ladeleistungs-Limit, Mindest-Reserve, AC-Leistungs-Limit; `switch` Laden aus dem Netz | Entladelimit anheben oder Mindest-Reserve senken | 🔍 |
 | Kostal Plenticore (Home Assistant) | `number` Batterie-Mindest-SOC, Mindest-Hausverbrauch, Wirkleistungsbegrenzung; `select` Batterie-Laden | Mindest-SOC senken / Mindest-Hausverbrauch setzen | 🔍 |
 | GoodWe (Home Assistant) | `number` Entladetiefe, Ladestrom, Einspeisebegrenzung; `select` Betriebsmodus | Betriebsmodus / Entladetiefe | 🔍 Angaben eines Testers (GW10KN-ET mit Smart Meter, BYD HVS), mit dem Wächter noch nicht getestet: Betriebsmodus mit den Optionen Allgemein, Netzunabhängig, Backup, Eco, Spitzenlastreduzierung. **Achtung:** „Active Power“ ist bei Netzbezug **negativ**; als Netzbezug eine Vorlage mit umgedrehtem Vorzeichen oder evcc eintragen. |

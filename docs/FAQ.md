@@ -57,6 +57,9 @@ Every device has its own switch *Observe only* as well. With it on, the guard ne
 Since 0.14.2 a hint appears under **Settings > Repairs**, and *Fix* switches it off with one click.
 Without the update: at the device, three dots > *Reconfigure* > switch *Observe only* off.
 
+**The quarter-hour forecast shows 10.96 kW, but I did not use that much in the last 24 hours.**
+That value is not a forecast of the past. It is the average of the *running* quarter hour if the power stays as it is now: (energy so far + current power x time left) / 0.25 h. A short high load, for example an oven, a kettle or a car that has just started charging, makes it jump for a moment and it falls back when the load stops. Only the average of the whole quarter hour is billed, and that is what the guard watches. What the house usually needs is shown by *Typical import now (forecast)*, and the highest expected quarter hour of the next 24 hours by *Expected peak in 24 h (forecast)* and the chart in the view *Statistics and forecast*.
+
 **The charge plan starts and pauses, but does not set the charging current.**
 Right, it does not do that yet: inside a planned window the car charges with what the wallbox is set to. Only the guard lowers
 the current, and only when a peak threatens. The guard's charge plan is a simple planner and gets no new features. When and how
@@ -102,7 +105,9 @@ The guard can only lower what it may control, and only as fast as the devices an
 running than can be switched off or throttled (cooker, oven, a heat pump that is not entered). A device is set to *Observe only*.
 A wallbox is at its minimum current already. A command arrives late, or the device's power value comes through a cloud only every
 few minutes. Or the distance to the limit is too small for this house. The log *Latest interventions* says what the guard tried
-and what was not carried out.
+and what was not carried out. Even with a wallbox set up it can happen when the rest of the
+house alone is already close to the limit: a wallbox can only be lowered down to its minimum current. If it happens regularly and
+the reason is unclear, the button *Send feedback* helps (with a contact address if you want an answer).
 
 **Which power sensor do I enter for the wallbox?**
 If possible one that comes straight from the wallbox and shows the **whole** charging power, not a single phase (L1) and not the
@@ -167,6 +172,9 @@ grid operator's smart meter). On a load jump one source already shows the new va
 Fix: set the same meter as grid meter in evcc as in the guard; then both show the same.
 
 ## General
+
+**Can I run the guard twice for a second meter point (a second house)?**
+Not yet. The guard allows one entry per Home Assistant, and its services always address that one. For a second meter point either leave it out, or, if both are billed together (one peak for both), add the two powers in a template sensor and enter that as the grid power. Several meter points are planned for a later version (about February 2027, no promise).
 
 **Does the guard need internet or AI?**
 No. Everything runs locally.

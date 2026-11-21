@@ -2,8 +2,12 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
-## 0.15.0 - unreleased
+## 0.15.0 - 2026-11-21
 
+- **After the update: create the dashboard again** (action `create_dashboard`). New in the dashboard: the card *Goes well with: Plugwhen*, the settings as full-width tiles, no template error after a restart. Without it the old dashboard stays as it is. *Deutsch:* **Nach dem Update das Dashboard neu erstellen** (Aktion `create_dashboard`). Neu im Dashboard: die Karte *Passt dazu: Plugwhen*, die Einstellungen als Kacheln über die ganze Breite, kein Template-Fehler nach einem Neustart. Ohne das bleibt das alte Dashboard, wie es ist.
+- **Goes well with: Plugwhen:** while the car planner [Plugwhen](https://github.com/mobilewhatelse/plugwhen) is not installed, the overview ends with a short card and a link into the Marketplace (Plugwhen is in the Marketplace since 19 November 2026); the README points to it as well. After installing it: create the dashboard again, then the card disappears. *Deutsch:* Passt dazu: Plugwhen: Solange der Auto-Planer [Plugwhen](https://github.com/mobilewhatelse/plugwhen) nicht installiert ist, endet die Übersicht mit einer kurzen Karte und einem Link in den Marketplace (Plugwhen ist seit 19.11.2026 im Marketplace); auch die README verweist darauf. Nach der Installation: Dashboard neu erstellen, dann verschwindet die Karte.
+- **Device check says what it counts while learning** (user feedback: "0/15" at a battery was read as days): the card names per device what the service counts, for example *Jackery: still learning (0 of 15 charge swings of 40 %+)*, *Pool pump: still learning (3 of 20 runs of 10 min+)*, measured charges at a wallbox, heating days below 15 °C at a heat pump, days with use at a water heater; an unknown device keeps *(a/b)*. Create the dashboard again. *Deutsch:* Der Geräte-Check sagt beim Lernen, was er zählt (Rückmeldung: „0/15“ beim Akku wurde als Tage gelesen): z. B. *Jackery: lernt noch (0 von 15 Ladehüben ab 40 %)*, *Poolpumpe: lernt noch (3 von 20 Läufen ab 10 Minuten)*, gemessene Ladungen bei der Wallbox, Heiztage unter 15 °C bei der Wärmepumpe, Tage mit Verbrauch beim Boiler; ein unbekanntes Gerät zeigt weiter *(a/b)*. Dashboard neu erstellen.
+- **FAQ:** what the *Quarter-hour forecast* shows (the running quarter hour if the power stays as it is now, not the past 24 hours) and why there is only one guard per Home Assistant. *Deutsch:* Häufige Fragen: was die *Viertelstunden-Prognose* zeigt (die laufende Viertelstunde, wenn die Leistung so bleibt wie jetzt, nicht die letzten 24 Stunden) und warum es nur einen Wächter je Home Assistant gibt.
 - **No template error after a restart:** right after a restart a dashboard card no longer writes a template error to the log while its sensor is not back yet. *Deutsch:* Kein Template-Fehler nach einem Neustart: Direkt nach einem Neustart schreibt eine Dashboard-Karte keinen Template-Fehler mehr ins Protokoll, solange ihr Sensor noch nicht wieder da ist. (Die Grafik-Seite zum Antippen ist wieder entfernt, sie hat am Handy nicht gut funktioniert; **Dashboard neu erstellen**.)
 - **A counter step after a gap is no peak (issue #4):** if the import counter said nothing for longer than a quarter hour (the meter
   or its connection was away) and then brings the energy of the whole gap at once, the step is left out: the quarter hour goes on
@@ -107,6 +111,13 @@ Format: newest first. German version below each English block is a short summary
   (dieselbe Bestätigung wie für den Geräte-Check) auch die Spitze des letzten Monats mit und ohne Wächter und die Eingriffe der
   letzten 30 Tage, nur als grobe Klassen. Der Text nennt alle Zwecke, auch Zusammenfassungen für Forschung oder Partner, immer aus
   mindestens 10 Installationen. Der Dienst behält die Wochendaten höchstens 60 Tage.
+- **Short consent text with the full list behind a link:** the question in the set-up and both questions under Repairs now say in a few
+  lines what is sent, what for and what never, and link the complete list on the privacy page (section *What the integrations send,
+  when and why*). A Yes also keeps the version of this data catalogue (version 1) locally; nothing new is sent in this version.
+  *Deutsch:* Kurzer Einwilligungstext mit Link auf die vollständige Liste: Die Frage beim Einrichten und beide Fragen unter Reparaturen
+  sagen jetzt in wenigen Zeilen, was gesendet wird, wofür und was nie, und verlinken die vollständige Liste auf der Datenschutzseite
+  (Abschnitt *Was die Integrationen wann senden und warum*). Ein Ja merkt lokal auch die Fassung dieses Datenkatalogs (Fassung 1); in
+  dieser Version wird nichts Neues gesendet.
 
 - **Device check (only with *Share anonymous data*):** once a day the guard asks our service whether the connected devices still work
   as usual. Wallbox: charging power against set current and phases (drop in power, a missing phase, a slow trend); home battery:

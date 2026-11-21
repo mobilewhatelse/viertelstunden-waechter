@@ -148,5 +148,39 @@ class GenericNameTests(unittest.TestCase):
         self.assertEqual(t, "wallbox: mbapi2020, Mercedes-Benz, EQB 250")
 
 
+class SelectOptionsTests(unittest.TestCase):
+    """Review 20.11.2026: the options of a select went into the report as they are. They are free texts ('Max Mustermann Auto')
+    and the anonymiser only knows the names it was given. In full only numbers and the allowed words, otherwise their number."""
+
+    KEEP = ["wallbox", "evcc", "switch", "script", "battery", "setting", "vehicle", "throttle", "go-e", "Fronius"]
+    CARS = ["Max Mustermann Auto", "Zweitwagen", "Gast"]
+
+    def test_free_texts_only_as_a_number(self):
+        t = fb.select_text("Max Mustermann Auto", self.CARS, self.KEEP)
+        self.assertEqual(t, "Option 1 von 3 Optionen")
+        for bad in ("Max", "Mustermann", "Zweitwagen", "Gast"):
+            self.assertNotIn(bad, t)
+        self.assertEqual(fb.select_text("Gast", ["6", "10", "Gast"], self.KEEP), "Option 3 von 3 Optionen")   # one is enough
+        self.assertEqual(fb.select_text("weg", self.CARS, self.KEEP), "Option ? von 3 Optionen")
+        self.assertEqual(fb.select_text("unavailable", self.CARS, self.KEEP), "unavailable von 3 Optionen")
+
+    def test_numbers_and_allowed_words_in_full(self):
+        self.assertEqual(fb.select_text("10", ["6", "10", "16"], self.KEEP), "10 von ['6', '10', '16']")
+        self.assertEqual(fb.select_text("16 A", ["6 A", "1,5 kW", "16 A", "80 %", "-2.5"]),
+                         "16 A von ['6 A', '1,5 kW', '16 A', '80 %', '-2.5']")
+        self.assertEqual(fb.select_text("Fronius", ["go-e", "Fronius", "evcc"], self.KEEP), "Fronius von ['go-e', 'Fronius', 'evcc']")
+        self.assertEqual(fb.select_text("3 Max", ["1 Anna", "3 Max"], self.KEEP), "Option 2 von 2 Optionen")   # a name is no unit
+
+    def test_not_in_the_report(self):
+        geraete = [{"art": "wallbox", "mode_entity": "go-e, ok " + fb.select_text("Max Mustermann Auto", self.CARS, self.KEEP)},
+                   {"art": "wallbox", "current_entity": "go-e, ok " + fb.select_text("16", ["6", "10", "16"], self.KEEP)}]
+        b = fb.bericht("0.15.0", "2026.11.1", {}, {}, geraete, [], [], {}, ["Familie Huber"], self.KEEP)
+        s = json.dumps(b, ensure_ascii=False)
+        for bad in ("Max", "Mustermann", "Zweitwagen", "Gast"):
+            self.assertNotIn(bad, s)
+        self.assertIn("Option 1 von 3 Optionen", s)
+        self.assertIn("16 von ['6', '10', '16']", s)
+
+
 if __name__ == "__main__":
     unittest.main()

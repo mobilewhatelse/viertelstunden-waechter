@@ -51,6 +51,8 @@ TEXTS: dict[str, dict[str, str]] = {
                      "der Akku weniger speichert oder die Wärmepumpe mehr Strom braucht als sonst.\n\n"
                      "Einschalten: Schalter *Anonyme Daten teilen*. Gesendet werden nur Messwerte, nie Namen oder Passwörter.",
         "check_ok": "alles gut", "check_learning": "lernt noch", "check_none": "kein Check (zu unterschiedlich oder nichts zu prüfen)",
+        "check_of": "von", "check_n_charges": "gemessenen Ladungen", "check_n_swings": "Ladehüben ab 40 %",
+        "check_n_runs": "Läufen ab 10 Minuten", "check_n_heat_days": "Heiztagen unter 15 °C", "check_n_days": "Tagen mit Verbrauch",
         "check_wait": "Die erste Prüfung kommt im Lauf der nächsten Stunde.", "check_last": "Zuletzt geprüft",
         "check_confirm": "Neu in 0.15: Der Geräte-Check sendet dafür einmal am Tag Messwerte der Geräte. Bitte einmal bestätigen.",
         "check_repairs": "Zu den Reparaturen",
@@ -122,6 +124,8 @@ TEXTS: dict[str, dict[str, str]] = {
                      "the battery stores less or the heat pump needs more power than usual.\n\n"
                      "To switch it on: *Share anonymous data*. Only measurements are sent, never names or passwords.",
         "check_ok": "all fine", "check_learning": "still learning", "check_none": "no check (too uneven or nothing to check)",
+        "check_of": "of", "check_n_charges": "measured charges", "check_n_swings": "charge swings of 40 %+",
+        "check_n_runs": "runs of 10 min+", "check_n_heat_days": "heating days below 15 °C", "check_n_days": "days with use",
         "check_wait": "The first check comes within the next hour.", "check_last": "Last checked",
         "check_confirm": "New in 0.15: for this the device check sends measured values of the devices once a day. Please confirm once.",
         "check_repairs": "Go to Repairs",
@@ -207,6 +211,24 @@ def _explanation_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     )
 
 
+def _learning_count(x: dict[str, str]) -> str:
+    """What the check service counts while it learns (`learning` = [have, need]), named per device (user 21.11.2026: "0/15" at a
+    battery read as days). As the service counts: a device of type heat pump or water heater learns days (heating days below
+    15 °C, days with use), a wallbox measured charges, a battery swings of 40 points or more, a switchable device runs of 10 minutes
+    or more. An unknown device keeps "a/b"."""
+    a, b = "{{ d['learning'][0] }}", "{{ d['learning'][1] }}"
+    n = a + " " + x["check_of"] + " " + b + " "
+    return (
+        "{% set art = d.get('art') %}{% set kind = d.get('kind') %}"
+        "{% if art == 'heat_pump' %}" + n + x["check_n_heat_days"] + ""
+        "{% elif art == 'water_heater' %}" + n + x["check_n_days"] + ""
+        "{% elif kind in ['wallbox', 'evcc'] %}" + n + x["check_n_charges"] + ""
+        "{% elif kind == 'battery' %}" + n + x["check_n_swings"] + ""
+        "{% elif kind in ['switch', 'setting', 'throttle', 'script'] %}" + n + x["check_n_runs"] + ""
+        "{% else %}" + a + "/" + b + "{% endif %}"
+    )
+
+
 def _check_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     """Device check: per device what was found, what is still being learned; without sharing, what it would do."""
     s = ids["device_check"]
@@ -217,7 +239,7 @@ def _check_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% elif not state_attr(s, 'checked_at') %}" + x["check_wait"] + ""
         "{% else %}{% for d in state_attr(s, 'devices') or [] %}- **{{ d['name'] }}**: "
         "{% if d['found'] %}{% for f in d['found'] %}{{ '⚠️' if f['level'] == 'warn' else 'ℹ️' }} {{ f['text'] }} {% endfor %}"
-        "{% elif d['status'] == 'learning' and d['learning'] %}" + x["check_learning"] + " ({{ d['learning'][0] }}/{{ d['learning'][1] }})"
+        "{% elif d['status'] == 'learning' and d['learning'] %}" + x["check_learning"] + " (" + _learning_count(x) + ")"
         "{% elif d['status'] == 'ok' %}✅ " + x["check_ok"] + ""
         "{% else %}" + x["check_none"] + "{% endif %}\n"
         "{% endfor %}{% set t = state_attr(s, 'checked_at') %}\n*" + x["check_last"] + ": {{ t[8:10] }}.{{ t[5:7] }}. {{ t[11:16] }}*"
@@ -441,10 +463,42 @@ def _grid_now(ids: dict[str, str], x: dict[str, str]) -> list[dict[str, Any]]:
     return [_tile(ids["grid_power_sensor"], x["grid_now"])] if ids.get("grid_power_sensor") else []
 
 
+PLUGWHEN_LINK = "https://my.home-assistant.io/redirect/hacs_repository/?owner=mobilewhatelse&repository=plugwhen&category=integration"
+PLUGWHEN_TEXT = {
+    "de": ("Passt dazu: Plugwhen",
+           "**Plugwhen** plant das Laden Ihres E-Autos: mit Sonne, nur so viel wie bis zur nächsten Abfahrt nötig und passend zum "
+           "Kalender. Der Wächter findet es automatisch und rechnet das Auto dann nicht mehr als Last, sondern plant mit dessen "
+           "Ladeplan.\n\n"
+           f"Kostenlos im [HACS-Marketplace]({PLUGWHEN_LINK}) · mehr auf [aiwhatelse.eu/plugwhen](https://www.aiwhatelse.eu/plugwhen/)\n\n"
+           "*Nach der Installation: Dashboard neu erstellen, dann verschwindet diese Karte.*"),
+    "en": ("Goes well with: Plugwhen",
+           "**Plugwhen** plans the charging of your electric car: with the sun, only as much as is needed by the next departure, "
+           "and in line with your calendar. The guard finds it automatically and then no longer counts the car as load but plans "
+           "with its charge plan.\n\n"
+           f"Free in the [HACS marketplace]({PLUGWHEN_LINK}) · more at [aiwhatelse.eu/plugwhen](https://www.aiwhatelse.eu/plugwhen/?lang=en)\n\n"
+           "*After installing it: create the dashboard again, then this card disappears.*"),
+}
+
+
+def is_installed(entries: Any) -> bool:
+    """Does the other integration run here? Only a loaded config entry counts (state ConfigEntryState.LOADED, value 'loaded'): a
+    disabled entry or one that failed to set up does nothing, then the card 'Goes well with' stays."""
+    return any(getattr(getattr(e, "state", None), "value", getattr(e, "state", None)) == "loaded" for e in entries or ())
+
+
+def plugwhen_section(lang: str | None) -> dict[str, Any]:
+    """A quiet card near the end of the overview, only while the car planner Plugwhen is not installed."""
+    head, text = PLUGWHEN_TEXT["de" if str(lang or "").lower().startswith("de") else "en"]
+    return {"type": "grid", "cards": [
+        {"type": "heading", "heading": head, "icon": "mdi:ev-station"},
+        {"type": "markdown", "content": text}]}
+
+
 def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, Any]] | None = None,
-                evcc: bool = False) -> list[dict[str, Any]]:
+                evcc: bool = False, plugwhen: bool | None = None) -> list[dict[str, Any]]:
     """Three views: the daily overview, the compact view for the phone ("today") and statistics with forecast.
-    `planners`: charge plans of a car planner (each {name, plan, ready}); then those are shown instead of the own plan."""
+    `planners`: charge plans of a car planner (each {name, plan, ready}); then those are shown instead of the own plan.
+    `plugwhen`: False = known not installed, then a quiet card points to it (True or None: no card)."""
     x = _t(lang)
     main = {
         "title": x["view_main"], "path": "waechter", "type": "sections", "max_columns": 3,
@@ -473,6 +527,7 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 _tile(ids["cost_month"], x["cost_month"]),
                 _tile(ids["savings_month"], x["saving_month"]), _tile(ids["savings_year"], x["saving_year"]),
             ]},
+            *([plugwhen_section(lang)] if plugwhen is False and not planners else []),
             feedback_section(ids, lang),
         ],
     }

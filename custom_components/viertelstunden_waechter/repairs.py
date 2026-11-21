@@ -13,6 +13,7 @@ from homeassistant.helpers.selector import BooleanSelector
 
 from .const import D_OBSERVE, DOMAIN
 from .engine import KIND_VEHICLE
+from .rueckmeldung import privacy_url
 
 
 def _guards(hass: HomeAssistant):
@@ -29,11 +30,13 @@ class ShareUsageFlow(RepairsFlow):
                 w.answer_usage(bool(user_input.get("share_usage")))
             return self.async_create_entry(data={})
         return self.async_show_form(step_id="confirm", data_schema=vol.Schema(
-            {vol.Required("share_usage", default=False): BooleanSelector()}))
+            {vol.Required("share_usage", default=False): BooleanSelector()}),
+            description_placeholders={"privacy_url": privacy_url(self.hass.config.language)})
 
 
 class ShareCheckFlow(RepairsFlow):
-    """Shared before 0.15: keep sharing (preset, the device check then starts) or switch sharing off."""
+    """Shared before 0.15: keep sharing (the device check then starts) or switch sharing off. The switch starts off: a consent
+    must be an active choice, not a preset one."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> data_entry_flow.FlowResult:
         return await self.async_step_confirm()
@@ -44,7 +47,8 @@ class ShareCheckFlow(RepairsFlow):
                 w.confirm_check(bool(user_input.get("share_usage")))
             return self.async_create_entry(data={})
         return self.async_show_form(step_id="confirm", data_schema=vol.Schema(
-            {vol.Required("share_usage", default=True): BooleanSelector()}))
+            {vol.Required("share_usage", default=False): BooleanSelector()}),
+            description_placeholders={"privacy_url": privacy_url(self.hass.config.language)})
 
 
 class ObserveOnlyFlow(RepairsFlow):

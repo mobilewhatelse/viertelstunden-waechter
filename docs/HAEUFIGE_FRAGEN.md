@@ -57,6 +57,9 @@ Jedes Gerät hat zusätzlich einen eigenen Schalter *Nur beobachten*. Ist er an,
 Seit 0.14.2 erscheint dann unter **Einstellungen > Reparaturen** ein Hinweis, und *Reparieren* schaltet es mit einem Klick aus.
 Ohne Update: beim Gerät die drei Punkte > *Neu konfigurieren* > *Nur beobachten* aus.
 
+**Die Viertelstunden-Prognose zeigt 10,96 kW, aber so viel hatte ich in den letzten 24 Stunden nicht.**
+Der Wert ist keine Vorhersage aus der Vergangenheit. Er ist der Durchschnitt der *laufenden* Viertelstunde, wenn die Leistung so bleibt wie jetzt: (bisherige Energie + aktuelle Leistung x Restzeit) / 0,25 h. Eine kurze hohe Last, zum Beispiel Backofen, Wasserkocher oder ein Auto, das gerade zu laden beginnt, lässt ihn kurz springen, und er fällt zurück, sobald die Last endet. Abgerechnet wird nur der Durchschnitt der ganzen Viertelstunde, und den beobachtet der Wächter. Was das Haus üblicherweise braucht, zeigt *Typischer Bezug jetzt (Prognose)*, und die höchste erwartete Viertelstunde der nächsten 24 Stunden zeigen *Erwartete Spitze in 24 h (Prognose)* und die Grafik in der Ansicht *Statistik und Prognose*.
+
 **Der Ladeplan startet und pausiert, stellt aber den Ladestrom nicht ein.**
 Richtig, das tut er bisher nicht: Im geplanten Fenster lädt das Auto mit dem, was an der Wallbox eingestellt ist. Den Strom senkt
 nur der Wächter, und nur, wenn eine Spitze droht. Der Ladeplan des Wächters ist ein einfacher Planer und bekommt keine neuen
@@ -105,7 +108,9 @@ Der Wächter kann nur senken, was er steuern darf, und nur so schnell, wie die G
 Gründe: Es läuft mehr, als sich abschalten oder drosseln lässt (Herd, Backofen, Wärmepumpe ohne Eintrag). Ein Gerät steht auf
 *Nur beobachten*. Eine Wallbox ist schon am Mindeststrom. Ein Befehl kommt spät an oder der Leistungswert des Geräts kommt über
 eine Cloud nur alle paar Minuten. Oder der Abstand zur Grenze ist für die Anlage zu klein eingestellt. Im Protokoll *Letzte
-Eingriffe* steht, was der Wächter versucht hat und was nicht umgesetzt wurde.
+Eingriffe* steht, was der Wächter versucht hat und was nicht umgesetzt wurde. Auch mit eingerichteter Wallbox kann es passieren, wenn
+der Rest des Hauses allein schon nahe an der Grenze liegt: die Wallbox lässt sich nur bis zu ihrem Mindeststrom senken. Passiert es
+regelmäßig und der Grund ist unklar, hilft die Taste *Rückmeldung senden* (mit Kontaktadresse, wenn Sie eine Antwort möchten).
 
 **Welchen Leistungssensor trage ich bei der Wallbox ein?**
 Möglichst einen, der direkt von der Wallbox kommt und die **gesamte** Ladeleistung zeigt, nicht nur eine Phase (L1) und nicht den
@@ -171,6 +176,9 @@ direkt vom Smartmeter des Netzbetreibers). Bei Lastsprüngen zeigt dann eine Que
 Abhilfe: in evcc denselben Zähler als Netzzähler einstellen wie im Wächter; dann zeigen beide dasselbe.
 
 ## Allgemein
+
+**Kann ich den Wächter für einen zweiten Zählpunkt (zweites Haus) doppelt laufen lassen?**
+Noch nicht. Der Wächter erlaubt einen Eintrag je Home Assistant, und seine Dienste sprechen immer diesen einen an. Für einen zweiten Zählpunkt: entweder weglassen, oder, wenn beide gemeinsam abgerechnet werden (eine Spitze für beide), die beiden Leistungen in einem Template-Sensor addieren und diesen als Netzleistung eintragen. Mehrere Zählpunkte sind für eine spätere Version geplant (etwa Februar 2027, keine Zusage).
 
 **Braucht der Wächter Internet oder KI?**
 Nein. Alles läuft lokal.

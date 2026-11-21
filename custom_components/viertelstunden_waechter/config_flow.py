@@ -36,6 +36,7 @@ from .geraete_check import ARTS
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
 from .evcc import EvccAuthError, EvccClient, EvccError, parse_grid_kw, parse_loadpoint
 from .inputs import grid_sign_hint, loadpoint_choices, loadpoint_prefill, looks_inverted, quarter_peak, unit_errors
+from .rueckmeldung import KATALOG, privacy_url
 
 ON_OFF_DOMAINS = ["binary_sensor", "input_boolean", "switch"]
 RELEASE_DOMAINS = ["number", "input_number", "select", "input_select", "switch", "input_boolean"]
@@ -470,10 +471,12 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
 
             await register_preview(self.hass)   # the picture in the description is served by the integration itself
             return self.async_show_form(step_id="finish", data_schema=vol.Schema(
-                {vol.Required("share_usage", default=False): BooleanSelector()}))
+                {vol.Required("share_usage", default=False): BooleanSelector()}),
+                description_placeholders={"privacy_url": privacy_url(self.hass.config.language)})
         self._options["share_usage"] = bool(user_input.get("share_usage"))
         if self._options["share_usage"]:
             self._options["share_check"] = True   # agreed with the text of 0.15, which describes the device check
+            self._options["katalog"] = KATALOG    # and links the data catalogue of this version (kept locally, never sent)
         subentries = [{"subentry_type": d[D_KIND], "title": device_title(d), "data": d, "unique_id": None} for d in self._devices]
         return self.async_create_entry(title=getattr(self, "_name", "Viertelstunden-Wächter"), data=self._data, options=self._options,
                                        subentries=subentries)

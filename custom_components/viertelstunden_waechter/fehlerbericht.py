@@ -29,6 +29,8 @@ _LONG_ID = re.compile(r"\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{
 
 _TS = re.compile(r"\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[+-]\d{2}:?\d{2}|Z)?")
 _CLOCK = re.compile(r"(?<![\d.:])\d{1,2}:\d{2}(?::\d{2})?(?![\d:])")
+# an option of a select that is a number, also with a comma or a unit ("6", "1,5 kW", "16 A", "80 %")
+_NUMBER_OPTION = re.compile(r"[+-]?\d+(?:[.,]\d+)?\s*(?:%|°c|°f|a|ma|v|w|kw|wh|kwh|h|min|s|km|km/h|mi|ct|€)?", re.I)
 
 
 def real_names(names: list[str] | None, keep: list[str] | None) -> list[str]:
@@ -36,6 +38,25 @@ def real_names(names: list[str] | None, keep: list[str] | None) -> list[str]:
     "Mercedes" in "Mercedes-Benz") is just a word, replacing it would erase what the report is for."""
     words = [str(k).lower() for k in (keep or []) if k]
     return [n for n in (names or []) if n and not any(n.strip().lower() in w for w in words)]
+
+
+def _plain_option(option: str, keep: list[str] | None) -> bool:
+    return bool(_NUMBER_OPTION.fullmatch(option.strip())) or not real_names([option], keep)
+
+
+def select_text(current: Any, options: Any, keep: list[str] | None = None) -> str:
+    """A select in the report: the current option and the list only when every option is a number (also with a unit or a comma)
+    or part of the words `keep` (as in real_names). Otherwise the options are free texts the anonymiser does not know (a car
+    named after its driver), then only how many there are and the position of the current one: 'Option 2 von 3 Optionen'."""
+    opts = [str(o) for o in options] if isinstance(options, (list, tuple)) else []
+    cur = str(current)
+    if opts and all(_plain_option(o, keep) for o in opts):
+        return f"{cur} von {opts}"
+    if cur in ("unknown", "unavailable") or _plain_option(cur, keep):
+        shown = cur
+    else:
+        shown = f"Option {opts.index(cur) + 1}" if cur in opts else "Option ?"
+    return f"{shown} von {len(opts)} Optionen"
 
 
 def anonym(text: Any, names: list[str] | None = None, limit: int = 300) -> str | None:

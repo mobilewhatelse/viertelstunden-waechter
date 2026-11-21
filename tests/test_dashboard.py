@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import unittest
+from enum import Enum
+from pathlib import Path
+from types import SimpleNamespace
 
 import sim  # noqa: F401  (puts the integration folder on sys.path)
-from dashboard import ENTITY_KEYS, build_views
+from dashboard import ENTITY_KEYS, build_views, is_installed
 
 IDS = {k: f"{d}.guard_{k}" for k, d in ENTITY_KEYS.items()}
 
@@ -197,3 +200,112 @@ class SourcesCardTests(unittest.TestCase):
         cards = self._sources(build_views(IDS, "de", evcc=True))
         self.assertEqual(len(cards), 1)
         self.assertNotIn("@GP@", cards[0]["content"])
+
+
+class PlugwhenHintTests(unittest.TestCase):
+    """The quiet card 'Goes well with: Plugwhen': only while the car planner is known not to be installed."""
+
+    def test_card_only_while_plugwhen_is_missing(self):
+        for lang, head, after in (("de", "Passt dazu: Plugwhen", "Dashboard neu erstellen"),
+                                  ("en", "Goes well with: Plugwhen", "create the dashboard again")):
+            views = build_views(IDS, lang, plugwhen=False)
+            overview = views[0]["sections"]
+            card = [s for s in overview if s["cards"][0].get("heading") == head]
+            self.assertEqual(len(card), 1)
+            text = json.dumps(card[0], ensure_ascii=False)
+            self.assertIn("repository=plugwhen", text)              # straight into the marketplace
+            self.assertIn("aiwhatelse.eu/plugwhen", text)
+            self.assertIn(after, text)
+            self.assertEqual(overview[-1]["cards"][0]["heading"], views[0]["sections"][-1]["cards"][0]["heading"])
+            for v in views[1:]:
+                self.assertNotIn("Plugwhen", json.dumps(v, ensure_ascii=False))   # only once, in the overview
+        json.dumps(build_views(IDS, "de", plugwhen=False))          # serialisable for the storage
+
+    def test_no_card_when_installed_unknown_or_chosen_as_planner(self):
+        planner = [{"name": "Car", "plan": "sensor.p", "ready": "sensor.r"}]
+        for kwargs in ({"plugwhen": True}, {"plugwhen": None}, {}, {"plugwhen": False, "planners": planner}):
+            for lang in ("de", "en"):
+                self.assertNotIn("Plugwhen", json.dumps(build_views(IDS, lang, **kwargs), ensure_ascii=False).replace("Plugwhen)", ""))
+
+    def test_the_card_sits_above_the_feedback(self):
+        sections = build_views(IDS, "de", plugwhen=False)[0]["sections"]
+        heads = [s["cards"][0].get("heading") for s in sections]
+        self.assertEqual(heads[-2:], ["Passt dazu: Plugwhen", "Rückmeldung"])
+
+
+class CheckLearningTests(unittest.TestCase):
+    """User 21.11.2026: "Jackery: lernt noch (0/15)" was read as days. The card now says per device what the service counts."""
+
+    @staticmethod
+    def _render(lang, device):
+        try:
+            import jinja2
+        except ImportError:
+            raise unittest.SkipTest("jinja2 not installed")
+        card = [c for c in _cards(build_views(IDS, lang)) if c.get("type") == "markdown" and IDS["device_check"] in c["content"]]
+        attrs = {"checked_at": "2026-11-21T08:05", "devices": [{"name": "Gerät", "status": "learning", "found": [], **device}]}
+        env = jinja2.Environment()
+        env.globals.update(states=lambda e: "learning", state_attr=lambda e, a: attrs.get(a))
+        return env.from_string(card[0]["content"]).render().splitlines()[0]
+
+    def test_every_kind_names_what_is_counted(self):
+        cases = [
+            ({"kind": "battery", "art": None, "learning": [0, 15]},
+             "lernt noch (0 von 15 Ladehüben ab 40 %)", "still learning (0 of 15 charge swings of 40 %+)"),
+            ({"kind": "switch", "art": "pump", "learning": [3, 20]},
+             "lernt noch (3 von 20 Läufen ab 10 Minuten)", "still learning (3 of 20 runs of 10 min+)"),
+            ({"kind": "setting", "art": None, "learning": [1, 20]},
+             "lernt noch (1 von 20 Läufen ab 10 Minuten)", "still learning (1 of 20 runs of 10 min+)"),
+            ({"kind": "throttle", "learning": [2, 20]},
+             "lernt noch (2 von 20 Läufen ab 10 Minuten)", "still learning (2 of 20 runs of 10 min+)"),
+            ({"kind": "script", "learning": [4, 20]},
+             "lernt noch (4 von 20 Läufen ab 10 Minuten)", "still learning (4 of 20 runs of 10 min+)"),
+            ({"kind": "wallbox", "art": None, "learning": [1, 3]},
+             "lernt noch (1 von 3 gemessenen Ladungen)", "still learning (1 of 3 measured charges)"),
+            ({"kind": "evcc", "learning": [0, 3]},
+             "lernt noch (0 von 3 gemessenen Ladungen)", "still learning (0 of 3 measured charges)"),
+            ({"kind": "setting", "art": "heat_pump", "learning": [3, 21]},
+             "lernt noch (3 von 21 Heiztagen unter 15 °C)", "still learning (3 of 21 heating days below 15 °C)"),
+            ({"kind": "switch", "art": "water_heater", "learning": [5, 20]},
+             "lernt noch (5 von 20 Tagen mit Verbrauch)", "still learning (5 of 20 days with use)"),
+            ({"kind": "something_new", "learning": [2, 7]}, "lernt noch (2/7)", "still learning (2/7)"),
+            ({"learning": [2, 7]}, "lernt noch (2/7)", "still learning (2/7)"),   # attributes of an older version: no kind, no art
+        ]
+        for device, de, en in cases:
+            self.assertEqual(self._render("de", device), "- **Gerät**: " + de, device)
+            self.assertEqual(self._render("en", device), "- **Gerät**: " + en, device)
+
+    def test_the_device_list_carries_the_type_of_device(self):
+        src = (Path(__file__).resolve().parents[1] / "custom_components" / "viertelstunden_waechter" / "coordinator.py").read_text(
+            encoding="utf-8")
+        self.assertIn('"kind": d.get(D_KIND), "art": d.get(D_ART) or None,', src)
+
+
+class InstalledTests(unittest.TestCase):
+    """'Goes well with': Plugwhen counts as installed only with a loaded config entry. A disabled entry or one that failed to set
+    up does nothing, so the card stays."""
+
+    class State(Enum):   # like homeassistant.config_entries.ConfigEntryState
+        LOADED = "loaded"
+        NOT_LOADED = "not_loaded"
+        SETUP_ERROR = "setup_error"
+        SETUP_RETRY = "setup_retry"
+
+    def entries(self, *states):
+        return [SimpleNamespace(state=s) for s in states]
+
+    def test_only_a_loaded_entry_counts(self):
+        S = self.State
+        self.assertFalse(is_installed([]))
+        self.assertFalse(is_installed(None))
+        self.assertFalse(is_installed(self.entries(S.NOT_LOADED)))          # disabled
+        self.assertFalse(is_installed(self.entries(S.SETUP_ERROR, S.SETUP_RETRY)))
+        self.assertTrue(is_installed(self.entries(S.NOT_LOADED, S.LOADED)))
+        self.assertTrue(is_installed(self.entries("loaded")))
+        self.assertFalse(is_installed([SimpleNamespace()]))                   # no state at all
+
+    def test_the_dashboard_service_uses_it(self):
+        src = (Path(__file__).resolve().parents[1] / "custom_components" / "viertelstunden_waechter" / "__init__.py").read_text(
+            encoding="utf-8")
+        self.assertIn('plugwhen=is_installed(hass.config_entries.async_entries("plugwhen"))', src)
+        self.assertNotIn('bool(hass.config_entries.async_entries("plugwhen"))', src)

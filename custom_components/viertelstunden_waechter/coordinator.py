@@ -494,7 +494,7 @@ class Waechter:
                 continue
             r = self.check.result.get(dev_id, {}) if self.share_usage and self.check_consent() else {}
             found = [{"level": b["level"], "text": self._finding_text({"device_id": dev_id, **b})} for b in r.get("befunde", [])]
-            out.append({"name": d.get(D_NAME, dev_id), "kind": d.get(D_KIND), "status": r.get("status", "none"), "found": found,
+            out.append({"name": d.get(D_NAME, dev_id), "kind": d.get(D_KIND), "art": d.get(D_ART) or None, "status": r.get("status", "none"), "found": found,
                         "learning": r.get("lernt"), "values": r.get("werte") or {}, "measured": measured.get(dev_id, {})})
         return out
 
@@ -1120,6 +1120,11 @@ class Waechter:
 
         if "share_usage" in self.entry.options:
             self._usage["gefragt"] = True   # answered in the set-up; a later change of the settings must not ask again
+            if self.entry.options.get("share_check") and self.entry.options.get("katalog") and not self._usage.get("katalog"):
+                # the Yes of the set-up, kept here too: the settings dialog (gear icon) does not keep these options
+                self._usage["check_ok"] = True
+                self._usage["katalog"] = rm.katalog(self.entry.options)
+                self._store.async_delay_save(self._data, 1)
             return
         if self._usage.get("gefragt") or self.share_usage:
             return
@@ -1131,10 +1136,14 @@ class Waechter:
         the switch turned on from 0.15 on, or the note under Repairs confirmed."""
         return bool(self._usage.get("check_ok") or self.entry.options.get("share_check"))
 
+    def consent_catalog(self) -> int:
+        """Version of the data catalogue agreed to (rueckmeldung.KATALOG); 0 = agreed before the catalogue, or not at all."""
+        return rm.katalog(self._usage) or (rm.katalog(self.entry.options) if self.entry.options.get("share_check") else 0)
+
     def confirm_check(self, share: bool) -> None:
         """Answer to the note under Repairs: keep sharing (with the device check) or switch sharing off."""
         if share:
-            self._usage["check_ok"] = True
+            rm.zustimmung_merken(self._usage)   # check_ok and the version of the catalogue; nothing more is sent
             self._store.async_delay_save(self._data, 1)
             async_dispatcher_send(self.hass, self.signal)
         else:
@@ -1144,7 +1153,7 @@ class Waechter:
         self.share_usage = bool(share)
         self._usage["gefragt"] = True
         if share:
-            self._usage["check_ok"] = True   # the question of 0.15 describes the device check
+            rm.zustimmung_merken(self._usage)   # the question of 0.15 describes the device check and links the catalogue
         self._store.async_delay_save(self._data, 1)
         from homeassistant.helpers.dispatcher import async_dispatcher_send
 
@@ -1251,12 +1260,12 @@ class Waechter:
                 parts += [x for x in (dev.manufacturer, dev.model, dev.sw_version and f"Firmware {dev.sw_version}") if x]
             state = fb.sensor_state(st, now)
             dom = eid.split(".")[0]
-            if st is not None and dom in ("number", "input_number", "select", "input_select", "switch", "input_boolean"):
+            if st is not None and dom in ("number", "input_number", "switch", "input_boolean"):
                 state += f" {st.state}"
                 if dom in ("number", "input_number"):
                     state += f" ({st.attributes.get('min')}..{st.attributes.get('max')} Schritt {st.attributes.get('step')})"
-                elif dom in ("select", "input_select"):
-                    state += f" von {st.attributes.get('options')}"
+            elif st is not None and dom in ("select", "input_select"):   # options are free texts the names do not cover
+                state += f" {fb.select_text(st.state, st.attributes.get('options'), keep)}"
             parts.append(state)
             calls = self.diag_calls.text(eid)
             if calls:

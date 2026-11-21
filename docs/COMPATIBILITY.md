@@ -23,14 +23,14 @@ Please be the first - see "How to report a test" below.
 ## In use by others (from the voluntary statistic)
 
 Users who switched on *Share anonymous data* send which integrations their grid sensors and devices come from
-(only the name of the integration, nothing else). As of 2026-11-14, from 44 installations, these are in use with
+(only the name of the integration, nothing else). As of 2026-11-21, from 73 installations (63 in Austria, 8 in Germany, 1 each in Switzerland and Slovenia; 64 of them observing, 9 intervening), these are in use with
 the guard. **In use does not mean tested:** we do not know whether the guard intervened there, only that it was set up.
 
-- **Inverters and meters:** Fronius, Huawei Solar, Shelly, SolarEdge Modbus (also Multi), Kostal Plenticore, GoodWe, Victron GX, HomeWizard, Tibber
-- **Wallboxes:** Fronius Wattpilot, go-e Charger (`goecharger_api2` and `goecharger_mqtt`), Charge Amps, and any wallbox through **evcc** (the most used way, also with the evcc integration `evcc_intg`)
-- **Home batteries:** sonnenBatterie, Anker Solix, Jackery
-- **Cars:** FordPass, Mercedes (`mbapi2020`), MySkoda, VW group (`vag_connect`)
-- **Other:** ESPHome, Tuya Local
+- **Inverters and meters:** Fronius, Huawei Solar, Shelly (also Shelly Cloud DIY), SolarEdge Modbus (also Multi), Kostal Plenticore, GoodWe, Victron GX, HomeWizard, Tibber, FoxESS Modbus, SolaX Modbus, SunSpec, Solar Manager, EcoTracker, Powerfox, EDL21 (smart-meter reader)
+- **Wallboxes:** Fronius Wattpilot, go-e Charger (`goecharger_api2` and `goecharger_mqtt`), Charge Amps, NRGkick, openWB (MQTT), Tuya EV charger, and any wallbox through **evcc** (the most used way, also with the evcc integration `evcc_intg`)
+- **Home batteries:** sonnenBatterie, Anker Solix (also the official integration), Jackery
+- **Cars:** FordPass, Mercedes (`mbapi2020`), MySkoda and Škoda, VW group (`vag_connect`), BYD, Tesla Fleet
+- **Other:** Tuya Local, Sonoff, Matter
 
 General building blocks (template, MQTT, utility meter, integration, min/max, group) are left out. Running the guard with
 one of these? A short report in the issues helps everyone, see "How to report a test" below.
@@ -42,7 +42,7 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 | Integration | Charging current | Status |
 |---|---|---|
 | Wattpilot (community, `wattpilot-HA`) | `number` "Max Charging Current", phase selection | ✅ authors, 2026-10-25, 0.11.0: car charging with 11 kW, cooker and oven added; lowered 16 → 12 → 10 → 8 → 6 A in steps, raised again step by step, "back to 16 A" logged; charging never stopped, the quarter hour stayed below the target. Not yet seen: 1-phase switching |
-| Anker SOLIX V1 Smart EV Charger (community, Anker Solix) | charging current as a list ("6 A", "8 A" …), since 0.14.3 | ✅ user, 2026-11-15, 0.14.4: car charging, oven, water heater and heat pump added; throttled to 8 A, back to 9 A when there was room again, "free again (9 A)" logged, so exactly the value before the intervention; the current changes in the app. **Note:** the power comes through the Anker cloud, which without MQTT updates only every 60 to 300 seconds. From 0.15 the guard measures this interval and waits accordingly before it reports "not carried out" |
+| Anker SOLIX V1 Smart EV Charger (community, Anker Solix) | charging current as a list ("6 A", "8 A" …), since 0.14.3 | ✅ user, 2026-11-15, 0.14.4: car charging, oven, water heater and heat pump added; throttled to 8 A, back to 9 A when there was room again, "free again (9 A)" logged, so exactly the value before the intervention; the current changes in the app. Confirmed again 2026-11-20 (user: "works", version not stated): 12 A to 10 A (three-phase, 0.7 kW too much) and back to 12 A after four minutes ("free again"). **Note:** the power comes through the Anker cloud, which without MQTT updates only every 60 to 300 seconds. From 0.15 the guard measures this interval and waits accordingly before it reports "not carried out" |
 | Wallbox (core) | `number` "Maximum charging current" | 🔍 |
 | OpenEVSE (core) | `number` "Charge rate" (A) | 🔍 |
 | Zaptec (community) | `number` "charger_max_current" | 🔍 |
@@ -52,7 +52,7 @@ Needs a charging power sensor and a settable charging current (`number`, A).
 | KEBA (core), Easee (community) | only a service, no number | 🔍 via helper (`input_number` + automation) |
 | Ohme, Blue Current (core), myenergi | no current number | ❌ |
 | evcc (any wallbox evcc controls) | own device type *evcc loadpoint*: the guard sets the loadpoint's maximum current over evcc's REST API (no integration needed). Tested 2026-11-09 against a demo evcc 0.319.0 with a simulated charger, not on hardware | 🔍 experimental |
-| go-e Charger (community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, step 1); phase mode as `select` `psm`. Checked in the source 2026-11-05, not tried on hardware | 🔍 |
+| go-e Charger (community, `marq24/ha-goecharger-api2`; Gemini, Gemini flex, HOMEfix) | `number` in A (6-32 A, step 1); phase mode as `select` `psm`. Checked in the source 2026-11-05. Confirmed by a user on 2026-11-19 (feedback from the voluntary statistic, version 0.14.4, mode *Active*, `goecharger_api2`): "positive practical test". **Note from the user:** the number of phases has to be worked out with an own helper from the phase currents | ✅ |
 | openWB, Tesla Wall Connector, others | | ❔ |
 
 ## Home batteries and inverters (device type *Battery*, or *Change settings*)
@@ -63,7 +63,7 @@ the house (maximum output / discharge power, operating mode) and puts them back.
 | Integration | Writable entities found | Idea for "released" | Status |
 |---|---|---|---|
 | Jackery (the authors' installation) | `select` auto standby mode, `number` maximum output power (on-grid), `sensor` battery SOC | mode `on`, power `800` | 🟡 |
-| Anker Solarbank 3 Pro (community, Anker Solix) | settings of the Solarbank | release output to the house | ✅ user, 2026-11-15, 0.14.4: "battery released (1.4 kW too much, charge 30 %)", after 14 minutes "back as before" logged; the output limit went from 100 to 350 W and back (seen by the user in the app, confirmed 2026-11-17). As a balcony-solar storage it delivers at most 800 W, so its effect against a peak is small |
+| Anker Solarbank 3 Pro (community, Anker Solix) | settings of the Solarbank | release output to the house | ✅ user, 2026-11-15, 0.14.4: "battery released (1.4 kW too much, charge 30 %)", after 14 minutes "back as before" logged; the output limit went from 100 to 350 W and back (seen by the user in the app, confirmed 2026-11-17). Again on 2026-11-20 (user: "works"): three releases within an hour, each given back after two to three minutes, the output went from 100 to 350 W. As a balcony-solar storage it delivers at most 800 W, so its effect against a peak is small |
 | Fronius (core) | `number` battery discharge power limit (+ enable switch), charge power limit, minimum reserve, AC power limit; `switch` battery grid charging | raise the discharge limit, or lower the minimum reserve | 🔍 |
 | Kostal Plenticore (core) | `number` battery min SOC, battery min home consumption, active power limitation; `select` battery charge | lower min SOC / set min home consumption | 🔍 |
 | GoodWe (core) | `number` battery discharge depth, charge current, grid export limit; `select` operation mode | operation mode / discharge depth | 🔍 Reported by a tester (GW10KN-ET with smart meter, BYD HVS), not yet tested with the guard: operation mode with the options general, off grid, backup, eco, peak shaving. **Note:** "Active Power" is **negative** while importing from the grid; as the grid import use a template with the sign flipped, or evcc. |

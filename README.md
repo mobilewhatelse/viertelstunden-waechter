@@ -49,8 +49,7 @@ The action `create_dashboard` builds a ready-made dashboard.
 
 - **[evcc](https://evcc.io):** enter the address of evcc. The guard sets only a ceiling at the loadpoint, evcc
   keeps charging. [Details](docs/MANUAL.md#evcc-loadpoint-since-014-experimental)
-- **A car planner such as Plugwhen:** the guard reads its charge plan and knows when the car will charge.
-  [Details](docs/MANUAL.md#the-guard-and-a-car-planner-together)
+- **[Plugwhen](https://github.com/mobilewhatelse/plugwhen)** (car charge planner, free in the Marketplace, [install it with one click](https://my.home-assistant.io/redirect/hacs_repository/?owner=mobilewhatelse&repository=plugwhen&category=integration)): the guard keeps the quarter-hour peak below your limit, Plugwhen plans the charging below it. The guard reads its charge plan, knows when the car will charge and no longer counts the car as load. [Details](docs/MANUAL.md#the-guard-and-a-car-planner-together)
 
 ## Anonymous data (voluntary)
 
