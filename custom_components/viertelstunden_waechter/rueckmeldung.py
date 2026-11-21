@@ -26,29 +26,46 @@ MAX_KONTAKT = 200
 
 
 ZUSTIMMUNG = 2      # Version des Zustimmungstexts: 2 = Monatskennung, Zusatzwerte, alle Zwecke genannt
-KATALOG = 1         # Fassung des Datenkatalogs, dem beim Ja zugestimmt wurde; nur lokal gemerkt ("katalog"), nie gesendet
+KATALOG = 1         # Fassung des Datenkatalogs (Datenschutzseite, Abschnitt "daten-teilen"), der beim Ja zugestimmt wurde;
+                    # nur lokal gemerkt ("katalog"), nie gesendet
 DATENSCHUTZ = "https://www.aiwhatelse.eu/datenschutz/?lang={lang}#daten-teilen"   # vollständige Liste: was wann gesendet wird und warum
 MAX_KENNUNGEN = 3   # laufender Monat und die zwei davor: der Dienst hält eine Kennung bis 60 Tage nach ihrer letzten Meldung
 SEIT_KLASSEN = ((1, "0-1"), (3, "1-3"), (6, "3-6"))   # Monate -> Klasse, darüber ">6"
 
 
-def privacy_url(sprache: str | None) -> str:
-    """Adresse der vollständigen Liste in der Sprache von Home Assistant: Deutsch für "de…", sonst Englisch."""
-    return DATENSCHUTZ.format(lang="de" if str(sprache or "").lower().startswith("de") else "en")
+def privacy_url(lang: str | None) -> str:
+    """Die Adresse der Liste, was wann gesendet wird (Link im Text der Zustimmung), in der Sprache von Home Assistant:
+    Deutsch für "de" und "de-AT" usw., sonst Englisch."""
+    return DATENSCHUTZ.format(lang="de" if str(lang or "").lower()[:2] == "de" else "en")
 
 
-def zustimmung_merken(usage: dict[str, Any]) -> None:
-    """Ja mit dem Text von 0.15: Geräte-Check zugestimmt und die Fassung des Katalogs gemerkt (bleibt lokal)."""
-    usage["check_ok"] = True
-    usage["katalog"] = KATALOG
+def katalog_fassung(*quellen: Any) -> int:
+    """Die höchste gemerkte Fassung des Katalogs aus Einträgen/Optionen/Speicher (je ein dict mit "katalog"); 0 = keine.
+    Ein fehlender oder unlesbarer Wert zählt als 0 (bisherige Teilnehmer)."""
+    best = 0
+    for q in quellen:
+        try:
+            best = max(best, int((q or {}).get("katalog") or 0))
+        except (TypeError, ValueError, AttributeError):
+            continue
+    return best
 
 
 def katalog(usage: dict[str, Any] | None) -> int:
-    """Fassung des Katalogs, der zugestimmt wurde; 0 = vor dem Katalog zugestimmt oder nie (fehlt oder unlesbar)."""
-    try:
-        return max(0, int((usage or {}).get("katalog") or 0))
-    except (TypeError, ValueError):
-        return 0
+    """Fassung des Katalogs, der zugestimmt wurde (eine Quelle); 0 = vor dem Katalog zugestimmt oder nie (fehlt oder unlesbar)."""
+    return katalog_fassung(usage)
+
+
+def katalog_fehlt(teilen: bool, *quellen: Any) -> bool:
+    """Teilt jemand schon, hat aber der aktuellen Fassung des Katalogs noch nicht zugestimmt? Dann einmal unter Reparaturen fragen."""
+    return bool(teilen) and katalog_fassung(*quellen) < KATALOG
+
+
+def zustimmung_merken(usage: dict[str, Any]) -> None:
+    """Ja mit dem Text von Wächter 0.15 / Plugwhen 0.10.1: Geräte-Check zugestimmt und die Fassung des Katalogs gemerkt
+    (bleibt lokal)."""
+    usage["check_ok"] = True
+    usage["katalog"] = KATALOG
 
 
 def neue_kennung() -> str:

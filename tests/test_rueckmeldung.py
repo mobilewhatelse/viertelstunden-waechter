@@ -96,5 +96,39 @@ class PayloadTest(unittest.TestCase):
         self.assertEqual(d["land"], "AT")
 
 
+class SharedFileTest(unittest.TestCase):
+    """rueckmeldung.py is the same file in the guard and in Plugwhen (0.15.1): the functions of both, with the same names."""
+
+    def test_functions_of_both_integrations(self):
+        public = {n for n in dir(rm) if callable(getattr(rm, n)) and not n.startswith("_") and getattr(rm, n).__module__ == rm.__name__}
+        self.assertEqual(public, {
+            "privacy_url", "katalog_fassung", "katalog", "katalog_fehlt", "zustimmung_merken", "neue_kennung", "monat", "kennung_fuer",
+            "zu_loeschen", "geloescht", "loeschen_faellig", "laeuft_seit", "faellig", "herkunft", "statistik", "loeschen",
+            "rueckmeldung", "senden"})
+
+    def test_catalogue_version_from_several_sources(self):
+        """Plugwhen asks entry options and store together; the guard asks one source (katalog), both give the same."""
+        self.assertEqual(rm.katalog_fassung({}, None), 0)
+        self.assertEqual(rm.katalog_fassung({"katalog": "x"}, {"katalog": None}), 0)
+        self.assertEqual(rm.katalog_fassung({"katalog": 1}, {}), 1)
+        self.assertEqual(rm.katalog_fassung({"katalog": -3}), 0)
+        self.assertEqual(rm.katalog_fassung("kein dict", {"katalog": 1}), 1)   # unreadable source is skipped
+        for usage in ({}, None, {"katalog": 1}, {"katalog": "2"}, {"katalog": "x"}, {"katalog": None}, {"katalog": -1}, {"check_ok": True}):
+            self.assertEqual(rm.katalog(usage), rm.katalog_fassung(usage), usage)
+
+    def test_catalogue_missing(self):
+        self.assertFalse(rm.katalog_fehlt(False, {}))
+        self.assertTrue(rm.katalog_fehlt(True, {}, {}))
+        self.assertFalse(rm.katalog_fehlt(True, {}, {"katalog": rm.KATALOG}))
+        usage: dict = {}
+        rm.zustimmung_merken(usage)
+        self.assertFalse(rm.katalog_fehlt(True, usage))
+        self.assertEqual(usage, {"check_ok": True, "katalog": rm.KATALOG})
+
+    def test_privacy_url_same_for_both_spellings(self):
+        for lang, want in (("de", "de"), ("de-AT", "de"), ("DE_ch", "de"), ("en", "en"), ("fr", "en"), (None, "en"), ("", "en"), ("d", "en")):
+            self.assertEqual(rm.privacy_url(lang), f"https://www.aiwhatelse.eu/datenschutz/?lang={want}#daten-teilen", lang)
+
+
 if __name__ == "__main__":
     unittest.main()
