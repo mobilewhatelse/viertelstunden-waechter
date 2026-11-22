@@ -113,6 +113,19 @@ the min-SOC is frozen at the current charge level; in his case *Expected relief*
 4. **Victron prerequisites:** In the ESS mode *Keep batteries charged* the min-SOC is ignored, so the battery does not help. And the guard only steps
    in once the effective limit is reached (see the question about the switch *Use peak already reached*).
 
+**Typical mistakes when setting up a battery (from real cases).**
+- **Entity in the wrong field:** *Setting while recharging* takes the **charge current of the battery** (e.g. with Victron "Ess maxchargecurrent"),
+  **not** the charge current of a wallbox (e.g. "Maxcurrent" of the evcharger). Otherwise the guard changes the wallbox current at the *Recharge from*
+  time. Check for every entity that it really belongs to the battery; the prefix before the dot (`number.`, `sensor.`) and the device shown below it
+  tell you.
+- **Value outside the allowed range:** If the entity has a range of, say, 0 to 20, it cannot take `40`. The range is shown in the entity's developer
+  tools dialog and in the error report.
+- **Recharging not needed:** For the "freeze the min-SOC" flow (see above), leave *Recharge from*, *Setting while recharging* and *Value while
+  recharging* **empty** (clear them with the X). Recharging is only meant for batteries that should charge from the grid in the evening.
+- **Entity entered twice:** When pasting into YAML, write the prefix (`number.`, `sensor.`) only once; a leftover bracket or line at the end turns the
+  editor red.
+- **Sensor ending in `_2`:** If there are two charge-level sensors (e.g. from two Victron integrations), check which one is current.
+
 **Can it put the heat pump on "standby"?**
 Yes, device type *device with settings*: the mode select, value as in the list (e.g. `Standby`). For protection set a *Comfort
 sensor* (e.g. hot water), *Minimum duration* and *Pause after taking back*, so the compressor does not cycle.

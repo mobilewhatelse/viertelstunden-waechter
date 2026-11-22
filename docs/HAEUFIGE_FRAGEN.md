@@ -116,6 +116,19 @@ vielen Dank für das Beispiel):
 4. **Voraussetzungen beim Victron:** Im ESS-Modus *Batterien geladen halten* wird der Min-SOC ignoriert, der Speicher hilft dann nicht. Damit der
    Wächter überhaupt eingreift, muss die wirksame Grenze erreicht sein (siehe die Frage zum Schalter *Bereits erreichte Spitze nutzen*).
 
+**Typische Fehler bei der Einrichtung eines Speichers (aus echten Fällen).**
+- **Entität im falschen Feld:** Bei *Einstellung beim Nachladen* gehört der **Ladestrom des Speichers** hin (z. B. beim Victron „Ess maxchargecurrent“),
+  **nicht** der Ladestrom einer Wallbox (z. B. „Maxcurrent“ des evchargers). Sonst stellt der Wächter zur *Nachladen ab*-Uhrzeit den Strom der Wallbox
+  um. Prüfen Sie bei jeder Entität, ob sie wirklich zum Speicher gehört; der Name vor dem Punkt (`number.`, `sensor.`) und die Geräteangabe darunter
+  zeigen es.
+- **Wert außerhalb des erlaubten Bereichs:** Hat die Entität zum Beispiel einen Bereich von 0 bis 20, kann sie `40` nicht annehmen. Der Bereich steht im
+  Entwicklerwerkzeuge-Dialog der Entität und im Fehlerbericht.
+- **Nachladen nicht nötig:** Beim Ablauf „Min-SOC einfrieren“ (siehe oben) lassen Sie *Nachladen ab*, *Einstellung beim Nachladen* und *Wert beim
+  Nachladen* **leer** (mit dem X löschen). Das Nachladen ist nur für den Fall gedacht, dass der Speicher abends aus dem Netz nachladen soll.
+- **Entität doppelt eingetragen:** Beim Einfügen in YAML das Präfix (`number.`, `sensor.`) nur einmal schreiben; ein Rest einer Klammer oder Zeile am
+  Ende macht den Editor rot.
+- **Sensor mit `_2` am Ende:** Gibt es zwei Ladestand-Sensoren (z. B. aus zwei Victron-Integrationen), prüfen Sie, welcher aktuell ist.
+
 **Kann er die Wärmepumpe auf „Bereitschaft“ stellen?**
 Ja, Gerätetyp *Gerät mit Einstellung*: die Modus-Auswahl, Wert `Bereitschaft`. Zum Schutz *Komfort-Sensor* (z. B. Warmwasser),
 *Mindestdauer* und *Pause nach dem Zurücknehmen* setzen, damit der Verdichter nicht taktet.
