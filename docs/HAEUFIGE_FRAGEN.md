@@ -90,8 +90,9 @@ Video (40 s, Testsystem, Wallbox nachgebildet; [als MP4](videos/wallbox_mit_ausw
 ![Wallbox mit Auswahlliste hinzufügen](videos/wallbox_mit_auswahlliste.gif)
 
 **Wie binde ich meinen Speicher ein, wenn ich schon eine eigene Min-SOC-Logik habe (z. B. Victron)?**
-Ein erprobtes Beispiel (Victron, Spitzen unter 4 kW halten; der Min-SOC liegt normalerweise hoch, der Speicher wird nur für Spitzen freigegeben,
-danach wird der Min-SOC auf den aktuellen Ladestand eingefroren):
+Ein erprobtes Beispiel von Markus (Victron, Spitzen unter 4 kW halten; der Min-SOC liegt normalerweise hoch, der Speicher wird nur für Spitzen
+freigegeben, danach wird der Min-SOC auf den aktuellen Ladestand eingefroren; bei ihm: *Erwartete Entlastung* 2500 W, *Höchste Dauer* 15 Minuten,
+vielen Dank für das Beispiel):
 1. **Skript anlegen** (*Einstellungen > Automationen & Szenen > Skripte*, drei Punkte > *In YAML bearbeiten*). Die beiden Entitäten durch Ihre
    ersetzen (Min-SOC-Zahl und Ladestand-Sensor), das Präfix `number.` bzw. `sensor.` nur **einmal**:
    ```yaml

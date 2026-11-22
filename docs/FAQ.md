@@ -88,8 +88,8 @@ Video (40 s, test system, wallbox simulated; [as MP4](videos/wallbox_with_list_e
 ![Add a wallbox with a list](videos/wallbox_with_list_en.gif)
 
 **How do I add my battery when I already have my own min-SOC logic (e.g. Victron)?**
-A tried example (Victron, keeping peaks below 4 kW; the min-SOC is normally high, the battery is only released for peaks, afterwards the min-SOC is
-frozen at the current charge level):
+A tried example from Markus (Victron, keeping peaks below 4 kW; the min-SOC is normally high, the battery is only released for peaks, afterwards
+the min-SOC is frozen at the current charge level; in his case *Expected relief* 2500 W, *Maximum duration* 15 minutes, many thanks for the example):
 1. **Create a script** (*Settings > Automations & scenes > Scripts*, three dots > *Edit in YAML*). Replace the two entities with yours (min-SOC number
    and charge-level sensor), and write the prefix `number.` or `sensor.` only **once**:
    ```yaml
