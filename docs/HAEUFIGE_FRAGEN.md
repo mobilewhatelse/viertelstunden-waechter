@@ -137,6 +137,16 @@ vielen Dank für das Beispiel):
 - **Entität doppelt eingetragen:** Beim Einfügen in YAML das Präfix (`number.`, `sensor.`) nur einmal schreiben; ein Rest einer Klammer oder Zeile am
   Ende macht den Editor rot.
 - **Sensor mit `_2` am Ende:** Gibt es zwei Ladestand-Sensoren (z. B. aus zwei Victron-Integrationen), prüfen Sie, welcher aktuell ist.
+- **Eingebauter Weg und eigenes Skript zugleich:** Nutzen Sie *Mindest-Ladestand folgt dem Ladestand zurück* (mit *Vorherige Werte wiederherstellen* **an**),
+  lassen Sie *Skript nach dem Zurücknehmen* **leer**. Das Skript läuft sonst nach dem Wächter und kann das Mitziehen abbrechen, wenn es einen anderen
+  Wert setzt. Nutzen Sie dagegen das Skript, schalten Sie *Vorherige Werte wiederherstellen*, *folgt zurück* und *Nachladen* aus.
+- **Nachladen zählt als Last:** Lädt der Speicher abends aus dem Netz nach (z. B. 40 A bei etwa 52 V, grob 2 kW), erscheint das als Netzbezug und zählt
+  für die Grenze mit. Für eine sichere Grenze einen kleineren Wert (z. B. 20 A) oder eine spätere Uhrzeit wählen.
+- **Restwerte in nicht benutzten Feldern:** Ein *Wert, der die Ladung hält* ohne gewählte *Einstellung, die die Ladung hält* wird nicht benutzt (am besten
+  löschen); für „bleibt beim aktuellen Ladestand“ gehört dort `soc` hinein, und es braucht den Schalter *Akku-Reserve vor einer Spitze*.
+- **Leistung des Akkus** (optional) dient nur dem Geräte-Check (wie viel der Akku speichert), nicht der Steuerung.
+- **Die Grenze greift nicht:** Prüfen Sie *Bereits erreichte Spitze nutzen* (siehe die Frage dazu): Liegt die Monatsspitze über Ihrer Grenze, rechnet der
+  Wächter damit.
 
 **Kann er die Wärmepumpe auf „Bereitschaft“ stellen?**
 Ja, Gerätetyp *Gerät mit Einstellung*: die Modus-Auswahl, Wert `Bereitschaft`. Zum Schutz *Komfort-Sensor* (z. B. Warmwasser),

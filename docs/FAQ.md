@@ -132,6 +132,16 @@ the min-SOC is frozen at the current charge level; in his case *Expected relief*
 - **Entity entered twice:** When pasting into YAML, write the prefix (`number.`, `sensor.`) only once; a leftover bracket or line at the end turns the
   editor red.
 - **Sensor ending in `_2`:** If there are two charge-level sensors (e.g. from two Victron integrations), check which one is current.
+- **Built-in way and your own script at once:** If you use *Minimum SOC follows the charge back up* (with *Put the previous values back* **on**), leave
+  *Script after taking back* **empty**. Otherwise the script runs after the guard and can break the following if it sets a different value. If you use
+  the script instead, switch *Put the previous values back*, *follows back* and *Recharge* off.
+- **Recharging counts as load:** If the battery recharges from the grid in the evening (e.g. 40 A at about 52 V, roughly 2 kW), that shows up as grid
+  import and counts for the limit. For a safe limit choose a smaller value (e.g. 20 A) or a later time.
+- **Leftover values in unused fields:** A *Value that keeps the charge* without a chosen *Setting that keeps the charge* is not used (best delete it); for
+  "stays at the current charge level" enter `soc` there, and the switch *Battery reserve before a peak* is needed.
+- **Battery power** (optional) is only for the device check (how much the battery stores), not for control.
+- **The limit does not take effect:** Check *Use peak already reached* (see the question about it): if the month peak is above your limit, the guard
+  works with that.
 
 **Can it put the heat pump on "standby"?**
 Yes, device type *device with settings*: the mode select, value as in the list (e.g. `Standby`). For protection set a *Comfort
