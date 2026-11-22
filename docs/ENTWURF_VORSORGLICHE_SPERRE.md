@@ -117,54 +117,57 @@ Spielraum, Höchstdauer, Mindestabstand, Tagesgrenze, Mitternacht, Tagessumme na
 Sperren begrenzen die echten nicht, läuft schon, Beobachten, Nur beobachten, Neustart, fehlende Messwerte, EVU-Sperre schon aktiv, ohne Sensor,
 Sperre nicht übernommen, Komfort-Minimum, Feld 0 = wie bisher, andere Typen, Vorschlag, Dashboard, Config-Flow).
 
-## Entwurf eines Kommentars für Issue 5 (nicht gepostet)
+## Kommentar für Issue 5 (nicht gepostet; Stand 22.11.: Sperre kommt als Beta mit 0.15.1 am 13.12.)
 
-> **Entwurf zum Testen: vorsorgliche Sperre**
+> **Vorsorgliche Sperre kommt als Beta mit Version 0.15.1 (um den 13. Dezember)**
 >
-> Wie angekündigt kommt hier ein Entwurf, bevor die Version um den 13. Dezember erscheint. Er ist **standardmäßig aus** und
-> greift nur bei Geräten vom Typ „Einstellung ändern“, bei denen du das neue Feld **Anlaufleistung** einträgst.
+> Wie angekündigt: Die vorsorgliche Sperre ist in der nächsten Version drin, als **Beta und standardmäßig aus**. Du brauchst nichts
+> Besonderes zu installieren, nur das normale Update in HACS und einen Neustart. Sie greift nur bei Geräten vom Typ „Einstellung
+> ändern“, bei denen du das neue Feld **Anlaufleistung** einträgst. Solange das Feld leer ist, ändert sich nichts.
 >
-> **So funktioniert es:** Solange die Wärmepumpe nicht läuft und der Spielraum bis zur Grenze kleiner ist als die
-> Anlaufleistung, hält der Wächter den Sperrkontakt auf dem Wert für „gesenkt“ (bei dir `on`). Hält der Spielraum zwei Minuten
-> lang, gibt er sie frei. Eine vorsorgliche Sperre dauert nie länger als 30 Minuten, zusammen höchstens 4 Stunden am Tag (beides
-> einstellbar), zwischen Sperre und Freigabe liegen mindestens 3 Minuten, und eine Wärmepumpe, die schon läuft, wird nie
-> vorsorglich gesperrt.
+> **So funktioniert es:** Solange die Wärmepumpe nicht läuft und der Spielraum bis zur Grenze kleiner ist als die Anlaufleistung,
+> hält der Wächter den Sperrkontakt auf dem Wert für „gesenkt“ (bei dir `on`). Hält der Spielraum zwei Minuten lang, gibt er sie
+> frei. Eine vorsorgliche Sperre dauert nie länger als 30 Minuten, zusammen höchstens 4 Stunden am Tag (beides einstellbar),
+> zwischen Sperre und Freigabe liegen mindestens 3 Minuten, und eine Wärmepumpe, die schon läuft, wird nie vorsorglich gesperrt.
 >
-> **Wichtig:** Viele Wärmepumpen haben nach einer EVU-Sperre eine eigene Wiederanlauf- oder Mindeststillstandszeit. Die kennt
-> der Wächter nicht; die Wärmepumpe startet dann nach der Freigabe erst später, und bis dahin kann der Spielraum wieder weg
-> sein. Deshalb bitte **zuerst nur beobachten**.
+> **Wichtig:** Viele Wärmepumpen haben nach einer EVU-Sperre eine eigene Wiederanlauf- oder Mindeststillstandszeit. Die kennt der
+> Wächter nicht; die Wärmepumpe startet dann nach der Freigabe erst später, und bis dahin kann der Spielraum wieder weg sein.
+> Deshalb bitte **zuerst nur beobachten**.
 >
-> **Was du brauchst:** den Leistungssensor der Wärmepumpe (neues Feld beim Gerät) oder eine Entität, die „läuft“ anzeigt. Mit
-> dem Leistungssensor zeigt der Status-Sensor nach ein paar Läufen die gemessene Anlaufspitze als Vorschlag.
+> **So gehst du vor:**
+> 1. Wächter in HACS auf 0.15.1 aktualisieren, Home Assistant neu starten.
+> 2. Beim Gerät den Leistungssensor der Wärmepumpe (oder eine Entität, die „läuft“ anzeigt) und die **Anlaufleistung** eintragen.
+>    Mit dem Leistungssensor zeigt der Status-Sensor nach ein paar Läufen die gemessene Anlaufspitze als Vorschlag.
+> 3. Beim Gerät **„Nur beobachten“** einschalten. Im Protokoll steht dann „hätte vorsorglich gesperrt …“ und beim echten Anlauf
+>    „eine Sperre hätte diesen Anlauf verschoben“.
+> 4. Wenn das passt, „Nur beobachten“ ausschalten.
 >
-> **Bitte zuerst beobachten:** Anlaufleistung eintragen und beim Gerät „Nur beobachten“ einschalten. Im Protokoll steht dann
-> „hätte vorsorglich gesperrt …“ und beim echten Anlauf „eine Sperre hätte diesen Anlauf verschoben“. Wenn das passt,
-> „Nur beobachten“ ausschalten.
->
-> Uns interessiert: Startet deine Wärmepumpe nach der Freigabe zuverlässig, und wie lange wartet sie dabei selbst? Wie oft
-> wird gesperrt, und kommen Höchstdauer oder Tagesgrenze vor? Danke fürs Testen!
+> Uns interessiert: Startet deine Wärmepumpe nach der Freigabe zuverlässig, und wie lange wartet sie dabei selbst? Wie oft wird
+> gesperrt, und kommen Höchstdauer oder Tagesgrenze vor? Danke fürs Testen!
 >
 > ---
 >
-> **Draft for testing: precautionary lock**
+> **Precautionary lock arrives as a beta with version 0.15.1 (around 13 December)**
 >
-> As announced, here is a draft before the release around 13 December. It is **off by default** and acts only on devices of
-> type "change a setting" where you enter the new field **start power**.
+> As announced: the precautionary lock is in the next version, as a **beta and off by default**. There is nothing special to
+> install, just the normal update in HACS and a restart. It acts only on devices of type "change a setting" where you enter the
+> new field **start power**. While the field is empty, nothing changes.
 >
-> **How it works:** while the heat pump is not running and the headroom up to the limit is smaller than the start power, the
-> guard keeps the lock contact at the value for "lowered" (`on` in your case). Once the headroom has held for two minutes, it
-> frees it. A precautionary lock never lasts longer than 30 minutes, at most 4 hours a day in total (both adjustable), there
-> are at least 3 minutes between lock and release, and a heat pump that is already running is never locked in advance.
+> **How it works:** while the heat pump is not running and the headroom up to the limit is smaller than the start power, the guard
+> keeps the lock contact at the value for "lowered" (`on` in your case). Once the headroom has held for two minutes, it frees it.
+> A precautionary lock never lasts longer than 30 minutes, at most 4 hours a day in total (both adjustable), there are at least
+> 3 minutes between lock and release, and a heat pump that is already running is never locked in advance.
 >
 > **Important:** many heat pumps have their own restart delay or minimum off time after a utility lock. The guard does not know
-> it; the heat pump then starts later after the release, and by then the headroom may be gone again. So please **observe
-> first**.
+> it; the heat pump then starts later after the release, and by then the headroom may be gone again. So please **observe first**.
 >
-> **What you need:** the power sensor of the heat pump (new field at the device) or an entity that shows "running". With the
-> power sensor the status sensor shows the measured start peak as a suggestion after a few runs.
+> **What to do:**
+> 1. Update the guard in HACS to 0.15.1 and restart Home Assistant.
+> 2. At the device enter the power sensor of the heat pump (or an entity that shows "running") and the **start power**. With the
+>    power sensor the status sensor shows the measured start peak as a suggestion after a few runs.
+> 3. Switch on **"observe only"** at the device. The log then says "would have been locked …" and, at a real start, "a lock would
+>    have put this start off".
+> 4. If that looks right, switch "observe only" off.
 >
-> **Please observe first:** enter the start power and switch on "observe only" at the device. The log then says "would have
-> been locked …" and, at a real start, "a lock would have put this start off". If that looks right, switch "observe only" off.
->
-> We would like to know: does your heat pump start reliably after the release, and how long does it wait by itself? How often
-> is it locked, and do the maximum duration or the daily limit occur? Thanks for testing!
+> We would like to know: does your heat pump start reliably after the release, and how long does it wait by itself? How often is
+> it locked, and do the maximum duration or the daily limit occur? Thanks for testing!
