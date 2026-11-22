@@ -57,6 +57,15 @@ Every device has its own switch *Observe only* as well. With it on, the guard ne
 Since 0.14.2 a hint appears under **Settings > Repairs**, and *Fix* switches it off with one click.
 Without the update: at the device, three dots > *Reconfigure* > switch *Observe only* off.
 
+**I set the limit to 4 kW, but the guard does not step in at 7 kW.**
+Check the switch **Use peak already reached** (on by default). If the highest quarter hour of the month is already above your limit,
+that peak applies instead of the limit for the rest of the month, because quarter hours below it cost nothing extra. With a reached peak of
+9.7 kW the guard regulates against 9.7 kW, and 7 kW is no reason to step in. The value is in the status sensor under `werte.limit_kw`, in the
+log as "limit 9.7 kW". If you want to stay below the set limit regardless of cost, switch *Use peak already reached* off; this month
+that no longer saves money, because the peak is already paid for.
+More points: a wallbox is only lowered to its minimum current and never stopped (3-phase at 6 A about 4.1 kW, 1-phase about 1.4 kW, 2-phase
+about 2.8 kW). A battery needs an entered release setting to help. And with *Observe only* at the device it only logs (see the question before).
+
 **The quarter-hour forecast shows 10.96 kW, but I did not use that much in the last 24 hours.**
 That value is not a forecast of the past. It is the average of the *running* quarter hour if the power stays as it is now: (energy so far + current power x time left) / 0.25 h. A short high load, for example an oven, a kettle or a car that has just started charging, makes it jump for a moment and it falls back when the load stops. Only the average of the whole quarter hour is billed, and that is what the guard watches. What the house usually needs is shown by *Typical import now (forecast)*, and the highest expected quarter hour of the next 24 hours by *Expected peak in 24 h (forecast)* and the chart in the view *Statistics and forecast*.
 

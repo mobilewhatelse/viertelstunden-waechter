@@ -57,6 +57,16 @@ Jedes Gerät hat zusätzlich einen eigenen Schalter *Nur beobachten*. Ist er an,
 Seit 0.14.2 erscheint dann unter **Einstellungen > Reparaturen** ein Hinweis, und *Reparieren* schaltet es mit einem Klick aus.
 Ohne Update: beim Gerät die drei Punkte > *Neu konfigurieren* > *Nur beobachten* aus.
 
+**Ich habe die Grenze auf 4 kW gestellt, aber bei 7 kW greift der Wächter nicht ein.**
+Prüfen Sie den Schalter **Bereits erreichte Spitze nutzen** (standardmäßig an). Ist die höchste Viertelstunde des Monats schon höher als Ihre
+Grenze, gilt für den Rest des Monats diese Spitze statt der Grenze, weil Viertelstunden darunter nichts extra kosten. Bei einer erreichten
+Spitze von 9,7 kW regelt der Wächter also gegen 9,7 kW, und 7 kW sind kein Anlass zum Eingreifen. Der Wert steht im Status-Sensor unter
+`werte.limit_kw`, im Protokoll als „Grenze 9.7 kW“. Wollen Sie unabhängig von der Kostenfrage immer unter der eingestellten Grenze bleiben,
+schalten Sie *Bereits erreichte Spitze nutzen* aus; in diesem Monat spart das dann kein Geld mehr, weil die Spitze schon bezahlt ist.
+Weitere Punkte: Eine Wallbox wird nur bis zum Mindeststrom gesenkt und nie gestoppt (3-phasig bei 6 A etwa 4,1 kW, 1-phasig etwa 1,4 kW,
+2-phasig etwa 2,8 kW). Zum Mithelfen braucht ein Speicher eine eingetragene Freigabe-Einstellung. Und bei *Nur beobachten* am Gerät wird nur
+protokolliert (siehe die Frage davor).
+
 **Die Viertelstunden-Prognose zeigt 10,96 kW, aber so viel hatte ich in den letzten 24 Stunden nicht.**
 Der Wert ist keine Vorhersage aus der Vergangenheit. Er ist der Durchschnitt der *laufenden* Viertelstunde, wenn die Leistung so bleibt wie jetzt: (bisherige Energie + aktuelle Leistung x Restzeit) / 0,25 h. Eine kurze hohe Last, zum Beispiel Backofen, Wasserkocher oder ein Auto, das gerade zu laden beginnt, lässt ihn kurz springen, und er fällt zurück, sobald die Last endet. Abgerechnet wird nur der Durchschnitt der ganzen Viertelstunde, und den beobachtet der Wächter. Was das Haus üblicherweise braucht, zeigt *Typischer Bezug jetzt (Prognose)*, und die höchste erwartete Viertelstunde der nächsten 24 Stunden zeigen *Erwartete Spitze in 24 h (Prognose)* und die Grafik in der Ansicht *Statistik und Prognose*.
 
