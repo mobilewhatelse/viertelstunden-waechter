@@ -90,9 +90,30 @@ Video (40 s, Testsystem, Wallbox nachgebildet; [als MP4](videos/wallbox_mit_ausw
 ![Wallbox mit Auswahlliste hinzufügen](videos/wallbox_mit_auswahlliste.gif)
 
 **Wie binde ich meinen Speicher ein, wenn ich schon eine eigene Min-SOC-Logik habe (z. B. Victron)?**
-Gerätetyp *Batterie*. *Einstellung, die die Batterie freigibt* = die Min-SOC-Entität, Wert = der niedrige Min-SOC (z. B. `10`).
-*Vorherige Werte wiederherstellen* **aus** und die eigene Logik als *Skript nach dem Zurücknehmen* eintragen (z. B. „aktuellen SOC als
-Min-SOC einfrieren“). Die eigene Auslöse-Automation abschalten, sonst regeln zwei gleichzeitig.
+Ein erprobtes Beispiel (Victron, Spitzen unter 4 kW halten; der Min-SOC liegt normalerweise hoch, der Speicher wird nur für Spitzen freigegeben,
+danach wird der Min-SOC auf den aktuellen Ladestand eingefroren):
+1. **Skript anlegen** (*Einstellungen > Automationen & Szenen > Skripte*, drei Punkte > *In YAML bearbeiten*). Die beiden Entitäten durch Ihre
+   ersetzen (Min-SOC-Zahl und Ladestand-Sensor), das Präfix `number.` bzw. `sensor.` nur **einmal**:
+   ```yaml
+   alias: Min-SOC auf aktuellen Ladestand einfrieren
+   sequence:
+     - action: number.set_value
+       target:
+         entity_id: number.victron_settings_ess_batterylife_minimumsoc
+       data:
+         value: "{{ states('sensor.victron_system_battery_soc') | float(0) | round(0) }}"
+   ```
+   Einmal mit *Ausführen* testen: Die Min-SOC-Entität muss auf den aktuellen Ladestand springen. Der Wert muss im erlaubten Bereich der Entität liegen.
+2. **Gerät *Batterie* im Wächter:** *Ladestand* = Ihr Ladestand-Sensor; *Mindest-Ladestand* z. B. 15 %; *Einstellung, die die Batterie freigibt* = die
+   Min-SOC-Entität, *Wert für „freigegeben“* = der niedrige Min-SOC (z. B. `15`); *Vorherige Werte wiederherstellen* **aus**; *Skript nach dem
+   Zurücknehmen* = das Skript aus Schritt 1. Ihre eigene Auslöse-Automation abschalten, sonst regeln zwei gleichzeitig.
+3. **Zurücknehmen verstehen:** Der Wächter nimmt die Batterie erst zurück (und führt dann das Skript aus), wenn (a) die *Mindestdauer* vorbei ist
+   (Standard 5 Minuten) **und** (b) der Spielraum größer ist als die *Erwartete Entlastung*. Der Spielraum kann höchstens **Grenze minus
+   Sicherheitsabstand** betragen (4,0 − 0,3 = 3,7 kW). Steht die *Erwartete Entlastung* darüber (z. B. 4000 W), wird die Bedingung **nie** erfüllt,
+   und die Batterie bleibt freigegeben, bis der Ladestand unter den Mindest-Ladestand fällt. Tragen Sie daher einen Wert **deutlich unter** der
+   Grenze ein, der zu Ihrer üblichen Hauslast passt (z. B. 2500 W), und zusätzlich eine **Höchste Dauer** (z. B. 15 bis 30 Minuten) als Sicherheitsnetz.
+4. **Voraussetzungen beim Victron:** Im ESS-Modus *Batterien geladen halten* wird der Min-SOC ignoriert, der Speicher hilft dann nicht. Damit der
+   Wächter überhaupt eingreift, muss die wirksame Grenze erreicht sein (siehe die Frage zum Schalter *Bereits erreichte Spitze nutzen*).
 
 **Kann er die Wärmepumpe auf „Bereitschaft“ stellen?**
 Ja, Gerätetyp *Gerät mit Einstellung*: die Modus-Auswahl, Wert `Bereitschaft`. Zum Schutz *Komfort-Sensor* (z. B. Warmwasser),

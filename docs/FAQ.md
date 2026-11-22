@@ -88,9 +88,30 @@ Video (40 s, test system, wallbox simulated; [as MP4](videos/wallbox_with_list_e
 ![Add a wallbox with a list](videos/wallbox_with_list_en.gif)
 
 **How do I add my battery when I already have my own min-SOC logic (e.g. Victron)?**
-Device type *Battery*. *Setting that releases the battery* = the min-SOC entity, value = the low min-SOC (e.g. `10`).
-*Put the previous values back* **off**, and your own logic as *Script after taking back* (e.g. "freeze the current SOC as min-SOC").
-Switch your own trigger automation off, or two controllers act at once.
+A tried example (Victron, keeping peaks below 4 kW; the min-SOC is normally high, the battery is only released for peaks, afterwards the min-SOC is
+frozen at the current charge level):
+1. **Create a script** (*Settings > Automations & scenes > Scripts*, three dots > *Edit in YAML*). Replace the two entities with yours (min-SOC number
+   and charge-level sensor), and write the prefix `number.` or `sensor.` only **once**:
+   ```yaml
+   alias: Freeze min SOC at the current charge level
+   sequence:
+     - action: number.set_value
+       target:
+         entity_id: number.victron_settings_ess_batterylife_minimumsoc
+       data:
+         value: "{{ states('sensor.victron_system_battery_soc') | float(0) | round(0) }}"
+   ```
+   Test it once with *Run*: the min-SOC entity must jump to the current charge level. The value must lie within the entity's allowed range.
+2. **Device *Battery* in the guard:** *State of charge* = your sensor; *Minimum state of charge* e.g. 15 %; *Setting that releases the battery* = the min-SOC
+   entity, *Value for "released"* = the low min-SOC (e.g. `15`); *Put the previous values back* **off**; *Script after taking back* = the script from
+   step 1. Switch your own trigger automation off, or two controllers act at once.
+3. **Understand taking back:** The guard takes the battery back (and then runs the script) only when (a) the *minimum duration* is over (default 5
+   minutes) **and** (b) the headroom is larger than the *Expected relief*. The headroom can be at most **limit minus safety margin** (4.0 − 0.3 = 3.7
+   kW). If the *Expected relief* is above that (e.g. 4000 W), the condition is **never** met, and the battery stays released until the state of charge
+   falls below the minimum. So enter a value **clearly below** the limit that fits your usual house load (e.g. 2500 W), and in addition a **maximum
+   duration** (e.g. 15 to 30 minutes) as a safety net.
+4. **Victron prerequisites:** In the ESS mode *Keep batteries charged* the min-SOC is ignored, so the battery does not help. And the guard only steps
+   in once the effective limit is reached (see the question about the switch *Use peak already reached*).
 
 **Can it put the heat pump on "standby"?**
 Yes, device type *device with settings*: the mode select, value as in the list (e.g. `Standby`). For protection set a *Comfort
