@@ -95,7 +95,10 @@ Video (40 s, Testsystem, Wallbox nachgebildet; [als MP4](videos/wallbox_mit_ausw
 *Nachladen ab* und *Einstellung, die die Ladung hält* mit dem Wert `soc`; siehe die Frage „Wie richte ich einen Akku mit einstellbarem
 Mindest-Ladestand ein (ab 0.15)?“ weiter oben. **Nehmen Sie diesen Weg zuerst.** Das folgende Beispiel mit eigenem Skript ist für Speicher
 gedacht, bei denen das nicht passt (kein Prozent-Min-SOC, eigene Sonderlogik). Beides zugleich ergibt Doppelarbeit; im Zweifel das eingebaute
-nehmen und das Skript weglassen.
+nehmen und das Skript weglassen. **Wichtig:** *Mindest-Ladestand folgt dem Ladestand zurück* und *Nachladen ab* wirken **nur bei
+eingeschaltetem *Vorherige Werte wiederherstellen***. Ist es aus (so, wie es für den Weg mit eigenem Skript nötig ist), bleiben beide ohne
+Wirkung, und nur das Skript läuft. Mit dem Skript zusammen kann außerdem das Mitziehen abbrechen, wenn das Skript einen anderen Wert setzt als der
+Wächter („geändert von jemand anderem“).
 Ein erprobtes Beispiel von Markus (Victron, Spitzen unter 4 kW halten; der Min-SOC liegt normalerweise hoch, der Speicher wird nur für Spitzen
 freigegeben, danach wird der Min-SOC auf den aktuellen Ladestand eingefroren; bei ihm: *Erwartete Entlastung* 2500 W, *Höchste Dauer* 15 Minuten,
 vielen Dank für das Beispiel):

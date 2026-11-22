@@ -91,7 +91,10 @@ Video (40 s, test system, wallbox simulated; [as MP4](videos/wallbox_with_list_e
 **From 0.15 you usually do not need your own script:** For a min-SOC in percent (Victron ESS and similar) there is *Minimum SOC follows the charge back up* (the min-SOC is set to the current charge level after the peak and follows it up to the old value), *Recharge from* and
 *Setting that keeps the charge* with the value `soc`; see the question "How do I set up a battery with an adjustable minimum charge (from 0.15)?"
 above. **Use that way first.** The example below with your own script is for batteries where that does not fit (no percent min-SOC, special logic of
-your own). Doing both is double work; if in doubt, use the built-in one and leave the script out.
+your own). Doing both is double work; if in doubt, use the built-in one and leave the script out. **Important:** *Minimum SOC follows the charge back up* and
+*Recharge from* only work **with *Put the previous values back* switched on**. If it is off (as it must be for the way with your own script), both do
+nothing and only the script runs. Together with the script, the following can also stop if the script sets a different value than the guard
+("changed by someone else").
 A tried example from Markus (Victron, keeping peaks below 4 kW; the min-SOC is normally high, the battery is only released for peaks, afterwards
 the min-SOC is frozen at the current charge level; in his case *Expected relief* 2500 W, *Maximum duration* 15 minutes, many thanks for the example):
 1. **Create a script** (*Settings > Automations & scenes > Scripts*, three dots > *Edit in YAML*). Replace the two entities with yours (min-SOC number
