@@ -2,9 +2,9 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
-## 0.15.2 - draft (Entwurf), unreleased
+## 0.15.1 - unreleased
 
-- **Precautionary lock before the start (draft for testing, off by default, issue #5):** a heat pump with a utility lock contact
+- **Precautionary lock before the start (beta, off by default, issue #5):** a heat pump with a utility lock contact
   (entered as *Change setting*) draws 4 to 5 kW right at its start; with the house already at 5 to 6 kW the quarter hour was over
   the limit at once, and the guard locked the pump only after it had started (a short cycle for the compressor). A device of the
   kind *Change setting* now has an optional field **Start power** (kW, 0 = off): while the device is not running (its power
@@ -24,7 +24,7 @@ Format: newest first. German version below each English block is a short summary
   dashboard again). New optional fields at *Change setting*: power sensor, running entity. Nothing new is sent: the device check
   and the overview of the setup leave out these two entities. Many heat pumps wait by themselves after a utility lock (restart
   delay); the guard does not know that time, so test in observe mode first. Other kinds of devices may follow after feedback.
-  *Deutsch:* **Vorsorgliche Sperre vor dem Anlauf (Entwurf zum Testen, Standard aus, Issue #5):** Eine Wärmepumpe mit
+  *Deutsch:* **Vorsorgliche Sperre vor dem Anlauf (Beta, Standard aus, Issue #5):** Eine Wärmepumpe mit
   EVU-Sperrkontakt (als *Einstellung ändern* eingetragen) zieht beim Anlauf sofort 4 bis 5 kW; liegt das Haus schon bei 5 bis 6
   kW, war die Viertelstunde sofort über der Grenze, und der Wächter sperrte die Wärmepumpe erst nach dem Start (kurzer Takt für
   den Verdichter). Ein Gerät vom Typ *Einstellung ändern* hat jetzt ein optionales Feld **Anlaufleistung** (kW, 0 = aus): Solange
@@ -47,7 +47,6 @@ Format: newest first. German version below each English block is a short summary
   (Wiederanlaufzeit); der Wächter kennt diese Zeit nicht, deshalb zuerst im Modus *Beobachten* testen. Andere Gerätetypen können
   nach Rückmeldungen folgen.
 
-## 0.15.1 - unreleased
 
 - **Local forecast log (stays in your Home Assistant, nothing is sent):** per quarter hour the guard now writes down what its
   *Quarter-hour forecast* said after 1, 3, 5 and 10 minutes, *typical* and *high* of the load forecast (with the car plan, and

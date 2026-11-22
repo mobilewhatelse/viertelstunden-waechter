@@ -2328,7 +2328,7 @@ class Waechter:
         return self.log_lines(limit)
 
     def precaution_info(self) -> list[dict[str, Any]]:
-        """Precautionary lock (draft 0.15.2), per device of the kind *change a setting* that has a start power or measured starts:
+        """Precautionary lock (0.15.1), per device of the kind *change a setting* that has a start power or measured starts:
         what is set, whether it is held now, and the measured start peak of the local log as a suggestion (never taken over)."""
         out: list[dict[str, Any]] = []
         now = dt_util.now()

@@ -1,4 +1,4 @@
-"""Precautionary lock (draft 0.15.2, issue #5): a heat pump with a utility lock contact (device of the kind *change a setting*)
+"""Precautionary lock (0.15.1, issue #5): a heat pump with a utility lock contact (device of the kind *change a setting*)
 is kept locked while its start would not fit, and freed as soon as there is room. Offline, no Home Assistant needed."""
 
 from __future__ import annotations

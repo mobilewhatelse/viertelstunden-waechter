@@ -506,7 +506,7 @@ def plugwhen_section(lang: str | None) -> dict[str, Any]:
 
 
 def _precaution_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
-    """Precautionary lock (draft 0.15.2): per device the start power, whether it is held now and the measured start peak as a
+    """Precautionary lock (0.15.1): per device the start power, whether it is held now and the measured start peak as a
     suggestion. Robust: without the attribute (older version, no device) a plain line."""
     s = ids["status"]
     return (

@@ -273,7 +273,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_MAX_OFF, default=d.get(D_MAX_OFF, 0))] = _num(0, 1440, 1, "min")
         s[vol.Required(D_RESTORE_ORIG, default=d.get(D_RESTORE_ORIG, True))] = BooleanSelector()
         s[_opt(D_OFF_SCRIPT, d)] = _ent("script")
-        # precautionary lock (draft 0.15.2, issue #5): start power 0 = off. Extension point: the same block for KIND_SWITCH
+        # precautionary lock (0.15.1, issue #5): start power 0 = off. Extension point: the same block for KIND_SWITCH
         # (keep off) or KIND_THROTTLE (keep low) once the engine can lock them in advance (engine.PC_KINDS)
         s[vol.Required(D_START_KW, default=d.get(D_START_KW, 0))] = _num(0, 50, 0.1, "kW")
         s[_opt(D_POWER, d)] = _ent("sensor")

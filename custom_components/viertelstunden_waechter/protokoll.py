@@ -265,7 +265,7 @@ class Protokoll:
         return out
 
     def start_peak(self, dev_id: str, now: datetime, days: int = SUGGEST_DAYS, min_runs: int = SUGGEST_MIN_RUNS) -> dict[str, Any] | None:
-        """Suggestion for the field *start power* of the precautionary lock (draft 0.15.2): the median of the peaks in the first
+        """Suggestion for the field *start power* of the precautionary lock (0.15.1): the median of the peaks in the first
         minutes of the runs of the last `days` days, in kW, and how many runs. None with fewer than `min_runs`. Only shown, never
         taken over by itself."""
         if dev_id not in self.devs:

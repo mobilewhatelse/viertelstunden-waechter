@@ -70,7 +70,7 @@ COUNTER_JUMP_FACTOR = 1.5     #     running quarter hour (a counter that reports
 COUNTER_GAP_KEEP = 15         # gaps between new counter values remembered (the usual interval of the counter, as power_gap)
 COUNTER_GAP_FACTOR = 2.5      # a gap counts as an outage only if it is this much longer than the usual interval (a cloud counter
                               # that reports every 20 to 30 minutes is no outage, review 20.11.2026)
-# precautionary lock (draft 0.15.2, issue #5): a device that is not running is kept locked while its start would not fit
+# precautionary lock (0.15.1, issue #5): a device that is not running is kept locked while its start would not fit
 PC_KINDS = (KIND_SETTING,)    # extension point: other kinds (switch: keep off; throttle: keep low) need their own lock/release
 PC_MAX_MIN = 30.0             # a precautionary lock never lasts longer than this (default of the device setting)
 PC_GAP_MIN = 3.0              # at least this long between two changes of the same device (lock, release; compressor protection)
@@ -305,7 +305,7 @@ class Guard:
         self._smooth = False               # forecast-based step: no phase switching
         self.misses = 0                    # interventions that never showed in the readings (since start)
         self._now = datetime.min
-        # precautionary lock (draft 0.15.2): kept apart from `interventions`, so the release order of the normal control is untouched
+        # precautionary lock (0.15.1): kept apart from `interventions`, so the release order of the normal control is untouched
         self.precaution: dict[str, dict[str, Any]] = {}   # device -> {"since", "room", "shadow"} while the guard holds it locked
         self._pc_last: dict[str, datetime] = {}           # last change of the device by the guard (lock or release, both logics)
         self._pc_rest: dict[str, datetime] = {}           # no new precautionary lock before this (after the maximum time)
@@ -554,7 +554,7 @@ class Guard:
         self.values["precaution"] = sorted(self.precaution)
         return checks + actions + pc
 
-    # ---------- precautionary lock (draft 0.15.2, issue #5) ----------
+    # ---------- precautionary lock (0.15.1, issue #5) ----------
 
     def _pc_running(self, dev: DeviceConfig, r: Reading) -> bool | None:
         """Whether the device runs: its "running" entity if it has one, else its power against min_power_w; None = unknown."""

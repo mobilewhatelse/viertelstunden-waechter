@@ -49,7 +49,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "below_min": "{name}: {what} {v:g} unter dem Mindestwert ({min:g})",
         "max_off": "{name}: höchste Auszeit ({min:.0f} min) erreicht",
         "all_free": "Alles freigegeben: {reason}",
-        # precautionary lock (draft 0.15.2)
+        # precautionary lock (0.15.1)
         "pc_lock": "Vorsorgliche Sperre: {name} gesperrt (Spielraum {room:.1f} kW, Anlauf {kw:.1f} kW)",
         "pc_would_lock": "Vorsorgliche Sperre: {name} hätte vorsorglich gesperrt (Spielraum {room:.1f} kW, Anlauf {kw:.1f} kW), es wurde nichts gesendet",
         "pc_free": "Vorsorgliche Sperre: {name} freigegeben (Spielraum {room:.1f} kW)",
