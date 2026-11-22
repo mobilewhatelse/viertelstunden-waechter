@@ -155,6 +155,23 @@ vielen Dank für das Beispiel):
 - **Die Grenze greift nicht:** Prüfen Sie *Bereits erreichte Spitze nutzen* (siehe die Frage dazu): Liegt die Monatsspitze über Ihrer Grenze, rechnet der
   Wächter damit.
 
+**Wie prüfe ich, ob die Einrichtung des Speichers funktioniert (Testablauf und Fehlerbericht lesen)?**
+1. **Vorher einstellen:** Min-SOC auf den **normalen Wert** (z. B. 30), *Vorherige Werte wiederherstellen* an, *Mindest-Ladestand folgt dem Ladestand zurück* an,
+   *Nachladen ab* (z. B. 20:00) mit der **Ladestrom-Entität des Speichers** (Victron: „Ess maxchargecurrent“) und einem Wert im erlaubten Bereich, *Skript
+   nach dem Zurücknehmen* leer. Danach **nichts mehr an den Einstellungen des Wächters ändern**: Jede Änderung lädt die Integration neu und gibt laufende
+   Eingriffe sofort zurück (im Verlauf: „Alles freigegeben: Integration beendet“).
+2. **Einen Eingriff auslösen:** warten, bis es eine echte Spitze gibt, oder die Grenze kurz sehr niedrig stellen (z. B. 0,5 kW), bis im Protokoll
+   „… freigegeben (… zu viel, Ladestand 30 %)“ steht, und dann die Grenze **zurückstellen**.
+3. **Erwartete Zeilen im Verlauf:** Freigabe, Rücknahme, dann „Mindest-Ladestand folgt …“ (der Min-SOC steht auf dem Ladestand und steigt Schritt für Schritt
+   bis zum alten Wert) und ab der Uhrzeit *Nachladen ab* (bis 12 Stunden danach) „Nachladen …“: Der Min-SOC geht auf den alten Wert, die Ladestrom-Entität auf den
+   eingetragenen Wert, am Ende kommt beides zurück. Ohne vorherige Freigabe passiert zur Uhrzeit nichts.
+4. **Fehlerbericht lesen:** Dashboard, Taste *Fehlerbericht senden* (enthält keine Namen und Adressen). Wichtig sind `werte.limit_kw` (die wirksame Grenze), bei
+   den Geräten `eingriff_aktiv` und `nur_beobachten`, und die Zeilen unter *Verlauf* (neueste zuerst, mit „vor x Stunden“). Typische Zeilen: „Wallbox 16 A -> 8 A“
+   (gesenkt), „… freigegeben (…)“ (Speicher freigegeben), „… wieder 16 A“ / „… wieder wie vorher“ (zurückgegeben), „Alles freigegeben: Integration beendet“
+   (Neuladen, z. B. nach Änderungen), „Nur beobachten: … würde …“ (am Gerät ist *Nur beobachten* an).
+5. **Bereiche prüfen:** Der Wert beim Nachladen muss im erlaubten Bereich der Entität liegen (Victron „Ess maxchargecurrent“: z. B. −100 bis 100 in Schritten von 10;
+   die Maxcurrent-Entität einer Wallbox hat einen anderen Bereich und gehört dort nicht hin).
+
 **Kann er die Wärmepumpe auf „Bereitschaft“ stellen?**
 Ja, Gerätetyp *Gerät mit Einstellung*: die Modus-Auswahl, Wert `Bereitschaft`. Zum Schutz *Komfort-Sensor* (z. B. Warmwasser),
 *Mindestdauer* und *Pause nach dem Zurücknehmen* setzen, damit der Verdichter nicht taktet.

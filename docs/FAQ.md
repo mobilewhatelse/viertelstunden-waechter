@@ -150,6 +150,23 @@ the min-SOC is frozen at the current charge level; in his case *Expected relief*
 - **The limit does not take effect:** Check *Use peak already reached* (see the question about it): if the month peak is above your limit, the guard
   works with that.
 
+**How do I check that the battery setup works (test procedure and reading the bug report)?**
+1. **Set up first:** min-SOC at its **normal value** (e.g. 30), *Put the previous values back* on, *Minimum SOC follows the charge back up* on, *Recharge from*
+   (e.g. 20:00) with the **charge-current entity of the battery** (Victron "Ess maxchargecurrent") and a value within its allowed range, *Script after taking
+   back* empty. Afterwards **change nothing in the guard's settings**: every change reloads the integration and gives back a running release at once (in the
+   history: "All released: integration ended").
+2. **Trigger a release:** wait for a real peak, or set the limit very low for a moment (e.g. 0.5 kW) until the log says "... released (... too much, charge
+   30 %)", then **put the limit back**.
+3. **Expected lines in the history:** release, taking back, then "Minimum SOC follows ..." (the min-SOC sits at the charge level and rises step by step up to the
+   old value) and from the time *Recharge from* (up to 12 hours after it) "Recharging ...": the min-SOC goes to the old value, the charge-current entity to the
+   entered value, at the end both are put back. Without a release before, nothing happens at that time.
+4. **Read the bug report:** dashboard, button *Send bug report* (no names and addresses). Important are `werte.limit_kw` (the effective limit), per device
+   `eingriff_aktiv` and `nur_beobachten`, and the lines under *Verlauf* (history, newest first, with "x hours ago"). Typical lines: "Wallbox 16 A -> 8 A"
+   (lowered), "... released (...)" (battery released), "... back to 16 A" / "... as before" (given back), "All released: integration ended" (reload, e.g.
+   after changes), "Observe only: ... would ..." (*Observe only* is on at the device).
+5. **Check ranges:** the value while recharging must lie within the entity's allowed range (Victron "Ess maxchargecurrent": e.g. −100 to 100 in steps of 10; the
+   Maxcurrent entity of a wallbox has another range and does not belong there).
+
 **Can it put the heat pump on "standby"?**
 Yes, device type *device with settings*: the mode select, value as in the list (e.g. `Standby`). For protection set a *Comfort
 sensor* (e.g. hot water), *Minimum duration* and *Pause after taking back*, so the compressor does not cycle.
