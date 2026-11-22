@@ -88,6 +88,11 @@ Video (40 s, test system, wallbox simulated; [as MP4](videos/wallbox_with_list_e
 ![Add a wallbox with a list](videos/wallbox_with_list_en.gif)
 
 **How do I add my battery when I already have my own min-SOC logic (e.g. Victron)?**
+**From 0.15 you usually do not need your own script:** For a min-SOC in percent (Victron ESS and similar) there is *Minimum charge level follows
+the charge level back* (the min-SOC is set to the current charge level after the peak and follows it up to the old value), *Recharge from* and
+*Setting that holds the charge* with the value `soc`; see the question "How do I set up a battery with an adjustable minimum charge (from 0.15)?"
+above. **Use that way first.** The example below with your own script is for batteries where that does not fit (no percent min-SOC, special logic of
+your own). Doing both is double work; if in doubt, use the built-in one and leave the script out.
 A tried example from Markus (Victron, keeping peaks below 4 kW; the min-SOC is normally high, the battery is only released for peaks, afterwards
 the min-SOC is frozen at the current charge level; in his case *Expected relief* 2500 W, *Maximum duration* 15 minutes, many thanks for the example):
 1. **Create a script** (*Settings > Automations & scenes > Scripts*, three dots > *Edit in YAML*). Replace the two entities with yours (min-SOC number

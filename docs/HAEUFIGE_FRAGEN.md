@@ -90,6 +90,12 @@ Video (40 s, Testsystem, Wallbox nachgebildet; [als MP4](videos/wallbox_mit_ausw
 ![Wallbox mit Auswahlliste hinzufügen](videos/wallbox_mit_auswahlliste.gif)
 
 **Wie binde ich meinen Speicher ein, wenn ich schon eine eigene Min-SOC-Logik habe (z. B. Victron)?**
+**Ab 0.15 brauchen Sie dafür in der Regel kein eigenes Skript:** Für einen Min-SOC in Prozent (Victron ESS und ähnliche) gibt es
+*Mindest-Ladestand folgt dem Ladestand zurück* (Min-SOC wird nach der Spitze auf den aktuellen Ladestand gesetzt und folgt ihm bis zum alten Wert),
+*Nachladen ab* und *Einstellung, die die Ladung hält* mit dem Wert `soc`; siehe die Frage „Wie richte ich einen Akku mit einstellbarem
+Mindest-Ladestand ein (ab 0.15)?“ weiter oben. **Nehmen Sie diesen Weg zuerst.** Das folgende Beispiel mit eigenem Skript ist für Speicher
+gedacht, bei denen das nicht passt (kein Prozent-Min-SOC, eigene Sonderlogik). Beides zugleich ergibt Doppelarbeit; im Zweifel das eingebaute
+nehmen und das Skript weglassen.
 Ein erprobtes Beispiel von Markus (Victron, Spitzen unter 4 kW halten; der Min-SOC liegt normalerweise hoch, der Speicher wird nur für Spitzen
 freigegeben, danach wird der Min-SOC auf den aktuellen Ladestand eingefroren; bei ihm: *Erwartete Entlastung* 2500 W, *Höchste Dauer* 15 Minuten,
 vielen Dank für das Beispiel):
