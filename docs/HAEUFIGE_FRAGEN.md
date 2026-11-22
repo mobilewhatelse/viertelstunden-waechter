@@ -140,6 +140,13 @@ vielen Dank für das Beispiel):
 - **Eingebauter Weg und eigenes Skript zugleich:** Nutzen Sie *Mindest-Ladestand folgt dem Ladestand zurück* (mit *Vorherige Werte wiederherstellen* **an**),
   lassen Sie *Skript nach dem Zurücknehmen* **leer**. Das Skript läuft sonst nach dem Wächter und kann das Mitziehen abbrechen, wenn es einen anderen
   Wert setzt. Nutzen Sie dagegen das Skript, schalten Sie *Vorherige Werte wiederherstellen*, *folgt zurück* und *Nachladen* aus.
+- **Das Nachladen passiert nicht „jeden Abend um 20 Uhr“:** Es gehört zum Mitziehen nach einer **echten Freigabe**. Erst wenn der Wächter den Speicher bei
+  einer Spitze freigegeben und wieder zurückgenommen hat, wird bis zum **alten Wert** nachgeladen, ab der Uhrzeit *Nachladen ab* und bis zu 12 Stunden
+  danach. Ohne vorherigen Eingriff passiert zur Uhrzeit nichts. Der **alte Wert ist der, der beim Freigeben in der Min-SOC-Entität stand**: Hat zuvor ein
+  eigenes Skript den Min-SOC auf den Ladestand gesetzt (z. B. 21), ist 21 der alte Wert, und es gibt nichts auf 30 % nachzuladen. Stellen Sie den
+  Min-SOC einmal von Hand auf Ihren normalen Wert (z. B. 30), bevor der Eingriff kommt. Wird die Integration mitten im Eingriff neu geladen (z. B. beim
+  Ändern der Einstellungen), wird alles sofort zurückgegeben und das Mitziehen beginnt nicht. Im Fehlerbericht steht unter *Verlauf* „… freigegeben (…,
+  Ladestand 30 %)“ und „Alles freigegeben: Integration beendet“.
 - **Nachladen zählt als Last:** Lädt der Speicher abends aus dem Netz nach (z. B. 40 A bei etwa 52 V, grob 2 kW), erscheint das als Netzbezug und zählt
   für die Grenze mit. Für eine sichere Grenze einen kleineren Wert (z. B. 20 A) oder eine spätere Uhrzeit wählen.
 - **Restwerte in nicht benutzten Feldern:** Ein *Wert, der die Ladung hält* ohne gewählte *Einstellung, die die Ladung hält* wird nicht benutzt (am besten

@@ -135,6 +135,13 @@ the min-SOC is frozen at the current charge level; in his case *Expected relief*
 - **Built-in way and your own script at once:** If you use *Minimum SOC follows the charge back up* (with *Put the previous values back* **on**), leave
   *Script after taking back* **empty**. Otherwise the script runs after the guard and can break the following if it sets a different value. If you use
   the script instead, switch *Put the previous values back*, *follows back* and *Recharge* off.
+- **Recharging does not happen "every evening at 8 pm":** It belongs to the following after a **real release**. Only after the guard has released the
+  battery for a peak and taken it back is it recharged up to the **old value**, from the time *Recharge from* and up to 12 hours after it. Without a
+  release before, nothing happens at that time. The **old value is the one that was in the min-SOC entity when the release began**: if your own script
+  had set the min-SOC to the charge level before (e.g. 21), 21 is the old value, and there is nothing to recharge to 30 %. Set the min-SOC by hand once to
+  your normal value (e.g. 30) before the release comes. If the integration is reloaded in the middle of a release (e.g. when you change settings),
+  everything is given back at once and the following does not start. The bug report's *History* shows "... released (..., charge 30 %)" and "All
+  released: integration ended".
 - **Recharging counts as load:** If the battery recharges from the grid in the evening (e.g. 40 A at about 52 V, roughly 2 kW), that shows up as grid
   import and counts for the limit. For a safe limit choose a smaller value (e.g. 20 A) or a later time.
 - **Leftover values in unused fields:** A *Value that keeps the charge* without a chosen *Setting that keeps the charge* is not used (best delete it); for
