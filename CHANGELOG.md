@@ -4,6 +4,14 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.1 - unreleased
 
+- **Fix: the recharge current is put back when the minimum SOC is changed by hand during a recharge (field case 22.11.2026).** The battery
+  recharge (*Recharge from*) sets a slow charge current (e.g. the ESS maximum charge current at 40 A). If someone else changed the minimum SOC
+  while the recharge was running, the guard ended the stepping ("changed by someone else") but did not put the charge current back, so it stayed
+  at 40 A. Now the current goes back (only if it still holds the value the guard set), also when the device is deleted during the recharge.
+  *Deutsch:* **Korrektur: Der Nachladestrom wird zurückgestellt, wenn der Mindest-Ladestand während des Nachladens von Hand geändert wird
+  (Fall vom 22.11.2026).** Das Nachladen (*Nachladen ab*) setzt einen langsamen Ladestrom (z. B. den maximalen ESS-Ladestrom auf 40 A). Änderte jemand
+  währenddessen den Mindest-Ladestand, beendete der Wächter das Mitziehen („anders eingestellt“), stellte den Ladestrom aber nicht zurück; er blieb
+  auf 40 A. Jetzt geht der Strom zurück (nur wenn er noch den Wert hat, den der Wächter gesetzt hat), auch wenn das Gerät währenddessen gelöscht wird.
 - **Precautionary lock before the start (beta, off by default, issue #5):** a heat pump with a utility lock contact
   (entered as *Change setting*) draws 4 to 5 kW right at its start; with the house already at 5 to 6 kW the quarter hour was over
   the limit at once, and the guard locked the pump only after it had started (a short cycle for the compressor). A device of the

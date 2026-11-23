@@ -249,6 +249,23 @@ class RechargeTests(unittest.TestCase):
         run(w._battery_step(NIGHT, True))
         self.assertEqual((w.states[CUR], w._ratchet), ("60", {}))
 
+    def test_minimum_changed_by_hand_while_recharging_still_gives_the_current_back(self):
+        # field case 22.11.2026: the user set the minimum SOC by hand during the recharge; the maximum charge current stayed at 40 A
+        w = self.w
+        run(w._battery_step(NIGHT, True))
+        self.assertEqual((w.states[CUR], w.states[MIN]), ("40", "30"))
+        w.states[MIN] = "28"                                              # someone else
+        run(w._battery_step(NIGHT, True))
+        self.assertEqual((w.states[CUR], w.states[MIN], w._ratchet), ("100", "28", {}))
+        self.assertIn("anders eingestellt", w.lines[-1])
+
+    def test_device_deleted_while_recharging_gives_the_current_back(self):
+        w = self.w
+        run(w._battery_step(NIGHT, True))
+        w.raw_devices = {}
+        run(w._battery_step(NIGHT, True))
+        self.assertEqual((w.states[CUR], w.states[MIN], w._ratchet), ("100", "30", {}))
+
     def test_released_while_recharging_gives_the_current_back(self):
         w = self.w
         run(w._battery_step(NIGHT, True))

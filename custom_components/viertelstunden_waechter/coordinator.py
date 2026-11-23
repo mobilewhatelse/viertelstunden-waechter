@@ -1690,7 +1690,8 @@ class Waechter:
             r = self._ratchet[dev_id]
             d = self.raw_devices.get(dev_id)
             if d is None:
-                self._ratchet.pop(dev_id, None)               # device deleted: leave the setting alone
+                await self._recharge_back(dev_id, r)           # the recharge current is ours: put it back
+                self._ratchet.pop(dev_id, None)               # device deleted: leave the minimum SOC alone
                 continue
             if dev_id in self.guard.interventions:
                 continue                                       # released again: the release keeps the old value
@@ -1704,7 +1705,11 @@ class Waechter:
                 r["lag"] = int(r.get("lag", 0)) + 1            # the device has not reported the new value yet: wait
                 continue
             if not _same_value(st.state, str(r["last"])) or target is None:
-                self._ratchet.pop(dev_id, None)               # changed by someone else (or never taken): theirs now
+                # changed by someone else (or never taken): the minimum SOC is theirs now - but a recharge current the guard set
+                # (e.g. the ESS maximum charge current at 40 A) is ours and goes back (field case 22.11.2026: the user set the
+                # minimum SOC by hand during the recharge, the current stayed at 40 A all night)
+                await self._recharge_back(dev_id, r)
+                self._ratchet.pop(dev_id, None)
                 self._log(Action(dev_id, "log", None, self.t("step_changed", name=name), False), False)
                 continue
             if not execute or not d.get(D_RESTORE_STEPWISE):
