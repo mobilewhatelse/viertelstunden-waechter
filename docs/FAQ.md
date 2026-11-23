@@ -193,6 +193,18 @@ and what was not carried out. Even with a wallbox set up it can happen when the 
 house alone is already close to the limit: a wallbox can only be lowered down to its minimum current. If it happens regularly and
 the reason is unclear, the button *Send feedback* helps (with a contact address if you want an answer).
 
+**Can the guard switch the wallbox off completely when lowering the charging current is no longer enough?**
+Not as a built-in function: a wallbox (and an evcc loadpoint) is only **lowered to its minimum current and never stopped**; with evcc the mode stays
+untouched. As a **last resort** it works with a device of your own: device type **Script** (emergency action) with two small scripts, *Script: intervene*
+(e.g. evcc mode to *Off* or pause the wallbox) and *Script after taking back* (set the old mode again), and the **lowest priority** (10 = only when nothing
+else helps). The guard triggers it only when the wallbox, the battery and the other devices are not enough, and gives it back first, in reverse order.
+Note: a stopped charge does not always restart by itself, depending on the car and the wallbox; try it with your own car first and use *Observe only*.
+
+**After the recharge the maximum charge current (e.g. Ess maxchargecurrent) still sits at the recharge value (e.g. 40 A) instead of the old value.**
+In 0.15.0 this happens when the minimum SOC is changed **by hand during the recharge**: the guard then ends the following ("set differently") but did not
+put the charge current back. **From 0.15.1 this is fixed** (the current goes back if it still holds the value the guard set). Until then: put the charge
+current back by hand and do not change the minimum SOC during the recharge.
+
 **Which power sensor do I enter for the wallbox?**
 If possible one that comes straight from the wallbox and shows the **whole** charging power, not a single phase (L1) and not the
 value from the car's cloud. A sensor of one phase shows a third while charging on three phases; a value that comes through a cloud

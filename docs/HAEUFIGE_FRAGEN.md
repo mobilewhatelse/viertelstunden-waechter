@@ -200,6 +200,19 @@ Eingriffe* steht, was der Wächter versucht hat und was nicht umgesetzt wurde. A
 der Rest des Hauses allein schon nahe an der Grenze liegt: die Wallbox lässt sich nur bis zu ihrem Mindeststrom senken. Passiert es
 regelmäßig und der Grund ist unklar, hilft die Taste *Rückmeldung senden* (mit Kontaktadresse, wenn Sie eine Antwort möchten).
 
+**Kann der Wächter die Wallbox ganz ausschalten, wenn das Senken des Ladestroms nicht mehr reicht?**
+Nicht als eingebaute Funktion: Eine Wallbox (und ein evcc-Ladepunkt) wird nur **bis zum Mindeststrom gesenkt und nie gestoppt**; bei evcc bleibt der Modus
+unberührt. Als **letzte Maßnahme** geht es mit einem eigenen Gerät: Gerätetyp **Skript** (Notfall-Aktion) mit zwei kleinen Skripten, *Skript: eingreifen*
+(z. B. evcc-Modus auf *Aus* oder die Wallbox pausieren) und *Skript nach dem Zurücknehmen* (den alten Modus wieder setzen), und der **niedrigsten
+Priorität** (10 = nur, wenn sonst nichts hilft). Der Wächter löst es erst aus, wenn Wallbox, Speicher und die anderen Geräte nicht ausreichen, und gibt es
+in umgekehrter Reihenfolge zuerst zurück. Beachten: Ein gestoppter Ladevorgang startet je nach Auto und Wallbox nicht immer von selbst wieder; im Zweifel
+vorher am eigenen Auto ausprobieren und *Nur beobachten* nutzen.
+
+**Nach dem Nachladen steht der maximale Ladestrom (z. B. Ess maxchargecurrent) noch auf dem Nachladewert (z. B. 40 A) statt wieder auf dem alten Wert.**
+In 0.15.0 passiert das, wenn der Mindest-Ladestand **während des Nachladens von Hand** geändert wird: Der Wächter beendet dann das Mitziehen („anders
+eingestellt“), stellte aber den Ladestrom nicht zurück. **Ab 0.15.1 ist das behoben** (der Strom geht zurück, wenn er noch den Wert hat, den der Wächter
+gesetzt hat). Bis dahin: den Ladestrom von Hand zurückstellen und den Mindest-Ladestand während des Nachladens nicht ändern.
+
 **Welchen Leistungssensor trage ich bei der Wallbox ein?**
 Möglichst einen, der direkt von der Wallbox kommt und die **gesamte** Ladeleistung zeigt, nicht nur eine Phase (L1) und nicht den
 Wert aus der Cloud des Autos. Ein Sensor für nur eine Phase zeigt bei dreiphasigem Laden ein Drittel; ein Wert, der über eine
