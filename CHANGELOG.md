@@ -2,7 +2,7 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
-## 0.15.1 - unreleased
+## 0.15.1 - 2026-11-26
 
 - **Fix: the set-up no longer "works for ever" when the database is slow (field report 26.11.2026: Raspberry Pi 5, Deye inverter via Solarman).** The set-up looks
   into the recorder twice: the states of the grid sensor of the last 3 days (sign check, also for the power sensor of a wallbox or switch) and its statistics of the last 10
