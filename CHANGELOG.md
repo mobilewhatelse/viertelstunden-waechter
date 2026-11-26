@@ -7,11 +7,17 @@ Format: newest first. German version below each English block is a short summary
 - **Fix: the set-up no longer "works for ever" when the database is slow (field report 26.11.2026: Raspberry Pi 5, Deye inverter via Solarman).** The set-up looks
   into the recorder twice: the states of the grid sensor of the last 3 days (sign check, also for the power sensor of a wallbox or switch) and its statistics of the last 10
   days (the hint for the limit). With a busy or slow database (a big history, a running migration) these looks could take minutes and the dialog stayed on "working". Both
-  now give up after 12 seconds and the hint is simply left out (you can still set the sign and the limit by hand).
+  now give up after 12 seconds and the hint is simply left out (you can still set the sign and the limit by hand). **And they are much cheaper:** the sign check reads the
+  short-term statistics (five-minute means, 288 rows a day) instead of every recorded state (a sensor that reports every 5 seconds has about 17 000 a day), and only without
+  statistics the states are read, without their attributes. Also: the own client session for evcc is released with `detach()` as Home Assistant 2026.10+ asks, instead of
+  `close()` (which logged "closes the Home Assistant aiohttp session").
   *Deutsch:* **Korrektur: Die Einrichtung „arbeitet nicht mehr ewig“, wenn die Datenbank langsam ist (Fall vom 26.11.2026: Raspberry Pi 5, Deye über Solarman).** Die
   Einrichtung fragt zweimal den Recorder ab: die Zustände des Netzbezug-Sensors der letzten 3 Tage (Vorzeichen-Prüfung, auch beim Leistungssensor einer Wallbox oder eines
   Schalters) und seine Statistik der letzten 10 Tage (der Hinweis zur Grenze). Bei einer ausgelasteten oder langsamen Datenbank (große Historie, laufende Migration) konnte das
-  Minuten dauern, und der Dialog blieb auf „arbeitet“. Beide Abfragen geben jetzt nach 12 Sekunden auf, der Hinweis entfällt (Vorzeichen und Grenze lassen sich von Hand einstellen).
+  Minuten dauern, und der Dialog blieb auf „arbeitet“. Beide Abfragen geben jetzt nach 12 Sekunden auf, der Hinweis entfällt (Vorzeichen und Grenze lassen sich von Hand einstellen). **Außerdem sind sie viel billiger:** Die
+  Vorzeichen-Prüfung liest die Kurzzeit-Statistik (5-Minuten-Mittel, 288 Zeilen je Tag) statt jedes gespeicherten Zustands (ein Sensor mit Meldung alle 5 Sekunden hat rund 17 000
+  am Tag); nur ohne Statistik werden die Zustände gelesen, ohne Attribute. Dazu: Die eigene Sitzung für evcc wird mit `detach()` freigegeben, wie es Home Assistant 2026.10+ verlangt,
+  statt mit `close()` (das „closes the Home Assistant aiohttp session“ ins Protokoll schrieb).
 - **Fix: the recharge current is put back when the minimum SOC is changed by hand during a recharge (field case 22.11.2026).** The battery
   recharge (*Recharge from*) sets a slow charge current (e.g. the ESS maximum charge current at 40 A). If someone else changed the minimum SOC
   while the recharge was running, the guard ended the stepping ("changed by someone else") but did not put the charge current back, so it stayed

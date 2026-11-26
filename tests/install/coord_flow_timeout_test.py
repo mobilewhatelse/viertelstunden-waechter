@@ -25,7 +25,7 @@ class SlowRecorder:
 
     async def async_add_executor_job(self, func, *args):
         await asyncio.sleep(self.seconds)
-        return {}
+        return func(*args) if self.seconds == 0 else {}
 
 
 class SlowRecorderTest(unittest.TestCase):
@@ -51,6 +51,54 @@ class SlowRecorderTest(unittest.TestCase):
         hass = types.SimpleNamespace(states=types.SimpleNamespace(get=lambda e: None))
         with mock.patch("homeassistant.components.recorder.get_instance", lambda h: SlowRecorder(0.0)):
             self.assertEqual(asyncio.run(cf._history_kw(hass, "sensor.grid", 3)), [])   # nothing recorded: empty, not an error
+
+
+class CheapPathTest(unittest.TestCase):
+    """A sensor that reports every 5 seconds: the statistics (five-minute means) are read, not the 17 000 states of a day."""
+
+    def hass(self, unit="W"):
+        st = types.SimpleNamespace(attributes={"unit_of_measurement": unit})
+        return types.SimpleNamespace(states=types.SimpleNamespace(get=lambda e: st))
+
+    def test_statistics_come_first_and_the_states_are_not_read(self):
+        stats = {"sensor.grid": [{"start": 1763000000.0, "mean": 1500.0}, {"start": 1763000300.0, "mean": 1700.0}]}
+        with mock.patch("homeassistant.components.recorder.get_instance", lambda h: SlowRecorder(0.0)),                 mock.patch("homeassistant.components.recorder.statistics.statistics_during_period", lambda *a: stats),                 mock.patch("homeassistant.components.recorder.history.state_changes_during_period",
+                           side_effect=AssertionError("the states must not be read")):
+            pts = asyncio.run(cf._history_kw(self.hass("W"), "sensor.grid", 3))
+        self.assertEqual([round(v, 3) for _, v in pts], [1.5, 1.7])          # W -> kW
+
+    def test_invert_turns_the_sign(self):
+        stats = {"sensor.grid": [{"start": 1763000000.0, "mean": 1500.0}]}
+        with mock.patch("homeassistant.components.recorder.get_instance", lambda h: SlowRecorder(0.0)),                 mock.patch("homeassistant.components.recorder.statistics.statistics_during_period", lambda *a: stats):
+            pts = asyncio.run(cf._history_kw(self.hass("W"), "sensor.grid", 3, invert=True))
+        self.assertEqual([round(v, 3) for _, v in pts], [-1.5])
+
+    def test_without_statistics_the_states_are_read_without_attributes(self):
+        calls = []
+
+        def states(hass, start, end, entity_id, **kw):
+            calls.append(kw)
+            return {"sensor.grid": [types.SimpleNamespace(state="2000", last_changed=cf.dt_util.utcnow())]}
+
+        with mock.patch("homeassistant.components.recorder.get_instance", lambda h: SlowRecorder(0.0)),                 mock.patch("homeassistant.components.recorder.statistics.statistics_during_period", lambda *a: {}),                 mock.patch("homeassistant.components.recorder.history.state_changes_during_period", states):
+            pts = asyncio.run(cf._history_kw(self.hass("W"), "sensor.grid", 3))
+        self.assertEqual([round(v, 3) for _, v in pts], [2.0])
+        self.assertTrue(calls and calls[0].get("no_attributes") is True)
+
+
+class SessionTest(unittest.TestCase):
+    def test_the_own_session_is_detached_not_closed(self):
+        """Home Assistant 2026.10+: a session made with auto_cleanup=False is released with detach(); close() logs a warning."""
+        session = mock.Mock()
+        session.close = mock.AsyncMock(side_effect=AssertionError("close() must not be called"))
+
+        async def go():
+            own = cf._OwnSession(types.SimpleNamespace())
+            own._session = session
+            await own.__aexit__(None, None, None)
+
+        asyncio.run(go())
+        session.detach.assert_called_once()
 
 
 if __name__ == "__main__":

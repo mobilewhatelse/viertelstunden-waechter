@@ -114,7 +114,7 @@ class _OwnSession:
         return self._session
 
     async def __aexit__(self, *exc: Any) -> bool:
-        await self._session.close()
+        self._session.detach()   # Home Assistant: a session made with auto_cleanup=False is released with detach(), close() only warns
         return False
 
 
@@ -135,51 +135,71 @@ async def find_local_evcc(hass: Any, need_grid: bool = False) -> str | None:
     return None
 
 
+def _unit_factor(hass: Any, entity_id: str, invert: bool) -> float:
+    """kW per unit of the sensor as it reads now (W, kW, MW), with the sign turned if `invert`."""
+    st = hass.states.get(entity_id)
+    unit = str((st.attributes.get("unit_of_measurement") if st else None) or "W").strip()
+    return {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001) * (-1 if invert else 1)
+
+
+async def _stat_points(hass: Any, entity_id: str, days: int, invert: bool) -> list[tuple[Any, float]]:
+    """(local time, kW) of the five-minute means in the short-term statistics (a few hundred rows a day, however often the sensor
+    reports); empty without statistics (a sensor without state_class) or when the database is too slow."""
+    try:
+        from homeassistant.components.recorder import get_instance
+        from homeassistant.components.recorder.statistics import statistics_during_period
+
+        start = dt_util.utcnow() - timedelta(days=days)
+        async with asyncio.timeout(HISTORY_TIMEOUT_S):
+            stats = await get_instance(hass).async_add_executor_job(
+                statistics_during_period, hass, start, None, {entity_id}, "5minute", None, {"mean"})
+    except Exception:  # noqa: BLE001 - no statistics or too slow (TimeoutError): the caller tries the states or leaves the hint out
+        return []
+    f = _unit_factor(hass, entity_id, invert)
+    pts: list[tuple[Any, float]] = []
+    for row in (stats or {}).get(entity_id, []):
+        t, m = row.get("start"), row.get("mean")
+        if t is None or m is None:
+            continue
+        t = dt_util.utc_from_timestamp(t) if isinstance(t, (int, float)) else t
+        pts.append((dt_util.as_local(t), float(m) * f))
+    return pts
+
+
 async def _history_kw(hass: Any, entity_id: str, days: int = 3, invert: bool = False) -> list[tuple[Any, float]]:
-    """(local time, kW) of the recorded states of a power sensor over the last `days` days; empty if there is no history."""
+    """(local time, kW) of a power sensor over the last `days` days; empty if there is no history. The statistics come first (cheap:
+    a sensor that reports every 5 seconds has 17 000 states a day but 288 statistics rows); only without statistics the recorded
+    states are read, without their attributes, and never longer than `HISTORY_TIMEOUT_S` (field report 26.11.2026: Raspberry Pi 5,
+    a sensor every 5 seconds, the dialog stayed on "working")."""
+    pts = await _stat_points(hass, entity_id, days, invert)
+    if pts:
+        return pts
     try:
         from homeassistant.components.recorder import get_instance, history
 
         start = dt_util.utcnow() - timedelta(days=days)
         async with asyncio.timeout(HISTORY_TIMEOUT_S):
             found = await get_instance(hass).async_add_executor_job(
-                lambda: history.state_changes_during_period(hass, start, None, entity_id, include_start_time_state=False))
+                lambda: history.state_changes_during_period(hass, start, None, entity_id, no_attributes=True,
+                                                            include_start_time_state=False))
     except Exception:  # noqa: BLE001 - no recorder, no history (or too slow, TimeoutError): nothing to say
         return []
+    f = _unit_factor(hass, entity_id, invert)
     out: list[tuple[Any, float]] = []
     for st in (found or {}).get(entity_id, []):
         try:
             v = float(st.state)
         except (TypeError, ValueError):
             continue
-        unit = str(st.attributes.get("unit_of_measurement") or "W").strip()
-        v *= {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001)
-        out.append((dt_util.as_local(st.last_changed), -v if invert else v))
+        out.append((dt_util.as_local(st.last_changed), v * f))
     return out
 
 
 async def _peak_kw(hass: Any, entity_id: str, invert: bool) -> float | None:
     """The highest quarter-hour mean of the grid import in the short-term statistics (about the last 10 days), or None."""
     try:
-        from homeassistant.components.recorder import get_instance
-        from homeassistant.components.recorder.statistics import statistics_during_period
-
-        start = dt_util.utcnow() - timedelta(days=10)
-        async with asyncio.timeout(HISTORY_TIMEOUT_S):
-            stats = await get_instance(hass).async_add_executor_job(
-                statistics_during_period, hass, start, None, {entity_id}, "5minute", None, {"mean"})
-        st = hass.states.get(entity_id)
-        unit = str((st.attributes.get("unit_of_measurement") if st else None) or "W").strip()
-        f = {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001) * (-1 if invert else 1)
-        pts = []
-        for row in stats.get(entity_id, []):
-            t, m = row.get("start"), row.get("mean")
-            if t is None or m is None:
-                continue
-            t = dt_util.utc_from_timestamp(t) if isinstance(t, (int, float)) else t
-            pts.append((dt_util.as_local(t), float(m) * f))
-        return quarter_peak(pts)
-    except Exception:  # noqa: BLE001 - no statistics (e.g. a sensor without state_class) or too slow: no suggestion
+        return quarter_peak(await _stat_points(hass, entity_id, 10, invert))
+    except Exception:  # noqa: BLE001 - no statistics (e.g. a sensor without state_class): no suggestion
         return None
 
 

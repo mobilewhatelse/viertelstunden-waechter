@@ -309,7 +309,7 @@ class Waechter:
             self.executing = False
             self.guard.forget()
         if self._evcc_session is not None and not self._evcc_session.closed:
-            await self._evcc_session.close()
+            self._evcc_session.detach()   # created with auto_cleanup=False: released with detach() (close() only warns in Home Assistant)
         self._evcc_session = None
         self._evcc_clients.clear()
         await self._store.async_save(self._data())
