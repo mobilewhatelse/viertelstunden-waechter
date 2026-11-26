@@ -213,6 +213,23 @@ In 0.15.0 passiert das, wenn der Mindest-Ladestand **während des Nachladens von
 eingestellt“), stellte aber den Ladestrom nicht zurück. **Ab 0.15.1 ist das behoben** (der Strom geht zurück, wenn er noch den Wert hat, den der Wächter
 gesetzt hat). Bis dahin: den Ladestrom von Hand zurückstellen und den Mindest-Ladestand während des Nachladens nicht ändern.
 
+**Ich bekomme keine Meldung bei Eingriff, obwohl der Schalter an ist.**
+Die Meldung geht über die **Benachrichtigungsdienste in den allgemeinen Einstellungen** des Wächters (Zahnrad der Integration, z. B. `notify.mobile_app_handy`).
+Ohne eingetragenen Dienst wird nichts gesendet; der Schalter allein reicht nicht. Im Beobachtungsmodus und bei *Nur beobachten* am Gerät kommt ebenfalls keine
+Meldung. Gesendet wird beim **ersten echten Eingriff** (höchstens alle 30 Minuten) und als **Zusammenfassung**, wenn alles wieder freigegeben ist.
+
+**Was ändert die Strategie (*Strenge Reihenfolge* oder *Geringster Komfortverlust*)?**
+*Strenge Reihenfolge* arbeitet wie eine feste Liste: erst Priorität 1 ganz ausreizen, dann 2, dann 3. *Geringster Komfortverlust* nimmt die günstigste Kombination
+(Summe der Prioritäten), die reicht. Beispiel: 0,7 kW zu viel, Pool Priorität 1, Wallbox 3: nur der Pool geht aus, das Auto lädt weiter. Es macht nur einen
+Unterschied, wenn mehrere Geräte nötig wären; für das Nachladen und die Freigabe eines Speichers ändert es nichts.
+
+**Beim Speicher mit Nachladen: Der Ladestrom bleibt auf dem Nachladewert (z. B. 30 A). Was ist bei Sonne? Lädt der Speicher bei kleiner Abweichung nicht sofort nach?**
+Solange das Nachladen läuft, ist der maximale Ladestrom des Speichers auf den **Nachladewert** begrenzt, **auch wenn die Sonne scheint**. Erreicht der Ladestand den alten
+Mindest-Ladestand (z. B. 30 %), stellt der Wächter den Strom auf den alten Wert (z. B. 70 A) zurück. Bei einem Abstand von nur 2 % ist das nach kurzer Zeit. **Ob** der
+Speicher sofort aus dem Netz nachlädt, wenn der Mindest-Ladestand wieder höher steht als der Ladestand, entscheidet der **Wechselrichter** (bei Victron der ESS-Modus
+und BatteryLife, z. B. der Zustand *Sustain*), nicht der Wächter. Der Wächter setzt nur den Min-SOC und den Ladestrom; die Werte stehen im Fehlerbericht
+(`mindest_ladestand_folgt`).
+
 **Welchen Leistungssensor trage ich bei der Wallbox ein?**
 Möglichst einen, der direkt von der Wallbox kommt und die **gesamte** Ladeleistung zeigt, nicht nur eine Phase (L1) und nicht den
 Wert aus der Cloud des Autos. Ein Sensor für nur eine Phase zeigt bei dreiphasigem Laden ein Drittel; ein Wert, der über eine

@@ -205,6 +205,22 @@ In 0.15.0 this happens when the minimum SOC is changed **by hand during the rech
 put the charge current back. **From 0.15.1 this is fixed** (the current goes back if it still holds the value the guard set). Until then: put the charge
 current back by hand and do not change the minimum SOC during the recharge.
 
+**I get no message on intervention although the switch is on.**
+The message goes through the **notification services in the general settings** of the guard (cog of the integration, e.g. `notify.mobile_app_phone`). Without an
+entered service nothing is sent; the switch alone is not enough. In observe mode and with *Observe only* at the device there is no message either. It is sent at
+the **first real intervention** (at most every 30 minutes) and as a **summary** when everything is given back.
+
+**What does the strategy change (*Strict order* or *Least loss of comfort*)?**
+*Strict order* works like a fixed list: first use priority 1 completely, then 2, then 3. *Least loss of comfort* takes the cheapest combination (sum of the
+priorities) that is enough. Example: 0.7 kW too much, pool priority 1, wallbox 3: only the pool goes off, the car keeps charging. It only makes a difference when several
+devices would be needed; for the recharge and the release of a battery it changes nothing.
+
+**Battery with recharge: the charge current stays at the recharge value (e.g. 30 A). What about the sun? Does the battery not recharge at once with a small gap?**
+While the recharge runs, the maximum charge current of the battery is limited to the **recharge value**, **even when the sun shines**. When the state of charge reaches the
+old minimum SOC (e.g. 30 %), the guard puts the current back to the old value (e.g. 70 A). With a gap of only 2 % that is after a short time. **Whether** the battery
+recharges from the grid at once when the minimum SOC is higher than the state of charge is decided by the **inverter** (with Victron the ESS mode and BatteryLife, e.g.
+the state *Sustain*), not by the guard. The guard only sets the minimum SOC and the charge current; the values are in the bug report (`mindest_ladestand_folgt`).
+
 **Which power sensor do I enter for the wallbox?**
 If possible one that comes straight from the wallbox and shows the **whole** charging power, not a single phase (L1) and not the
 value from the car's cloud. A sensor of one phase shows a third while charging on three phases; a value that comes through a cloud
