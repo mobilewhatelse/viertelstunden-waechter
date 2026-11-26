@@ -6,6 +6,7 @@ Devices are subentries: Home Assistant lists them on the integration page with "
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from typing import Any
 
@@ -93,6 +94,9 @@ def _general_schema(d: dict[str, Any], first: bool) -> vol.Schema:
 
 LOCAL_EVCC_URLS = ("http://localhost:7070",)   # evcc on the same machine as Home Assistant (add-on, or Docker with host network)
 PROBE_TIMEOUT_S = 2.0
+# the set-up looks into the recorder (states of 3 days, statistics of 10 days); a busy or slow database (Raspberry Pi, a big history, a
+# running migration) must not keep the dialog "working" for ever: after this long the hint is simply left out
+HISTORY_TIMEOUT_S = 12.0
 
 
 class _OwnSession:
@@ -137,9 +141,10 @@ async def _history_kw(hass: Any, entity_id: str, days: int = 3, invert: bool = F
         from homeassistant.components.recorder import get_instance, history
 
         start = dt_util.utcnow() - timedelta(days=days)
-        found = await get_instance(hass).async_add_executor_job(
-            lambda: history.state_changes_during_period(hass, start, None, entity_id, include_start_time_state=False))
-    except Exception:  # noqa: BLE001 - no recorder, no history: nothing to say
+        async with asyncio.timeout(HISTORY_TIMEOUT_S):
+            found = await get_instance(hass).async_add_executor_job(
+                lambda: history.state_changes_during_period(hass, start, None, entity_id, include_start_time_state=False))
+    except Exception:  # noqa: BLE001 - no recorder, no history (or too slow, TimeoutError): nothing to say
         return []
     out: list[tuple[Any, float]] = []
     for st in (found or {}).get(entity_id, []):
@@ -160,8 +165,9 @@ async def _peak_kw(hass: Any, entity_id: str, invert: bool) -> float | None:
         from homeassistant.components.recorder.statistics import statistics_during_period
 
         start = dt_util.utcnow() - timedelta(days=10)
-        stats = await get_instance(hass).async_add_executor_job(
-            statistics_during_period, hass, start, None, {entity_id}, "5minute", None, {"mean"})
+        async with asyncio.timeout(HISTORY_TIMEOUT_S):
+            stats = await get_instance(hass).async_add_executor_job(
+                statistics_during_period, hass, start, None, {entity_id}, "5minute", None, {"mean"})
         st = hass.states.get(entity_id)
         unit = str((st.attributes.get("unit_of_measurement") if st else None) or "W").strip()
         f = {"W": 0.001, "kW": 1.0, "MW": 1000.0}.get(unit, 0.001) * (-1 if invert else 1)
@@ -173,7 +179,7 @@ async def _peak_kw(hass: Any, entity_id: str, invert: bool) -> float | None:
             t = dt_util.utc_from_timestamp(t) if isinstance(t, (int, float)) else t
             pts.append((dt_util.as_local(t), float(m) * f))
         return quarter_peak(pts)
-    except Exception:  # noqa: BLE001 - no statistics (e.g. a sensor without state_class): no suggestion
+    except Exception:  # noqa: BLE001 - no statistics (e.g. a sensor without state_class) or too slow: no suggestion
         return None
 
 

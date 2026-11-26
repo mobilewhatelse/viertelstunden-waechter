@@ -4,6 +4,14 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.15.1 - unreleased
 
+- **Fix: the set-up no longer "works for ever" when the database is slow (field report 26.11.2026: Raspberry Pi 5, Deye inverter via Solarman).** The set-up looks
+  into the recorder twice: the states of the grid sensor of the last 3 days (sign check, also for the power sensor of a wallbox or switch) and its statistics of the last 10
+  days (the hint for the limit). With a busy or slow database (a big history, a running migration) these looks could take minutes and the dialog stayed on "working". Both
+  now give up after 12 seconds and the hint is simply left out (you can still set the sign and the limit by hand).
+  *Deutsch:* **Korrektur: Die Einrichtung „arbeitet nicht mehr ewig“, wenn die Datenbank langsam ist (Fall vom 26.11.2026: Raspberry Pi 5, Deye über Solarman).** Die
+  Einrichtung fragt zweimal den Recorder ab: die Zustände des Netzbezug-Sensors der letzten 3 Tage (Vorzeichen-Prüfung, auch beim Leistungssensor einer Wallbox oder eines
+  Schalters) und seine Statistik der letzten 10 Tage (der Hinweis zur Grenze). Bei einer ausgelasteten oder langsamen Datenbank (große Historie, laufende Migration) konnte das
+  Minuten dauern, und der Dialog blieb auf „arbeitet“. Beide Abfragen geben jetzt nach 12 Sekunden auf, der Hinweis entfällt (Vorzeichen und Grenze lassen sich von Hand einstellen).
 - **Fix: the recharge current is put back when the minimum SOC is changed by hand during a recharge (field case 22.11.2026).** The battery
   recharge (*Recharge from*) sets a slow charge current (e.g. the ESS maximum charge current at 40 A). If someone else changed the minimum SOC
   while the recharge was running, the guard ended the stepping ("changed by someone else") but did not put the charge current back, so it stayed
