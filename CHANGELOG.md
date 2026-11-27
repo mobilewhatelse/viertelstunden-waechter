@@ -48,6 +48,15 @@ Format: newest first. German version below each English block is a short summary
   verschwindet von selbst, sobald ein Dienst eingetragen (z. B. `notify.mobile_app_handy`) oder der Schalter ausgeschaltet ist. Er ist
   bewusst leise: kein Eintrag unter Reparaturen und keine Meldung, weil der Schalter standardmäßig an ist und ein solcher Eintrag bei
   allen stehen bliebe, die keine Meldungen nutzen. Das Senden selbst ist unverändert.
+- **Clearer text: *Recharge from* (battery device).** The description now says what the FAQ says: only after a real release, from
+  this time the minimum SOC is set back to its old value and the battery charges from the grid (for up to 12 hours); without an
+  intervention before, nothing happens at that time. It needs *Put the previous values back* and *Minimum SOC follows the charge back up*
+  (before it only said "needs the switch above"). Nothing changes in what the guard does.
+  *Deutsch:* **Klarerer Text: *Nachladen ab* (Batterie).** Die Beschreibung sagt jetzt, was auch in den häufigen Fragen steht: Nur nach
+  einer echten Freigabe wird ab dieser Uhrzeit der Mindest-Ladestand wieder auf den alten Wert gesetzt, und der Akku lädt aus dem Netz nach
+  (bis zu 12 Stunden lang); ohne vorherigen Eingriff passiert zur Uhrzeit nichts. Es braucht *Vorherige Werte wiederherstellen* und
+  *Mindest-Ladestand folgt dem Ladestand zurück* (vorher stand nur „braucht den Schalter darüber“). Am Verhalten des Wächters ändert sich
+  nichts.
 
 ## 0.15.1 - 2026-11-26
 
