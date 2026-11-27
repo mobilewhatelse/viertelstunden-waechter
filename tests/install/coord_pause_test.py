@@ -140,6 +140,14 @@ class EvccPauseTests(unittest.TestCase):
             run(w._run(w.guard.step(T0 + timedelta(seconds=20 * i), 12.14, None, w._readings(), 10.0, 0.5, True), True))
         self.assertFalse([c for c in w.client.calls if c[0] == "mode"], w.client.calls)
 
+    def test_unknown_mode_from_before_sends_nothing(self):
+        """Review 27.11.2026: "now" would let a solar-only car charge at full grid power; nothing is sent, a line says why."""
+        w = make()
+        w._evcc_lp["egolf"] = parse_loadpoint(evcc_state("off", False), 1)
+        run(w._exec(Action("egolf", "wb_resume", None, "eGolf wieder erlaubt", False)))
+        self.assertEqual(w.client.calls, [])
+        self.assertTrue(any("Modus" in ln and "eGolf" in ln for ln in w.lines), w.lines)
+
 
 class OtherWallboxTests(unittest.TestCase):
     def test_pause_and_allow_commands(self):

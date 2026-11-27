@@ -405,6 +405,48 @@ class ForcedTests(unittest.TestCase):
         self.assertEqual(len([a for _, a in out if a.kind == "wb_pause"]), 2, texts(out))   # the pause and its repetition
         self.assertTrue(kinds(out, "unconfirmed"), texts(out))
 
+    def _deaf_pause(self, base, pool=True, earlier_current=6):
+        """A wallbox that ignores the pause command (review finding 27.11.2026): it goes on charging."""
+        house = House(Car(current=earlier_current), base=base, pool=pool)
+        guard = engine.Guard([wb()] + others())
+        deaf = house.car.apply
+        house.car.apply = lambda a: None if a.kind == "wb_pause" else deaf(a)
+        return guard, house
+
+    def test_a_pause_that_is_not_followed_is_forgotten(self):
+        guard, house = self._deaf_pause(8.0, pool=False)
+        out = drive(guard, house, 8)
+        self.assertTrue(kinds(out, "unconfirmed"), texts(out))
+        self.assertNotIn("wb", guard.interventions, "created only for the pause: removed, nothing stays behind")
+        self.assertAlmostEqual(guard._saved_kw(house.readings()), 0.0, places=3)
+        self.assertEqual(kinds(out, "wb_resume"), [], "it was never paused: the mode is not touched")
+        self.assertEqual(house.car.mode, "pv")
+
+    def test_after_a_failed_pause_an_earlier_lowering_stays(self):
+        guard, house = self._deaf_pause(9.0, pool=False, earlier_current=16)
+        out = drive(guard, house, 10)
+        self.assertTrue(kinds(out, "unconfirmed"), texts(out))
+        iv = guard.interventions.get("wb")
+        self.assertIsNotNone(iv, "the lowering 16 -> 6 A is still the guard's and is given back later")
+        self.assertNotIn("paused", iv)
+        self.assertEqual(iv["orig_current"], 16)
+
+    def test_after_a_failed_pause_the_other_devices_are_given_back(self):
+        guard, house = self._deaf_pause(lambda t: 8.0 if t < 8 else 1.0)
+        out = drive(guard, house, 30)
+        self.assertTrue(kinds(out, "unconfirmed"), texts(out))
+        self.assertTrue([a for _, a in out if a.device_id == "pool" and a.kind == "turn_on"], texts(out))
+        self.assertEqual(kinds(out, "wb_resume"), [])
+
+    def test_no_new_pause_within_the_rest_after_a_failed_pause(self):
+        guard, house = self._deaf_pause(8.0, pool=False)
+        out = drive(guard, house, 80)
+        pauses = [t for t, a in out if a.kind == "wb_pause"]
+        miss = [t for t, a in out if a.kind == "unconfirmed"][0]
+        later = [t for t in pauses if t > miss]
+        self.assertTrue(later, texts(out))
+        self.assertGreaterEqual(later[0] - miss, engine.PAUSE_USER_REST_MIN - 1e-9)
+
     def test_savings_count_the_paused_power(self):
         guard, house = self._paused()
         self.assertAlmostEqual(guard._saved_kw(house.readings()), 6 * 3 * V1 / 1000.0, places=2)
