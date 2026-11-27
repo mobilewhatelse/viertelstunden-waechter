@@ -4,6 +4,32 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.16.0 - unreleased
 
+- **New (beta, off by default): the wallbox may be paused as the last measure (user wish 23.11.2026).** A new switch *May be paused as
+  the last measure (Beta)* at the devices *Wallbox* and *evcc loadpoint*. While it is off nothing changes: a wallbox is only lowered to its
+  minimum current and never stopped (an older device without the field counts as off). With it on, the guard pauses the charging only when
+  the wallbox already charges at its minimum current (three-phase with phase switching: only after the switch to 1 phase; 1, 2 and 3 phases
+  are counted), every other lever is used up (switches, battery, settings, throttles) and this lasted 2 minutes; never in observe mode or with
+  *Observe only* at the device (then only the line "would be paused"). evcc: `POST /api/loadpoints/{n}/mode/off`, the mode from before is
+  remembered with the intervention (also over a restart) and set again; another wallbox needs a command that pauses and one that allows
+  charging again (as in the charge plan). Taken back first (reverse order) when the headroom fits the minimum current plus 0.5 kW, after the
+  *Minimum duration of a pause*; no new pause before the *Pause after taking back* (both 0 = 5 minutes); at once on a reload, a restart, a
+  change of the mode and when the switch is turned off. A pause someone ended meanwhile (another evcc mode) stays theirs. Every pause sends a
+  message, counts as an intervention, shows in the log, in the bug report (`pausiert`) and as `paused_by_guard` at the status sensor and in
+  the dashboard. Not every car charges again by itself after a pause: test it with *Observe only* first. The way with a *Script* device
+  still works.
+  *Deutsch:* **Neu (Beta, standardmäßig aus): Die Wallbox darf als letzte Maßnahme pausiert werden (Wunsch vom 23.11.2026).** Neuer Schalter
+  *Darf als letzte Maßnahme pausiert werden (Beta)* bei den Geräten *Wallbox* und *evcc-Ladepunkt*. Solange er aus ist, ändert sich nichts:
+  eine Wallbox wird nur bis zum Mindeststrom gesenkt und nie gestoppt (ein älteres Gerät ohne das Feld gilt als aus). Ist er an, pausiert der
+  Wächter das Laden nur, wenn die Wallbox schon mit dem Mindeststrom lädt (dreiphasig mit Umschaltung erst nach dem Wechsel auf 1 Phase; 1, 2
+  und 3 Phasen werden gerechnet), alle anderen Hebel ausgeschöpft sind (Schalter, Speicher, Einstellungen, Drosseln) und das 2 Minuten lang so
+  bleibt; nie im Beobachten-Modus oder mit *Nur beobachten* am Gerät (dann nur die Zeile „würde pausiert“). evcc: `POST
+  /api/loadpoints/{n}/mode/off`, der Modus von vorher wird mit dem Eingriff gemerkt (auch über einen Neustart) und wieder gesetzt; eine andere
+  Wallbox braucht einen Befehl zum Pausieren und einen zum Erlauben (wie beim Ladeplan). Zurück als Erstes (umgekehrte Reihenfolge), wenn der
+  Spielraum für den Mindeststrom plus 0,5 kW reicht, nach der *Mindestdauer einer Pause*; keine neue Pause vor der *Pause nach dem
+  Zurücknehmen* (beide 0 = 5 Minuten); sofort beim Neuladen, Neustart, Wechsel der Betriebsart und beim Ausschalten des Schalters. Eine Pause,
+  die jemand inzwischen beendet hat (anderer evcc-Modus), bleibt so. Jede Pause kommt als Meldung, zählt als Eingriff, steht im Protokoll, im
+  Fehlerbericht (`pausiert`) und als `paused_by_guard` am Status-Sensor und im Dashboard. Nicht jedes Auto lädt nach einer Pause von selbst
+  weiter: vorher mit *Nur beobachten* testen. Die Lösung mit einem Gerät *Skript* geht weiterhin.
 - **Fix: two-phase wallboxes are calculated right (field case 26.11.2026).** A wallbox that charges on two phases (e.g. a car whose
   charger uses two; here a Victron EV Charging Station behind evcc, about 9 A and 4.3 to 4.5 kW) was counted as three-phase. The guard
   took 6 A x 3 x 230 V = 4.14 kW as its lowest power, so it saw only about 0.26 kW of headroom instead of about 1.6 kW (6 A on two phases

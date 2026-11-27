@@ -250,6 +250,16 @@ loadpoint**, a ceiling: evcc keeps regulating below it (sun, plans, tariffs). It
 ceiling of 16 A does nothing while evcc offers 8 A) and gives back the **original** ceiling afterwards, also after a restart.
 Charging is never stopped and the mode of evcc is not touched. Switching to 1 phase only if allowed and the charger can.
 
+**Pause as the last measure (since 0.16.0, beta, off by default):** with the switch *May be paused as the last measure (Beta)* at a *Wallbox* or an
+*evcc loadpoint*, the guard may pause the charging, but only when the wallbox already charges at its minimum current (with phase switching allowed:
+only after the switch to 1 phase), every other device is used up and this lasts 2 minutes. evcc: the mode is set to *Off*
+(`POST /api/loadpoints/{n}/mode/off`) and the remembered mode from before is set again (`.../mode/{old}`), also after a restart. Another wallbox needs two
+commands as in the charge plan: *Command: pause charging* and *Command: allow charging* (button, switch, selection or number, with value). *Minimum
+duration of a pause* and *Pause after taking back* (each 0 = 5 minutes) keep the car from being stopped and started every few minutes. It is taken back
+first, as soon as the headroom fits the minimum current plus 0.5 kW, and at once on a reload, a restart, a switch to *Observe* and when the field is
+switched off; a mode someone changed meanwhile stays theirs. Not every car charges again by itself: test it with *Observe only* first. The way with a
+device of the type *Script* (emergency action, priority 10) still works (see the FAQ).
+
 *Experimental:* tested against a demo evcc (0.319.0, simulated charger) in a fresh Home Assistant (installation test
 `tests/install/itest_evcc.py`), not yet on real hardware. Do not enter the same wallbox a second time with its own integration.
 

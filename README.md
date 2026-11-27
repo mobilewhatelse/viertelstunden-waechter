@@ -13,7 +13,8 @@ throttles the wallbox and pauses devices, only as long as needed.
 - **For whom:** Home Assistant users with a wallbox or switchable loads (pool pump, water heater, heat pump,
   home battery) and a grid meter in Home Assistant.
 - **What you get:** a guard that steps in only when a quarter hour would really end above your limit. The car
-  keeps charging, it is throttled but never stopped. Everything is given back afterwards.
+  keeps charging, it is throttled but never stopped (unless you allow a pause as the last measure, beta since 0.16.0).
+  Everything is given back afterwards.
 - **What it is not:** no replacement for fuses or a required load management, and no tariff calculator.
 
 ## How it works

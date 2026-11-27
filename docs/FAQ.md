@@ -63,7 +63,7 @@ that peak applies instead of the limit for the rest of the month, because quarte
 9.7 kW the guard regulates against 9.7 kW, and 7 kW is no reason to step in. From 0.16.0 the dashboard shows the *Effective limit* under the settings, with one sentence why it is higher;
 the status sensor has `effective_limit_kw` and `limit_note` for it, the log says "limit 9.7 kW". If you want to stay below the set limit regardless of cost, switch *Use peak already reached as limit* off; this month
 that no longer saves money, because the peak is already paid for.
-More points: a wallbox is only lowered to its minimum current and never stopped (3-phase at 6 A about 4.1 kW, 1-phase about 1.4 kW, 2-phase
+More points: a wallbox is only lowered to its minimum current and (without the beta switch *May be paused as the last measure*) never stopped (3-phase at 6 A about 4.1 kW, 1-phase about 1.4 kW, 2-phase
 about 2.8 kW). A battery needs an entered release setting to help. And with *Observe only* at the device it only logs (see the question before).
 
 **The quarter-hour forecast shows 10.96 kW, but I did not use that much in the last 24 hours.**
@@ -194,8 +194,20 @@ house alone is already close to the limit: a wallbox can only be lowered down to
 the reason is unclear, the button *Send feedback* helps (with a contact address if you want an answer).
 
 **Can the guard switch the wallbox off completely when lowering the charging current is no longer enough?**
-Not as a built-in function: a wallbox (and an evcc loadpoint) is only **lowered to its minimum current and never stopped**; with evcc the mode stays
-untouched. As a **last resort** it works with a device of your own: device type **Script** (emergency action) with two small scripts, *Script: intervene*
+From 0.16.0 as a **beta, off by default**: the switch **May be paused as the last measure (Beta)** at the device *Wallbox* or *evcc loadpoint*. While it
+is off, a wallbox is only **lowered to its minimum current and never stopped**, as before. With it on, the guard pauses the charging only when (1) the
+wallbox already charges at its minimum current (three-phase with phase switching allowed: only after the switch to 1 phase), (2) every other device is
+used up (switches, battery, settings, throttles) and (3) this lasts 2 minutes. How: with evcc the mode is set to *Off* and the mode from before is
+remembered (also over a restart); another wallbox needs a **command that pauses** and one **that allows** charging again (button, switch, selection or
+number, as in the charge plan). It is taken back **first** (reverse order) when the headroom fits the minimum current plus 0.5 kW, at the earliest after
+the *Minimum duration of a pause* (0 = 5 minutes); after that no new pause before the *Pause after taking back* (0 = 5 minutes). A reload, a restart,
+switching to *Observe* or *Off* and switching the field off allow charging again at once. If someone changed the evcc mode (or the pause switch)
+meanwhile, it stays so, and the guard does not pause this wallbox for an hour. Every pause sends a message (with *Message on intervention*), counts as an
+intervention and shows in the log ("… paused (… kW too much, the minimum current is not enough …)", "… allowed again"), in the bug report
+(`eingriff_aktiv`, `pausiert`) and in the dashboard ("Wallbox paused by the guard", attribute `paused_by_guard` of the status sensor, e.g. for
+Plugwhen). **Important:** not every car and not every wallbox charges again by itself after a pause (sometimes the plug has to be put in again). So test
+it with **Observe only** first (then the log only says "would be paused", nothing is sent) and try it with your own car.
+The earlier way still works, e.g. if you need more than a pause (or without the switch): a device of your own of the type **Script** (emergency action) with two small scripts, *Script: intervene*
 (e.g. evcc mode to *Off* or pause the wallbox) and *Script after taking back* (set the old mode again), and the **lowest priority** (10 = only when nothing
 else helps). The guard triggers it only when the wallbox, the battery and the other devices are not enough, and gives it back first, in reverse order.
 Note: a stopped charge does not always restart by itself, depending on the car and the wallbox; try it with your own car first and use *Observe only*.

@@ -128,9 +128,17 @@ Reihenfolge.
 | Genutzte Phasen (optional) | `sensor.wallbox_phasen` | |
 
 Ablauf: 3-phasig schrittweise bis zum Mindeststrom → reicht das 2 Minuten lang nicht, auf 1 Phase umschalten
-(kurze Ladepause) → zurück auf 3 Phasen erst nach 5 Minuten mit genug Luft. **Das Laden wird nie gestoppt.**
+(kurze Ladepause) → zurück auf 3 Phasen erst nach 5 Minuten mit genug Luft. **Das Laden wird nie gestoppt** (außer mit dem Beta-Schalter unten).
 Geht, wenn die Integration der Wallbox (oder des Autos) einen einstellbaren Ladestrom anbietet. Wallboxen, die
 sich nur starten und stoppen lassen, werden nicht unterstützt.
+
+**Als letzte Maßnahme pausieren (seit 0.16.0, Beta, standardmäßig aus):** Mit dem Schalter *Darf als letzte Maßnahme pausiert werden (Beta)* darf der
+Wächter das Laden pausieren, aber nur, wenn die Wallbox schon mit dem Mindeststrom lädt (bei erlaubter Umschaltung erst einphasig), alle anderen Geräte
+ausgeschöpft sind und das 2 Minuten lang so bleibt. Dazu gehören zwei Befehle wie beim Ladeplan: *Befehl: Laden pausieren* und *Befehl: Laden erlauben*
+(Knopf, Schalter, Auswahl oder Zahl, mit Wert). *Mindestdauer einer Pause* und *Pause nach dem Zurücknehmen* (je 0 = 5 Minuten) verhindern ein ständiges
+Stoppen und Starten. Zurückgenommen wird zuerst, sobald der Spielraum für den Mindeststrom plus 0,5 kW reicht, sofort beim Neuladen, Neustart, Wechsel auf
+*Nur beobachten* und beim Ausschalten des Schalters. Nicht jedes Auto lädt danach von selbst weiter: vorher mit *Nur beobachten* testen. Die Lösung mit
+einem eigenen Gerät *Skript* (Notfall-Aktion, Priorität 10) geht weiterhin (siehe Häufige Fragen).
 
 ### evcc-Ladepunkt (seit 0.14, experimentell)
 
@@ -139,7 +147,9 @@ Passwort nur, wenn evcc eines verlangt. Adresse und Passwort sind schon ausgefü
 ein evcc auf demselben Rechner vorgeschlagen). Eine andere Integration ist nicht nötig. Der Wächter setzt den **maximalen Ladestrom des Ladepunkts** in
 evcc, eine Obergrenze: darunter regelt evcc weiter (Sonne, Pläne, Tarife). Er rechnet mit dem Strom, den evcc gerade anbietet (eine Obergrenze von
 16 A bewirkt nichts, solange evcc 8 A anbietet), und gibt danach die **ursprüngliche** Obergrenze zurück, auch nach einem Neustart. Das Laden wird
-nie gestoppt, der Modus von evcc bleibt unberührt. Umschalten auf 1 Phase nur, wenn erlaubt und die Wallbox es kann.
+nie gestoppt, der Modus von evcc bleibt unberührt. Umschalten auf 1 Phase nur, wenn erlaubt und die Wallbox es kann. Ausnahme (seit 0.16.0, Beta,
+standardmäßig aus): mit *Darf als letzte Maßnahme pausiert werden* stellt der Wächter als letzte Maßnahme den Modus auf *Aus*
+(`POST /api/loadpoints/{n}/mode/off`) und später den gemerkten Modus von vorher zurück (siehe Wallbox oben).
 
 | Feld | Beispiel | Bedeutung |
 |---|---|---|

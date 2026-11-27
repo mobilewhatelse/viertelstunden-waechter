@@ -63,7 +63,7 @@ Grenze, gilt für den Rest des Monats diese Spitze statt der Grenze, weil Vierte
 Spitze von 9,7 kW regelt der Wächter also gegen 9,7 kW, und 7 kW sind kein Anlass zum Eingreifen. Ab 0.16.0 zeigt das Dashboard unter den Einstellungen die *Wirksame Grenze* mit einem Satz, warum sie höher ist;
 im Status-Sensor stehen dazu `effective_limit_kw` und `limit_note`, im Protokoll „Grenze 9.7 kW“. Wollen Sie unabhängig von der Kostenfrage immer unter der eingestellten Grenze bleiben,
 schalten Sie *Bereits erreichte Spitze als Grenze nutzen* aus; in diesem Monat spart das dann kein Geld mehr, weil die Spitze schon bezahlt ist.
-Weitere Punkte: Eine Wallbox wird nur bis zum Mindeststrom gesenkt und nie gestoppt (3-phasig bei 6 A etwa 4,1 kW, 1-phasig etwa 1,4 kW,
+Weitere Punkte: Eine Wallbox wird nur bis zum Mindeststrom gesenkt und (ohne den Beta-Schalter *Darf als letzte Maßnahme pausiert werden*) nie gestoppt (3-phasig bei 6 A etwa 4,1 kW, 1-phasig etwa 1,4 kW,
 2-phasig etwa 2,8 kW). Zum Mithelfen braucht ein Speicher eine eingetragene Freigabe-Einstellung. Und bei *Nur beobachten* am Gerät wird nur
 protokolliert (siehe die Frage davor).
 
@@ -201,8 +201,21 @@ der Rest des Hauses allein schon nahe an der Grenze liegt: die Wallbox lässt si
 regelmäßig und der Grund ist unklar, hilft die Taste *Rückmeldung senden* (mit Kontaktadresse, wenn Sie eine Antwort möchten).
 
 **Kann der Wächter die Wallbox ganz ausschalten, wenn das Senken des Ladestroms nicht mehr reicht?**
-Nicht als eingebaute Funktion: Eine Wallbox (und ein evcc-Ladepunkt) wird nur **bis zum Mindeststrom gesenkt und nie gestoppt**; bei evcc bleibt der Modus
-unberührt. Als **letzte Maßnahme** geht es mit einem eigenen Gerät: Gerätetyp **Skript** (Notfall-Aktion) mit zwei kleinen Skripten, *Skript: eingreifen*
+Ab 0.16.0 als **Beta, standardmäßig aus**: Schalter **Darf als letzte Maßnahme pausiert werden (Beta)** beim Gerät *Wallbox* oder *evcc-Ladepunkt*.
+Solange er aus ist, wird eine Wallbox wie bisher nur **bis zum Mindeststrom gesenkt und nie gestoppt**. Ist er an, pausiert der Wächter das Laden nur, wenn
+(1) die Wallbox schon mit dem Mindeststrom lädt (dreiphasig mit erlaubter Umschaltung erst nach dem Wechsel auf 1 Phase), (2) alle anderen Geräte
+ausgeschöpft sind (Schalter, Speicher, Einstellungen, Drosseln) und (3) das 2 Minuten lang so bleibt. Wie: bei evcc wird der Modus auf *Aus* gestellt und
+der Modus von vorher gemerkt (auch über einen Neustart); bei einer anderen Wallbox braucht es einen **Befehl zum Pausieren** und einen **zum Erlauben**
+(Knopf, Schalter, Auswahl oder Zahl, wie beim Ladeplan). Zurück geht es **als Erstes** (umgekehrte Reihenfolge), wenn der Spielraum für den Mindeststrom
+plus 0,5 kW reicht, frühestens nach der *Mindestdauer einer Pause* (0 = 5 Minuten); danach keine neue Pause vor Ablauf der *Pause nach dem Zurücknehmen*
+(0 = 5 Minuten). Beim Neuladen, Neustart, Wechsel auf *Nur beobachten* oder *Aus* und beim Ausschalten des Schalters wird sofort wieder erlaubt. Hat
+jemand den evcc-Modus (oder den Pausieren-Schalter) inzwischen selbst geändert, bleibt es dabei, und der Wächter pausiert diese Wallbox eine Stunde lang
+nicht. Jede Pause kommt als Meldung (bei *Meldung bei Eingriff*), zählt als Eingriff, steht im Protokoll („… pausiert (… kW zu viel, Mindeststrom reicht
+nicht …)“, „… wieder erlaubt“), im Fehlerbericht (`eingriff_aktiv`, `pausiert`) und im Dashboard („Wallbox vom Wächter pausiert“, Attribut
+`paused_by_guard` am Status-Sensor, z. B. für Plugwhen). **Wichtig:** Nicht jedes Auto und nicht jede Wallbox lädt nach einer Pause von selbst weiter
+(manchmal muss der Stecker neu gesteckt werden). Deshalb vorher mit **Nur beobachten** testen (dann steht nur „würde pausiert“ im Protokoll, gesendet
+wird nichts) und am eigenen Auto ausprobieren.
+Die bisherige Lösung geht weiterhin, z. B. wenn Sie mehr als Pausieren brauchen (oder ohne den Schalter): ein eigenes Gerät vom Typ **Skript** (Notfall-Aktion) mit zwei kleinen Skripten, *Skript: eingreifen*
 (z. B. evcc-Modus auf *Aus* oder die Wallbox pausieren) und *Skript nach dem Zurücknehmen* (den alten Modus wieder setzen), und der **niedrigsten
 Priorität** (10 = nur, wenn sonst nichts hilft). Der Wächter löst es erst aus, wenn Wallbox, Speicher und die anderen Geräte nicht ausreichen, und gibt es
 in umgekehrter Reihenfolge zuerst zurück. Beachten: Ein gestoppter Ladevorgang startet je nach Auto und Wallbox nicht immer von selbst wieder; im Zweifel
