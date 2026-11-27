@@ -715,7 +715,7 @@ class Guard:
             if a.kind == "set_current":
                 r = readings.get(dev.id) or Reading()
                 phase_switch = any(x.kind == "set_phase" and x.device_id == dev.id for x in acts)
-                kw = float(a.value) * (self.v1 if self._phases(dev, r) == 1 else self.v3) / 1000.0
+                kw = float(a.value) * self._volts(self._phases(dev, r)) / 1000.0
                 self._set_pending(dev.id, a, now, expect_kw=kw, power_after=PHASE_PAUSE_S if phase_switch else 0)
             elif a.kind in ("turn_off", "set_value", "battery_release"):
                 self._set_pending(dev.id, a, now)
@@ -802,9 +802,9 @@ class Guard:
                 cur = r.current_a if r.current_a is not None else dev.max_current
                 orig = float(iv.get("orig_current") or dev.max_current)
                 phases = self._phases(dev, r)
-                orig_phases = 3 if iv.get("switched") else phases
-                orig_kw = orig * (self.v3 if orig_phases == 3 else self.v1) / 1000.0
-                cur_kw = cur * (self.v3 if phases == 3 else self.v1) / 1000.0
+                orig_phases = 3 if iv.get("switched") else phases   # a switch to one phase only ever comes from three
+                orig_kw = orig * self._volts(orig_phases) / 1000.0
+                cur_kw = cur * self._volts(phases) / 1000.0
                 total += max(0.0, orig_kw - max(cur_kw, p))
             elif dev.kind == KIND_SWITCH:
                 if r.is_on is False:
@@ -1009,14 +1009,25 @@ class Guard:
         return self._wb.setdefault(dev_id, {"changed": None, "phase": None, "too_little": None, "room3": None})
 
     def _phases(self, dev: DeviceConfig, r: Reading) -> int:
+        """1, 2 or 3. Two only when the source reports exactly two (a car that charges on two phases, field case 26.11.2026);
+        unknown or more than three counts as three, as before."""
         iv = self.interventions.get(dev.id)
         if iv is not None and "one_phase" in iv:
-            return 1 if iv["one_phase"] else 3  # what the guard set; the "phases in use" sensor lags
+            if iv["one_phase"]:
+                return 1   # what the guard set; the "phases in use" sensor lags
+            # the phases at the start of the intervention (saved since 0.16.0); an intervention saved before has none
+            return int(iv.get("phases") or (2 if r.phases == 2 else 3))
         if dev.one_phase_option and r.phase_option == dev.one_phase_option:
             return 1
         if r.phases is not None and r.phases < 2:
             return 1
+        if r.phases == 2:
+            return 2
         return 3
+
+    def _volts(self, phases: int) -> float:
+        """Volts times phases: what one amp gives in W (v1, 2 x v1 or v3)."""
+        return self.v1 if phases == 1 else self.v3 if phases == 3 else phases * self.v1
 
     def _wb_locked(self, dev_id: str, now: datetime) -> bool:
         t = self._wbt(dev_id)
@@ -1032,7 +1043,10 @@ class Guard:
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         t = self._wbt(dev.id)
         lo = self._wb_min(dev, r)
-        if self._phases(dev, r) == 3:
+        phases = self._phases(dev, r)
+        if phases == 2:   # two phases: only down to the minimum, never to one phase (see _wb_reduce)
+            return max(0.0, p_wb - lo * self._volts(2) / 1000.0) if cur > lo else 0.0
+        if phases == 3:
             if cur > lo:
                 return max(0.0, p_wb - lo * self.v3 / 1000.0)
             if self._smooth:
@@ -1060,7 +1074,11 @@ class Guard:
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         goal = p_wb - want_kw
         lo, steps = self._wb_min(dev, r), r.current_steps
-        if self._phases(dev, r) == 3:
+        phases = self._phases(dev, r)
+        if phases == 2:
+            a = int(goal * 1000.0 / self._volts(2))
+            return cur, min(cur, max(step_down(a, steps), lo)), False
+        if phases == 3:
             a = int(goal * 1000.0 / self.v3)
             if a >= lo:
                 return cur, min(cur, max(step_down(a, steps), lo)), False
@@ -1079,7 +1097,13 @@ class Guard:
         goal = p_wb - want_kw
         acts: list[Action] = []
         lo = self._wb_min(dev, r)
-        if phases == 3:
+        if phases == 2:
+            # Two phases (the car charges on two, e.g. its charger has two): only the current is lowered. No switch to one phase:
+            # the way back (_wb_release) knows only one and three phases, and the few amps it would bring are not worth a pause
+            a = max(step_down(int(goal * 1000.0 / self._volts(2)), r.current_steps), lo)
+            if a < cur:
+                acts = [Action(dev.id, "set_current", a, self.t("wb2_down", name=dev.name, cur=cur, new=a, excess=excess))]
+        elif phases == 3:
             a = int(goal * 1000.0 / self.v3)
             if a >= lo:
                 a = max(step_down(a, r.current_steps), lo)
@@ -1102,7 +1126,7 @@ class Guard:
         if acts:
             iv = self.interventions.setdefault(dev.id, {
                 "since": now.isoformat(), "orig_current": cur, "orig_phase": r.phase_option,
-                "one_phase": phases == 1, "switched": False,
+                "one_phase": phases == 1, "switched": False, "phases": phases,
             })
             if any(x.kind == "set_phase" for x in acts):
                 iv["one_phase"] = iv["switched"] = True
@@ -1150,8 +1174,9 @@ class Guard:
                     del self.interventions[dev.id]
                 return acts
             return []
-        if room > self.v3 / 1000.0 + 0.15 and cur < orig:
-            new = step_down(min(orig, cur + max(1, int((room - 0.15) * 1000.0 / self.v3))), r.current_steps)
+        vn = self._volts(self._phases(dev, r))   # three phases, or two (field case 26.11.2026)
+        if room > vn / 1000.0 + 0.15 and cur < orig:
+            new = step_down(min(orig, cur + max(1, int((room - 0.15) * 1000.0 / vn))), r.current_steps)
             if new <= cur:   # the next step of the list does not fit yet
                 return []
             t["changed"] = now
