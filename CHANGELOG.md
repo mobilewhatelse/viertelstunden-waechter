@@ -4,6 +4,10 @@ Format: newest first. German version below each English block is a short summary
 
 ## 0.16.0 - unreleased
 
+- **Fixed: absurd "kW too much" at the end of a quarter hour.** In a quarter hour that was already over its budget, the allowed power
+  (budget / remaining seconds) became strongly negative and log lines said e.g. "245.9 kW zu viel" (seen in the setup film, 135.6 kW in the
+  test); with *Least loss of comfort* this also made the guard take every lever. The amount is now capped at the power that actually flows
+  (same arithmetic since 0.1). Nothing changes while the quarter hour is within its budget.
 - **New (beta, off by default): the wallbox may be paused as the last measure (user wish 23.11.2026).** A new switch *May be paused as
   the last measure (Beta)* at the devices *Wallbox* and *evcc loadpoint*. While it is off nothing changes: a wallbox is only lowered to its
   minimum current and never stopped (an older device without the field counts as off). With it on, the guard pauses the charging only when

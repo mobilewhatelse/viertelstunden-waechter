@@ -501,7 +501,9 @@ class Guard:
         p = sum(fast) / len(fast)
         allowed = (target * 0.25 - self.energy_kwh) / rest_h
         forecast = (self.energy_kwh + p * rest_h) / 0.25
-        excess = p - allowed
+        # Late in a quarter hour that is already over its budget, `allowed` is strongly negative (budget / a few seconds) and the
+        # difference becomes absurd (seen: 245.9 kW). More than what flows can never be taken away, so it is capped (0.16.0).
+        excess = min(p - allowed, max(p, 0.0))
         if excess <= 0.1:   # the wait before a wallbox pause starts again (only set with a device that may pause)
             for t in self._wb.values():
                 t.pop("pause_need", None)
@@ -548,11 +550,11 @@ class Guard:
         if not [a for a in actions if a.kind != "log"]:
             if excess > 0.1:
                 actions = actions + self._reduce(now, excess, readings, forecast, limit_kw, rest_h)
-            elif reserve_kw > 0 and p - (allowed - reserve_kw) > 0.1:
+            elif reserve_kw > 0 and min(p - (allowed - reserve_kw), max(p, 0.0)) > 0.1:
                 # forecast says a spike is usual in this quarter hour: take the smooth levers (wallbox, throttle) early
                 self._smooth = True
                 try:
-                    actions = self._reduce(now, p - (allowed - reserve_kw), readings, forecast, limit_kw, rest_h,
+                    actions = self._reduce(now, min(p - (allowed - reserve_kw), max(p, 0.0)), readings, forecast, limit_kw, rest_h,
                                            smooth_only=True)
                 finally:
                     self._smooth = False
