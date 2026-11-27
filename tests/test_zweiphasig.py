@@ -93,6 +93,27 @@ class TwoPhaseFieldCase(unittest.TestCase):
         self.assertEqual((cur, new, one), (9, 7, False))
 
 
+class OpenFinding(unittest.TestCase):
+    """Why the battery came first in the field case: the arithmetic of 0.15.1, step by step (see CHANGELOG 0.16.0)."""
+
+    def test_three_phase_arithmetic_left_no_lever_below_4_24_kw(self):
+        # what 0.15.1 did with the eGolf: two phases counted as three. 6 A x 690 V = 4.14 kW, a lever needs 0.1 kW more
+        guard = engine.Guard(devices())
+        dev = guard.devices["egolf"]
+        for kw, lever in ((4.4, True), (4.25, True), (4.2, False), (3.0, False)):
+            r = readings(power_w=kw * 1000.0, phases=3)["egolf"]
+            self.assertEqual(guard._wb_reduction(dev, r, START) >= 0.1, lever, kw)
+            r2 = readings(power_w=kw * 1000.0, phases=2)["egolf"]
+            self.assertGreaterEqual(guard._wb_reduction(dev, r2, START), 0.1, kw)   # with two phases it always is one
+
+    def test_a_car_that_stopped_is_no_lever_the_battery_helps(self):
+        # unchanged by design: a wallbox drawing less than 1 kW (the car is full) is no lever, even if the 60 s average of the
+        # grid still holds its power. Then the next lever of the order is used.
+        guard, acts = first_step(readings(power_w=300.0))
+        real = [a for a in acts if a.kind != "log"]
+        self.assertEqual(real[0].device_id, "speicher", [a.text for a in acts])
+
+
 class TwoPhaseRelease(unittest.TestCase):
     def _reduced(self):
         guard, _ = first_step(readings())
@@ -101,7 +122,7 @@ class TwoPhaseRelease(unittest.TestCase):
 
     def test_more_room_again_counts_two_phases(self):
         guard = self._reduced()
-        dev, r = guard.devices["egolf"], readings(power_w=2800.0, current_a=6)
+        dev, r = guard.devices["egolf"], readings(power_w=2800.0, current_a=6)["egolf"]
         later = START + timedelta(minutes=3)
         # 1.5 kW of room: (1.5 - 0.15) kW / (2 x 230 V) = 2 more amps (with three phases it was only 1)
         acts = guard._wb_release(dev, r, 1.5, later, False)
@@ -109,7 +130,7 @@ class TwoPhaseRelease(unittest.TestCase):
 
     def test_little_room_is_enough_for_one_amp_at_two_phases(self):
         guard = self._reduced()
-        dev, r = guard.devices["egolf"], readings(power_w=2800.0, current_a=6)
+        dev, r = guard.devices["egolf"], readings(power_w=2800.0, current_a=6)["egolf"]
         # 0.7 kW: more than one amp on two phases (0.46 kW + 0.15), less than one on three (0.69 kW + 0.15)
         acts = guard._wb_release(dev, r, 0.7, START + timedelta(minutes=3), False)
         self.assertEqual([a.value for a in acts if a.kind == "set_current"], [7])
