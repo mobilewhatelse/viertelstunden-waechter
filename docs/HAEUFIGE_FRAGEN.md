@@ -204,7 +204,7 @@ regelmäßig und der Grund ist unklar, hilft die Taste *Rückmeldung senden* (mi
 Ab 0.16.0 als **Beta, standardmäßig aus**: Schalter **Darf als letzte Maßnahme pausiert werden (Beta)** beim Gerät *Wallbox* oder *evcc-Ladepunkt*.
 Solange er aus ist, wird eine Wallbox wie bisher nur **bis zum Mindeststrom gesenkt und nie gestoppt**. Ist er an, pausiert der Wächter das Laden nur, wenn
 (1) die Wallbox schon mit dem Mindeststrom lädt (dreiphasig mit erlaubter Umschaltung erst nach dem Wechsel auf 1 Phase), (2) alle anderen Geräte
-ausgeschöpft sind (Schalter, Speicher, Einstellungen, Drosseln) und (3) das 2 Minuten lang so bleibt. Wie: bei evcc wird der Modus auf *Aus* gestellt und
+ausgeschöpft sind (Schalter, Speicher, Einstellungen, Drosseln) und (3) das 2 Minuten lang so bleibt (bei evcc nur, wenn der Modus bekannt ist). Wie: bei evcc wird der Modus auf *Aus* gestellt und
 der Modus von vorher gemerkt (auch über einen Neustart); bei einer anderen Wallbox braucht es einen **Befehl zum Pausieren** und einen **zum Erlauben**
 (Knopf, Schalter, Auswahl oder Zahl, wie beim Ladeplan). Zurück geht es **als Erstes** (umgekehrte Reihenfolge), wenn der Spielraum für den Mindeststrom
 plus 0,5 kW reicht, frühestens nach der *Mindestdauer einer Pause* (0 = 5 Minuten); danach keine neue Pause vor Ablauf der *Pause nach dem Zurücknehmen*

@@ -9,7 +9,7 @@ Format: newest first. German version below each English block is a short summary
   minimum current and never stopped (an older device without the field counts as off). With it on, the guard pauses the charging only when
   the wallbox already charges at its minimum current (three-phase with phase switching: only after the switch to 1 phase; 1, 2 and 3 phases
   are counted), every other lever is used up (switches, battery, settings, throttles) and this lasted 2 minutes; never in observe mode or with
-  *Observe only* at the device (then only the line "would be paused"). evcc: `POST /api/loadpoints/{n}/mode/off`, the mode from before is
+  *Observe only* at the device (then only the line "would be paused"). evcc (only with a known evcc mode): `POST /api/loadpoints/{n}/mode/off`, the mode from before is
   remembered with the intervention (also over a restart) and set again; another wallbox needs a command that pauses and one that allows
   charging again (as in the charge plan). Taken back first (reverse order) when the headroom fits the minimum current plus 0.5 kW, after the
   *Minimum duration of a pause*; no new pause before the *Pause after taking back* (both 0 = 5 minutes); at once on a reload, a restart, a
@@ -23,7 +23,7 @@ Format: newest first. German version below each English block is a short summary
   Wächter das Laden nur, wenn die Wallbox schon mit dem Mindeststrom lädt (dreiphasig mit Umschaltung erst nach dem Wechsel auf 1 Phase; 1, 2
   und 3 Phasen werden gerechnet), alle anderen Hebel ausgeschöpft sind (Schalter, Speicher, Einstellungen, Drosseln) und das 2 Minuten lang so
   bleibt; nie im Beobachten-Modus oder mit *Nur beobachten* am Gerät (dann nur die Zeile „würde pausiert“). evcc: `POST
-  /api/loadpoints/{n}/mode/off`, der Modus von vorher wird mit dem Eingriff gemerkt (auch über einen Neustart) und wieder gesetzt; eine andere
+  /api/loadpoints/{n}/mode/off` (nur bei bekanntem evcc-Modus), der Modus von vorher wird mit dem Eingriff gemerkt (auch über einen Neustart) und wieder gesetzt; eine andere
   Wallbox braucht einen Befehl zum Pausieren und einen zum Erlauben (wie beim Ladeplan). Zurück als Erstes (umgekehrte Reihenfolge), wenn der
   Spielraum für den Mindeststrom plus 0,5 kW reicht, nach der *Mindestdauer einer Pause*; keine neue Pause vor der *Pause nach dem
   Zurücknehmen* (beide 0 = 5 Minuten); sofort beim Neuladen, Neustart, Wechsel der Betriebsart und beim Ausschalten des Schalters. Eine Pause,

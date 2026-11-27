@@ -252,7 +252,7 @@ Charging is never stopped and the mode of evcc is not touched. Switching to 1 ph
 
 **Pause as the last measure (since 0.16.0, beta, off by default):** with the switch *May be paused as the last measure (Beta)* at a *Wallbox* or an
 *evcc loadpoint*, the guard may pause the charging, but only when the wallbox already charges at its minimum current (with phase switching allowed:
-only after the switch to 1 phase), every other device is used up and this lasts 2 minutes. evcc: the mode is set to *Off*
+only after the switch to 1 phase), every other device is used up and this lasts 2 minutes. evcc (only while its mode is known): the mode is set to *Off*
 (`POST /api/loadpoints/{n}/mode/off`) and the remembered mode from before is set again (`.../mode/{old}`), also after a restart. Another wallbox needs two
 commands as in the charge plan: *Command: pause charging* and *Command: allow charging* (button, switch, selection or number, with value). *Minimum
 duration of a pause* and *Pause after taking back* (each 0 = 5 minutes) keep the car from being stopped and started every few minutes. It is taken back

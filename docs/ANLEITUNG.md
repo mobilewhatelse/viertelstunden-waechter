@@ -148,7 +148,7 @@ ein evcc auf demselben Rechner vorgeschlagen). Eine andere Integration ist nicht
 evcc, eine Obergrenze: darunter regelt evcc weiter (Sonne, Pläne, Tarife). Er rechnet mit dem Strom, den evcc gerade anbietet (eine Obergrenze von
 16 A bewirkt nichts, solange evcc 8 A anbietet), und gibt danach die **ursprüngliche** Obergrenze zurück, auch nach einem Neustart. Das Laden wird
 nie gestoppt, der Modus von evcc bleibt unberührt. Umschalten auf 1 Phase nur, wenn erlaubt und die Wallbox es kann. Ausnahme (seit 0.16.0, Beta,
-standardmäßig aus): mit *Darf als letzte Maßnahme pausiert werden* stellt der Wächter als letzte Maßnahme den Modus auf *Aus*
+standardmäßig aus): mit *Darf als letzte Maßnahme pausiert werden* stellt der Wächter als letzte Maßnahme (nur bei bekanntem Modus) den Modus auf *Aus*
 (`POST /api/loadpoints/{n}/mode/off`) und später den gemerkten Modus von vorher zurück (siehe Wallbox oben).
 
 | Feld | Beispiel | Bedeutung |

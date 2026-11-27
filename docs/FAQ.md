@@ -197,7 +197,7 @@ the reason is unclear, the button *Send feedback* helps (with a contact address 
 From 0.16.0 as a **beta, off by default**: the switch **May be paused as the last measure (Beta)** at the device *Wallbox* or *evcc loadpoint*. While it
 is off, a wallbox is only **lowered to its minimum current and never stopped**, as before. With it on, the guard pauses the charging only when (1) the
 wallbox already charges at its minimum current (three-phase with phase switching allowed: only after the switch to 1 phase), (2) every other device is
-used up (switches, battery, settings, throttles) and (3) this lasts 2 minutes. How: with evcc the mode is set to *Off* and the mode from before is
+used up (switches, battery, settings, throttles) and (3) this lasts 2 minutes (with evcc only while its mode is known). How: with evcc the mode is set to *Off* and the mode from before is
 remembered (also over a restart); another wallbox needs a **command that pauses** and one **that allows** charging again (button, switch, selection or
 number, as in the charge plan). It is taken back **first** (reverse order) when the headroom fits the minimum current plus 0.5 kW, at the earliest after
 the *Minimum duration of a pause* (0 = 5 minutes); after that no new pause before the *Pause after taking back* (0 = 5 minutes). A reload, a restart,
