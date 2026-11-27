@@ -22,6 +22,21 @@ Format: newest first. German version below each English block is a short summary
   Phasen* genau 2 meldet: beim Spielraum, beim gesetzten Strom, bei der Prüfung, ob die Wallbox gefolgt ist, bei der geschätzten Ersparnis
   und beim Hochstellen („wieder mehr Luft“). Bei zwei Phasen wird nur bis zum Mindeststrom gesenkt, nie auf eine Phase umgeschaltet (die
   Umschaltung bleibt für drei Phasen). Ein- und dreiphasig sowie eine unbekannte Phasenzahl (zählt als drei) verhalten sich wie bisher.
+- **New: the effective limit is shown, and the switch has a clearer name (user case).** A user had set 4 kW, the month peak was already
+  9.7 kW, and the guard did not step in at 7 kW: with *Use peak already reached as limit* (on by default) it works with the month peak
+  as long as that is higher, because up to it a higher import costs nothing more. That was not visible anywhere. Now the dashboard shows
+  *Effective limit* under the settings, with one sentence when it is above the set limit ("effective 9.7 kW instead of 4.0 kW, because
+  the month peak is higher ..."), the status sensor has the attributes `limit_kw`, `effective_limit_kw` and `limit_note`, and the
+  explanation of the day names it. The switch is now called *Use peak already reached as limit* (before: *Use peak already reached*);
+  existing entity ids stay as they are. The control itself is unchanged. The new dashboard line comes with *Create dashboard* again.
+  *Deutsch:* **Neu: Die wirksame Grenze wird angezeigt, und der Schalter heißt klarer (Fall eines Nutzers).** Eingestellt waren 4 kW, die
+  Monatsspitze lag schon bei 9,7 kW, und bei 7 kW griff der Wächter nicht ein: Mit *Bereits erreichte Spitze als Grenze nutzen*
+  (standardmäßig an) arbeitet er mit der Monatsspitze, solange sie höher ist, weil bis dorthin ein höherer Bezug nichts mehr kostet. Das
+  war nirgends zu sehen. Jetzt zeigt das Dashboard unter den Einstellungen die *Wirksame Grenze*, mit einem Satz, wenn sie über der
+  eingestellten liegt („Wirksam 9,7 kW statt 4,0 kW, weil die Monatsspitze höher ist …“); der Status-Sensor hat dazu die Attribute
+  `limit_kw`, `effective_limit_kw` und `limit_note`, und die Erklärung des Tages nennt sie. Der Schalter heißt jetzt *Bereits erreichte
+  Spitze als Grenze nutzen* (vorher *Bereits erreichte Spitze nutzen*); vorhandene Entitäts-IDs bleiben, wie sie sind. An der Regelung
+  selbst ändert sich nichts. Die neue Zeile im Dashboard kommt mit *Dashboard erstellen* neu.
 
 ## 0.15.1 - 2026-11-26
 

@@ -33,7 +33,7 @@ from . import protokoll as pr
 from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, GridDiffer, choose_grid, parse_grid_kw, parse_loadpoint, target_ceiling,
                    virtual_current)
 from .explain import build_instructions, extract_text, plain_summary
-from .messages import Messages
+from .messages import Messages, limit_note
 from .export import days_csv, quarters_csv
 from .forecast import (
     MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile, frozen_value, is_freeze, recharge_due,
@@ -42,7 +42,7 @@ from .corrections import correct_quarter as _correct_quarter, remove_quarter as 
 from . import rueckmeldung as rm
 from . import fehlerbericht as fb
 from .plan import charging_allowed, make_plan
-from .pricing import monthly_cost
+from .pricing import effective_limit as _effective_limit, monthly_cost
 from .report import week_label, week_report
 from .engine import (
     KIND_BATTERY, KIND_SCRIPT, KIND_SETTING, KIND_VEHICLE, KIND_SWITCH, KIND_THROTTLE, KIND_WALLBOX, STRATEGY_COMFORT, Action,
@@ -820,10 +820,14 @@ class Waechter:
     def effective_limit(self, now: datetime) -> float:
         """The limit the guard works with. With "use paid peak" a month peak above the limit raises it for the rest
         of the month: quarter hours below the peak that was already reached cost nothing extra."""
-        if not self.paid_peak:
-            return self.limit_kw
-        reached = float(self.months.get(now.strftime("%Y-%m"), {}).get("kw") or 0.0)
-        return max(self.limit_kw, reached)
+        return _effective_limit(self.limit_kw, self.months.get(now.strftime("%Y-%m"), {}).get("kw"), self.paid_peak)
+
+    def limit_info(self, now: datetime) -> dict[str, Any]:
+        """For the status sensor (0.16.0): the set limit, the effective one and a sentence when they differ (user case: 4 kW set,
+        month peak 9.7 kW, the guard did not step in at 7 kW and nothing said why)."""
+        eff = self.effective_limit(now)
+        return {"limit_kw": self.limit_kw, "effective_limit_kw": round(eff, 3),
+                "limit_note": limit_note(self.hass.config.language, self.limit_kw, eff)}
 
     def cost(self, peak_kw: float) -> float:
         return monthly_cost(peak_kw, self.price_low, self.price_high, self.price_threshold)
@@ -1851,7 +1855,7 @@ class Waechter:
         result: dict[str, Any] = {"date": day, "created": now.isoformat(timespec="seconds"), "source": "rule", "text": ""}
         entity = self.cfg.get(CONF_AI_TASK)
         if interventions == 0:
-            result["text"] = plain_summary(lang, 0, peak_kw, self.limit_kw, now.strftime("%d.%m."))
+            result["text"] = plain_summary(lang, 0, peak_kw, self.limit_kw, now.strftime("%d.%m."), effective_kw=self.effective_limit(now))
         elif not entity:
             result.update({"source": "none", "error": "no AI task entity in the settings"})
         elif self._ai_calls.get(day, 0) >= AI_CALLS_PER_DAY:
@@ -1861,7 +1865,7 @@ class Waechter:
             instructions = build_instructions(
                 lang, now.strftime("%d.%m.%Y"), lines, self.limit_kw,
                 float(self.guard.values.get("target_kw") or (self.limit_kw - self.margin_kw)), peak_kw, peak.get("at"),
-                interventions, int(counts.get("miss", 0)), self.mode == MODE_OBSERVE,
+                interventions, int(counts.get("miss", 0)), self.mode == MODE_OBSERVE, effective_kw=self.effective_limit(now),
             )
             try:
                 async with asyncio.timeout(90):

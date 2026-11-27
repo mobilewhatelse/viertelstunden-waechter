@@ -296,6 +296,17 @@
           "would_intervene": "Would intervene",
           "ready": "Ready",
           "intervening": "Intervening"
+        },
+        "state_attributes": {
+          "limit_kw": {
+            "name": "Set limit"
+          },
+          "effective_limit_kw": {
+            "name": "Effective limit"
+          },
+          "limit_note": {
+            "name": "Note on the limit"
+          }
         }
       },
       "quarter_energy": {
@@ -381,7 +392,7 @@
     },
     "switch": {
       "paid_peak": {
-        "name": "Use peak already reached"
+        "name": "Use peak already reached as limit"
       },
       "notify_intervention": {
         "name": "Message on intervention"

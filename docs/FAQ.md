@@ -58,10 +58,10 @@ Since 0.14.2 a hint appears under **Settings > Repairs**, and *Fix* switches it 
 Without the update: at the device, three dots > *Reconfigure* > switch *Observe only* off.
 
 **I set the limit to 4 kW, but the guard does not step in at 7 kW.**
-Check the switch **Use peak already reached** (on by default). If the highest quarter hour of the month is already above your limit,
+Check the switch **Use peak already reached as limit** (on by default). If the highest quarter hour of the month is already above your limit,
 that peak applies instead of the limit for the rest of the month, because quarter hours below it cost nothing extra. With a reached peak of
-9.7 kW the guard regulates against 9.7 kW, and 7 kW is no reason to step in. The value is in the status sensor under `werte.limit_kw`, in the
-log as "limit 9.7 kW". If you want to stay below the set limit regardless of cost, switch *Use peak already reached* off; this month
+9.7 kW the guard regulates against 9.7 kW, and 7 kW is no reason to step in. From 0.16.0 the dashboard shows the *Effective limit* under the settings, with one sentence why it is higher;
+the status sensor has `effective_limit_kw` and `limit_note` for it, the log says "limit 9.7 kW". If you want to stay below the set limit regardless of cost, switch *Use peak already reached as limit* off; this month
 that no longer saves money, because the peak is already paid for.
 More points: a wallbox is only lowered to its minimum current and never stopped (3-phase at 6 A about 4.1 kW, 1-phase about 1.4 kW, 2-phase
 about 2.8 kW). A battery needs an entered release setting to help. And with *Observe only* at the device it only logs (see the question before).
@@ -118,7 +118,7 @@ the min-SOC is frozen at the current charge level; in his case *Expected relief*
    falls below the minimum. So enter a value **clearly below** the limit that fits your usual house load (e.g. 2500 W), and in addition a **maximum
    duration** (e.g. 15 to 30 minutes) as a safety net.
 4. **Victron prerequisites:** In the ESS mode *Keep batteries charged* the min-SOC is ignored, so the battery does not help. And the guard only steps
-   in once the effective limit is reached (see the question about the switch *Use peak already reached*).
+   in once the effective limit is reached (see the question about the switch *Use peak already reached as limit*).
 
 **Typical mistakes when setting up a battery (from real cases).**
 - **Entity in the wrong field:** *Setting while recharging* takes the **charge current of the battery** (e.g. with Victron "Ess maxchargecurrent"),
@@ -147,7 +147,7 @@ the min-SOC is frozen at the current charge level; in his case *Expected relief*
 - **Leftover values in unused fields:** A *Value that keeps the charge* without a chosen *Setting that keeps the charge* is not used (best delete it); for
   "stays at the current charge level" enter `soc` there, and the switch *Battery reserve before a peak* is needed.
 - **Battery power** (optional) is only for the device check (how much the battery stores), not for control.
-- **The limit does not take effect:** Check *Use peak already reached* (see the question about it): if the month peak is above your limit, the guard
+- **The limit does not take effect:** Check *Use peak already reached as limit* (see the question about it): if the month peak is above your limit, the guard
   works with that.
 
 **How do I check that the battery setup works (test procedure and reading the bug report)?**

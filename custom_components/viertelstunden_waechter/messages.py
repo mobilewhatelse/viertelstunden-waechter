@@ -220,3 +220,20 @@ class Messages:
 
     def __call__(self, key: str, **values: Any) -> str:
         return MESSAGES[self.lang][key].format(**values)
+
+
+def _kw(lang: str, v: float) -> str:
+    s = f"{v:.1f}"
+    return s.replace(".", ",") if lang == "de" else s
+
+
+def limit_note(lang: str | None, limit_kw: float, effective_kw: float) -> str | None:
+    """One sentence when the effective limit is above the set one (0.16.0, user case: 4 kW set, 9.7 kW month peak); else None."""
+    if effective_kw <= limit_kw + 0.005:
+        return None
+    lg = language(lang)
+    if lg == "de":
+        return (f"Wirksam {_kw(lg, effective_kw)} kW statt {_kw(lg, limit_kw)} kW, weil die Monatsspitze höher ist: bis dorthin kostet "
+                "ein höherer Bezug nichts mehr, deshalb greift der Wächter erst darüber ein.")
+    return (f"Effective {_kw(lg, effective_kw)} kW instead of {_kw(lg, limit_kw)} kW, because the month peak is higher: up to it a "
+            "higher import costs nothing more, so the guard only steps in above it.")

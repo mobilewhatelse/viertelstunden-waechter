@@ -35,7 +35,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "now": "Jetzt", "costs": "Kosten und Ersparnis", "forecast": "Prognose 24 Stunden",
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
         "mode": "Betriebsart", "strategy": "Strategie", "limit": "Grenze (kW)", "margin": "Sicherheitsabstand (kW)",
-        "paid_peak": "Bereits erreichte Spitze nutzen", "notify": "Meldung bei Eingriff", "costs_on": "Kosten und Ersparnis berechnen",
+        "paid_peak": "Erreichte Spitze als Grenze", "eff_limit": "Wirksame Grenze", "notify": "Meldung bei Eingriff", "costs_on": "Kosten und Ersparnis berechnen",
         "forecast_on": "Lastprognose lernen und anzeigen", "price_low": "Leistungspreis bis Schwelle",
         "price_high": "Leistungspreis über Schwelle", "threshold": "Preisschwelle (kW)",
         "status": "Status", "prognosis": "Prognose Viertelstunde", "allowed": "Erlaubt jetzt", "so_far": "Viertelstunde bisher",
@@ -112,7 +112,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "now": "Now", "costs": "Cost and savings", "forecast": "24-hour forecast",
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
         "mode": "Mode", "strategy": "Strategy", "limit": "Limit (kW)", "margin": "Safety margin (kW)",
-        "paid_peak": "Use peak already reached", "notify": "Message on intervention", "costs_on": "Calculate cost and savings",
+        "paid_peak": "Reached peak as limit", "eff_limit": "Effective limit", "notify": "Message on intervention", "costs_on": "Calculate cost and savings",
         "forecast_on": "Learn and show the load forecast", "price_low": "Demand charge to threshold",
         "price_high": "Demand charge above threshold", "threshold": "Price threshold (kW)",
         "status": "Status", "prognosis": "Quarter-hour forecast", "allowed": "Allowed now", "so_far": "Quarter hour so far",
@@ -505,6 +505,16 @@ def plugwhen_section(lang: str | None) -> dict[str, Any]:
         {"type": "markdown", "content": text}]}
 
 
+def _limit_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
+    """The limit the guard works with (0.16.0) and, when the month peak raised it, one sentence why. Without the status sensor (right
+    after a restart) nothing is shown."""
+    s = ids["status"]
+    return (
+        "{% set e = state_attr('" + s + "', 'effective_limit_kw') %}{% set n = state_attr('" + s + "', 'limit_note') %}"
+        "{% if e is not none %}**" + x["eff_limit"] + ":** {{ '%.1f' | format(e | float(0)) }} kW{% if n %}\n\nℹ️ {{ n }}{% endif %}{% endif %}"
+    )
+
+
 def _precaution_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
     """Precautionary lock (0.15.1): per device the start power, whether it is held now and the measured start peak as a
     suggestion. Robust: without the attribute (older version, no device) a plain line."""
@@ -536,8 +546,10 @@ def build_views(ids: dict[str, str], lang: str = "en", planners: list[dict[str, 
                 {"type": "heading", "heading": x["settings"], "heading_style": "subtitle"},
                 *[_setting(ids[k], x[n]) for k, n in (("mode", "mode"), ("strategy", "strategy"), ("limit", "limit"), ("margin", "margin"))],
                 {"type": "heading", "heading": x["features"], "heading_style": "subtitle"},
+                *[_setting(ids[k], x[n]) for k, n in (("paid_peak", "paid_peak"), ("notify_intervention", "notify"))],
+                {"type": "markdown", "content": _limit_markdown(ids, x)},   # 0.16.0: the effective limit and why
                 *[_setting(ids[k], x[n]) for k, n in (
-                    ("paid_peak", "paid_peak"), ("notify_intervention", "notify"), ("costs_enabled", "costs_on"),
+                    ("costs_enabled", "costs_on"),
                     ("forecast_enabled", "forecast_on"), ("predictive", "predictive"), ("battery_reserve", "reserve_on"),
                     ("ai_explainer", "ai_on"), ("prewarn", "prewarn"), ("forecast_smooth", "smooth_on"),
                     ("weekly_report_enabled", "weekly_on"),

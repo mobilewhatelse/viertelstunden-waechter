@@ -224,7 +224,7 @@ power sensor is optional (otherwise the *assumed power* is used). The guard only
 
 **Inside the integration** (nothing else to install): the decision engine, the device list with priorities and
 strategies, observe mode and the lock, the safety rules, the entities (mode, strategy, limit, margin, price
-numbers, the four feature switches, all sensors), cost and savings, "use peak already reached", the message on
+numbers, the four feature switches, all sensors), cost and savings, "use peak already reached as limit", the message on
 intervention, the load forecast, diagnostics.
 
 **Outside, in your own Home Assistant** (it depends on your home, so the integration cannot ship it):
@@ -338,7 +338,7 @@ Three switches, **all on by default** (the last state is restored after a restar
 
 | Switch | What it does |
 |---|---|
-| **Use peak already reached** | The tariff bills the highest quarter hour of the month. If a peak above the limit has already happened this month (say 12 kW), quarter hours below it cost nothing extra – the guard then works with that peak as its limit for the rest of the month (the limit number itself stays unchanged). Only helps after a peak above the limit; with a month peak below the limit nothing changes. The month peak counts from the moment the integration measures it. |
+| **Use peak already reached as limit** | The tariff bills the highest quarter hour of the month. If a peak above the limit has already happened this month (say 12 kW), quarter hours below it cost nothing extra – the guard then works with that peak as its limit for the rest of the month (the limit number itself stays unchanged). Only helps after a peak above the limit; with a month peak below the limit nothing changes. The month peak counts from the moment the integration measures it. |
 | **Message on intervention** | Via the notify services of the general settings: (1) at the first real intervention a message **with everything the guard did in that step** (e.g. "Wallbox 16 A -> 12 A (3-phasig, 1.6 kW zu viel)"), at most every 30 minutes; (2) when the guard has given everything back a **summary of all steps** with times (up to 15 lines). Not sent in observe mode. |
 | **Calculate cost and savings** | Shows what the month's peak costs and what it would have cost without the guard. |
 
@@ -679,7 +679,7 @@ dashboard (clear the frontend cache in the app).
 ### Importing earlier measurements
 
 Service **Import history** (`viertelstunden_waechter.import_history`) seeds the day and month peaks from an earlier
-measurement (a spreadsheet, an older script) so that statistics, the monthly cost and the "use peak already reached"
+measurement (a spreadsheet, an older script) so that statistics, the monthly cost and the "use peak already reached as limit"
 function know the past. It only raises values (a day or month that already has a higher peak keeps it); values taken
 from hourly data are lower bounds.
 
@@ -723,7 +723,7 @@ from the database to keep it small.
 | `sensor` Peak this month | kW |
 | `sensor` Interventions today | count, attribute `observed` for observe mode |
 | `number` Demand charge up to / above the threshold, Price threshold | EUR/kW/year and kW |
-| `switch` Use peak already reached, Message on intervention, Calculate cost and savings | default on |
+| `switch` Use peak already reached as limit, Message on intervention, Calculate cost and savings | default on |
 | `sensor` Demand charge this month, … without the guard, Savings this month / this year, Relief now | EUR and kW, estimates |
 | `switch` Learn and show the load forecast | default on |
 | `switch` Throttle ahead using the forecast (default off), Early warning before an intervention (default off), Weekly report (default on) | optional |

@@ -58,11 +58,11 @@ Seit 0.14.2 erscheint dann unter **Einstellungen > Reparaturen** ein Hinweis, un
 Ohne Update: beim Gerät die drei Punkte > *Neu konfigurieren* > *Nur beobachten* aus.
 
 **Ich habe die Grenze auf 4 kW gestellt, aber bei 7 kW greift der Wächter nicht ein.**
-Prüfen Sie den Schalter **Bereits erreichte Spitze nutzen** (standardmäßig an). Ist die höchste Viertelstunde des Monats schon höher als Ihre
+Prüfen Sie den Schalter **Bereits erreichte Spitze als Grenze nutzen** (standardmäßig an). Ist die höchste Viertelstunde des Monats schon höher als Ihre
 Grenze, gilt für den Rest des Monats diese Spitze statt der Grenze, weil Viertelstunden darunter nichts extra kosten. Bei einer erreichten
-Spitze von 9,7 kW regelt der Wächter also gegen 9,7 kW, und 7 kW sind kein Anlass zum Eingreifen. Der Wert steht im Status-Sensor unter
-`werte.limit_kw`, im Protokoll als „Grenze 9.7 kW“. Wollen Sie unabhängig von der Kostenfrage immer unter der eingestellten Grenze bleiben,
-schalten Sie *Bereits erreichte Spitze nutzen* aus; in diesem Monat spart das dann kein Geld mehr, weil die Spitze schon bezahlt ist.
+Spitze von 9,7 kW regelt der Wächter also gegen 9,7 kW, und 7 kW sind kein Anlass zum Eingreifen. Ab 0.16.0 zeigt das Dashboard unter den Einstellungen die *Wirksame Grenze* mit einem Satz, warum sie höher ist;
+im Status-Sensor stehen dazu `effective_limit_kw` und `limit_note`, im Protokoll „Grenze 9.7 kW“. Wollen Sie unabhängig von der Kostenfrage immer unter der eingestellten Grenze bleiben,
+schalten Sie *Bereits erreichte Spitze als Grenze nutzen* aus; in diesem Monat spart das dann kein Geld mehr, weil die Spitze schon bezahlt ist.
 Weitere Punkte: Eine Wallbox wird nur bis zum Mindeststrom gesenkt und nie gestoppt (3-phasig bei 6 A etwa 4,1 kW, 1-phasig etwa 1,4 kW,
 2-phasig etwa 2,8 kW). Zum Mithelfen braucht ein Speicher eine eingetragene Freigabe-Einstellung. Und bei *Nur beobachten* am Gerät wird nur
 protokolliert (siehe die Frage davor).
@@ -123,7 +123,7 @@ vielen Dank für das Beispiel):
    und die Batterie bleibt freigegeben, bis der Ladestand unter den Mindest-Ladestand fällt. Tragen Sie daher einen Wert **deutlich unter** der
    Grenze ein, der zu Ihrer üblichen Hauslast passt (z. B. 2500 W), und zusätzlich eine **Höchste Dauer** (z. B. 15 bis 30 Minuten) als Sicherheitsnetz.
 4. **Voraussetzungen beim Victron:** Im ESS-Modus *Batterien geladen halten* wird der Min-SOC ignoriert, der Speicher hilft dann nicht. Damit der
-   Wächter überhaupt eingreift, muss die wirksame Grenze erreicht sein (siehe die Frage zum Schalter *Bereits erreichte Spitze nutzen*).
+   Wächter überhaupt eingreift, muss die wirksame Grenze erreicht sein (siehe die Frage zum Schalter *Bereits erreichte Spitze als Grenze nutzen*).
 
 **Typische Fehler bei der Einrichtung eines Speichers (aus echten Fällen).**
 - **Entität im falschen Feld:** Bei *Einstellung beim Nachladen* gehört der **Ladestrom des Speichers** hin (z. B. beim Victron „Ess maxchargecurrent“),
@@ -152,7 +152,7 @@ vielen Dank für das Beispiel):
 - **Restwerte in nicht benutzten Feldern:** Ein *Wert, der die Ladung hält* ohne gewählte *Einstellung, die die Ladung hält* wird nicht benutzt (am besten
   löschen); für „bleibt beim aktuellen Ladestand“ gehört dort `soc` hinein, und es braucht den Schalter *Akku-Reserve vor einer Spitze*.
 - **Leistung des Akkus** (optional) dient nur dem Geräte-Check (wie viel der Akku speichert), nicht der Steuerung.
-- **Die Grenze greift nicht:** Prüfen Sie *Bereits erreichte Spitze nutzen* (siehe die Frage dazu): Liegt die Monatsspitze über Ihrer Grenze, rechnet der
+- **Die Grenze greift nicht:** Prüfen Sie *Bereits erreichte Spitze als Grenze nutzen* (siehe die Frage dazu): Liegt die Monatsspitze über Ihrer Grenze, rechnet der
   Wächter damit.
 
 **Wie prüfe ich, ob die Einrichtung des Speichers funktioniert (Testablauf und Fehlerbericht lesen)?**

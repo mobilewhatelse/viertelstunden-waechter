@@ -19,6 +19,8 @@ TEXTS = {
         "data": "Daten des Tages",
         "date": "Datum", "limit": "Grenze", "target": "Ziel", "peak": "höchste Viertelstunde heute", "at": "um",
         "count": "Eingriffe", "misses": "Befehle ohne Wirkung", "log": "Protokoll des Wächters (neueste zuerst)",
+        "effective": "Wirksame Grenze: {kw:.1f} kW (die Monatsspitze ist höher als die Grenze; bis dorthin kostet ein höherer Bezug "
+                     "nichts mehr, deshalb greift der Wächter erst darüber ein)",
         "observed": "Hinweis: Der Wächter war im Beobachtungsmodus; mit (beobachtet) markierte Zeilen wurden nicht ausgeführt.",
     },
     "en": {
@@ -31,6 +33,8 @@ TEXTS = {
         "data": "Data of the day",
         "date": "Date", "limit": "Limit", "target": "Target", "peak": "highest quarter hour today", "at": "at",
         "count": "Interventions", "misses": "Commands without effect", "log": "Guard log (newest first)",
+        "effective": "Effective limit: {kw:.1f} kW (the month peak is above the limit; up to it a higher import costs nothing more, "
+                     "so the guard only steps in above it)",
         "observed": "Note: the guard was in observe mode; lines marked (observed) were not carried out.",
     },
 }
@@ -38,11 +42,13 @@ TEXTS = {
 
 def build_instructions(lang: str, day: str, lines: list[str], limit_kw: float, target_kw: float,
                        peak_kw: float | None, peak_at: str | None, interventions: int, misses: int,
-                       observed: bool) -> str:
+                       observed: bool, effective_kw: float | None = None) -> str:
     x = TEXTS["de" if str(lang).startswith("de") else "en"]
+    raised = effective_kw is not None and effective_kw > limit_kw + 0.005
     data = [
         f"{x['date']}: {day}",
         f"{x['limit']}: {limit_kw:.1f} kW, {x['target']}: {target_kw:.1f} kW",
+        x["effective"].format(kw=effective_kw) if raised else "",
         f"{x['peak']}: {peak_kw:.2f} kW" + (f" {x['at']} {peak_at}" if peak_at else "") if peak_kw is not None else "",
         f"{x['count']}: {interventions}, {x['misses']}: {misses}",
     ]
@@ -53,8 +59,10 @@ def build_instructions(lang: str, day: str, lines: list[str], limit_kw: float, t
     return "\n".join(parts)
 
 
-def plain_summary(lang: str, interventions: int, peak_kw: float | None, limit_kw: float, day: str = "") -> str:
-    """Text without AI for a day without interventions (no AI call needed)."""
+def plain_summary(lang: str, interventions: int, peak_kw: float | None, limit_kw: float, day: str = "",
+                  effective_kw: float | None = None) -> str:
+    """Text without AI for a day without interventions (no AI call needed). With an effective limit above the set one (0.16.0) the
+    text says so, else it stays as before."""
     de = str(lang).startswith("de")
 
     def num(v: float | None) -> str:
@@ -62,9 +70,12 @@ def plain_summary(lang: str, interventions: int, peak_kw: float | None, limit_kw
             return "-"
         return f"{v:.1f}".replace(".", ",") if de else f"{v:.1f}"
 
+    raised = effective_kw is not None and effective_kw > limit_kw + 0.005
     if de:
-        return f"{'Am ' + day if day else 'Heute'} musste der Wächter nicht eingreifen. Die höchste Viertelstunde lag bei {num(peak_kw)} kW (Grenze {num(limit_kw)} kW)."
-    return f"The guard did not need to intervene {'on ' + day.rstrip('.') if day else 'today'}. The highest quarter hour was {num(peak_kw)} kW (limit {num(limit_kw)} kW)."
+        eff = f", wirksam {num(effective_kw)} kW, weil die Monatsspitze höher ist" if raised else ""
+        return f"{'Am ' + day if day else 'Heute'} musste der Wächter nicht eingreifen. Die höchste Viertelstunde lag bei {num(peak_kw)} kW (Grenze {num(limit_kw)} kW{eff})."
+    eff = f", effective {num(effective_kw)} kW because the month peak is higher" if raised else ""
+    return f"The guard did not need to intervene {'on ' + day.rstrip('.') if day else 'today'}. The highest quarter hour was {num(peak_kw)} kW (limit {num(limit_kw)} kW{eff})."
 
 
 def extract_text(response: Any) -> str:

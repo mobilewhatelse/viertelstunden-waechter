@@ -62,7 +62,7 @@ class DeviceCheckSensor(WaechterEntity, SensorEntity):
 
 
 class StatusSensor(WaechterEntity, SensorEntity):
-    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text", "precaution"})
+    _unrecorded_attributes = frozenset({"profile", "hours", "hours_house", "windows", "days", "months", "peaks_by_day", "today", "recent", "configuration", "text", "precaution", "limit_note"})
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = STATUS_OPTIONS
     _attr_icon = "mdi:shield-half-full"
@@ -85,6 +85,7 @@ class StatusSensor(WaechterEntity, SensorEntity):
             "room_kw": w.guard.values.get("room_kw"),
             "forecast_reserve_kw": w.guard.values.get("reserve_kw"),
             "target_kw": w.guard.values.get("target_kw"),
+            **w.limit_info(dt_util.now()),   # 0.16.0: limit_kw, effective_limit_kw, limit_note (a sentence when they differ)
             "grid_age_s": w.grid_age,
             "grid_stale": w.grid_stale,
             "grid_source": w.grid_source,

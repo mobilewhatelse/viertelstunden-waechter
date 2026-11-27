@@ -333,7 +333,7 @@ def main():
         "switch.viertelstunden_wachter_vorwarnung_vor_einem_eingriff": "off",
         "switch.viertelstunden_wachter_wochenbericht": "on",
         "switch.viertelstunden_wachter_meldung_bei_eingriff": "on",
-        "switch.viertelstunden_wachter_bereits_erreichte_spitze_nutzen": "on",
+        "switch.viertelstunden_wachter_bereits_erreichte_spitze_als_grenze_nutzen": "on",
         "switch.viertelstunden_wachter_lastprognose_lernen_und_anzeigen": "on",
         "switch.viertelstunden_wachter_ladeplan_auch_ausfuhren": "off",
         "switch.viertelstunden_wachter_akku_reserve_vor_einer_spitze": "off",

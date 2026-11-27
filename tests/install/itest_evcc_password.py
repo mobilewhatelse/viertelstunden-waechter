@@ -114,7 +114,7 @@ def main():
     time.sleep(15)
 
     # ---------- active: the ceiling is written into the evcc with a password ----------
-    it.svc("switch", "turn_off", {"entity_id": "switch.viertelstunden_wachter_bereits_erreichte_spitze_nutzen"})
+    it.svc("switch", "turn_off", {"entity_id": "switch.viertelstunden_wachter_bereits_erreichte_spitze_als_grenze_nutzen"})
     it.svc("input_number", "set_value", {"entity_id": "input_number.hauslast_w", "value": 12000})
     it.svc("select", "select_option", {"entity_id": "select.viertelstunden_wachter_betriebsart", "option": "active"})
     low = it.wait_for(lambda: (lp1().get("maxCurrent") or 16) < 16, 960, 10)

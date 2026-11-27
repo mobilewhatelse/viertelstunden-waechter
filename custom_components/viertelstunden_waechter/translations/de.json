@@ -296,6 +296,17 @@
           "would_intervene": "Würde eingreifen",
           "ready": "Bereit",
           "intervening": "Greift ein"
+        },
+        "state_attributes": {
+          "limit_kw": {
+            "name": "Eingestellte Grenze"
+          },
+          "effective_limit_kw": {
+            "name": "Wirksame Grenze"
+          },
+          "limit_note": {
+            "name": "Hinweis zur Grenze"
+          }
         }
       },
       "quarter_energy": {
@@ -381,7 +392,7 @@
     },
     "switch": {
       "paid_peak": {
-        "name": "Bereits erreichte Spitze nutzen"
+        "name": "Bereits erreichte Spitze als Grenze nutzen"
       },
       "notify_intervention": {
         "name": "Meldung bei Eingriff"

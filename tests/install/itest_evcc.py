@@ -94,7 +94,7 @@ def main():
     time.sleep(15)
 
     # the limit must stay at 10 kW: with "use the peak already reached" a first quarter of 13.8 kW in observe mode lifts it (correctly)
-    it.svc("switch", "turn_off", {"entity_id": "switch.viertelstunden_wachter_bereits_erreichte_spitze_nutzen"})
+    it.svc("switch", "turn_off", {"entity_id": "switch.viertelstunden_wachter_bereits_erreichte_spitze_als_grenze_nutzen"})
     # ---- observe: nothing is switched ----
     it.svc("input_boolean", "turn_on", {"entity_id": "input_boolean.auto_laedt"})
     it.svc("input_number", "set_value", {"entity_id": "input_number.hauslast_w", "value": 2000})
