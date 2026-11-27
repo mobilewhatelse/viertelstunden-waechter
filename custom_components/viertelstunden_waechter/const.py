@@ -100,6 +100,13 @@ D_START_GAP = "start_gap_min"             # at least this long between two chang
 D_START_DAY = "start_day_h"               # at most this many hours locked per calendar day (h, default 4, 0 = no daily limit)
 D_RUNNING = "running_entity"              # optional: on = the device runs (else its power sensor against min_power_w)
 PRECAUTION_ENTITIES = (D_POWER, D_RUNNING)  # entities of a setting device that only the precautionary lock uses
+# wallbox may pause as the last measure (0.16.0, BETA, default off), at the kinds wallbox and evcc loadpoint. Minimum duration and
+# pause after taking back are D_HOLD / D_PAUSE (there only for the pause). evcc pauses with its mode; another wallbox with commands:
+D_MAY_PAUSE = "may_pause"
+D_WB_PAUSE = "pause_entity"               # wallbox: button, switch, selection or number that pauses the charging ...
+D_WB_PAUSE_VALUE = "pause_value"          # ... with this value (not for a button)
+D_WB_RESUME = "resume_entity"             # wallbox: the one that allows it again ...
+D_WB_RESUME_VALUE = "resume_value"        # ... with this value (not for a button)
 
 MODE_OFF = "off"
 MODE_OBSERVE = "observe"

@@ -28,6 +28,7 @@ from .const import (
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
 from .const import D_ART, D_BATTERY_POWER, D_MAX_CURRENT
 from .const import D_RUNNING, D_START_KW, PRECAUTION_ENTITIES
+from .const import D_MAY_PAUSE, D_WB_PAUSE, D_WB_PAUSE_VALUE, D_WB_RESUME, D_WB_RESUME_VALUE
 from . import geraete_check as gc
 from . import protokoll as pr
 from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, GridDiffer, choose_grid, parse_grid_kw, parse_loadpoint, target_ceiling,
@@ -657,6 +658,8 @@ class Waechter:
                 r.available = r.current_a is not None
                 if lp:
                     r.phases = lp["phases_active"]
+                    r.mode = lp.get("mode")   # wallbox pause (0.16.0, Beta): remembered when paused, "off" = paused
+                    r.paused = r.mode == "off" if r.mode is not None else None
                     if d.get(D_EVCC_ONE_PHASE) and lp["phases_switchable"] and lp["phases_configured"] is not None:
                         r.phase_option = str(lp["phases_configured"])
             elif kind == KIND_WALLBOX:
@@ -666,6 +669,7 @@ class Waechter:
                 r.phase_option = st.state if st else None
                 ph = self._float(d.get(D_PHASES))
                 r.phases = int(ph) if ph is not None else None
+                r.paused = self._wb_paused(d)
             elif kind == KIND_SWITCH:
                 st = self._state(d.get(D_SWITCH))
                 r.available = st is not None
@@ -687,6 +691,15 @@ class Waechter:
                     r.running = None if st is None else st.state in ("on", "true", "running", "1")
             out[dev_id] = r
         return out
+
+    def _wb_paused(self, d: dict[str, Any]) -> bool | None:
+        """Wallbox pause (0.16.0, Beta): whether its pause command shows (the setting holds the pause value); None for a button, without
+        a command or without a state (then a pause someone ended meanwhile cannot be seen)."""
+        ent = d.get(D_WB_PAUSE)
+        if not ent or str(ent).split(".")[0] == "button":
+            return None
+        st = self._state(ent)
+        return None if st is None else _same_value(st.state, str(d.get(D_WB_PAUSE_VALUE) or ""))
 
     # ---------- main cycle ----------
 
@@ -865,12 +878,13 @@ class Waechter:
             self._session = []
             return
         shown = ("set_current", "set_phase", "turn_off", "turn_on", "script_on", "script_off", "battery_release",
-                 "battery_restore", "set_value")
+                 "battery_restore", "set_value", "wb_pause", "wb_resume")
         done = [a for a in acts if a.text and a.kind in shown]
         reductions = [a for a in done if a.intervention]
         if self._session or reductions:
             self._session += [f"{now:%H:%M:%S} {a.text}" for a in done]
-        if reductions and (self._last_push is None or (now - self._last_push) >= timedelta(minutes=30)):
+        paused = any(a.kind == "wb_pause" for a in reductions)   # a wallbox pause (0.16.0, Beta) is always worth a message
+        if reductions and (paused or self._last_push is None or (now - self._last_push) >= timedelta(minutes=30)):
             self._last_push = now
             await self._exec(Action("", "notify", None, self.t("push_iv", text="; ".join(a.text for a in reductions))))
         if self._session and not self.guard.interventions:
@@ -1369,6 +1383,8 @@ class Waechter:
             iv = self.guard.interventions.get(dev_id)
             if isinstance(iv, dict):
                 g["eingriff"] = {k: num(v) for k, v in iv.items() if isinstance(v, (int, float, str, bool)) and not str(k).endswith("at")}
+                if isinstance(iv.get("paused"), dict):   # wallbox pause (0.16.0, Beta)
+                    g["pausiert"] = {"seit": iv["paused"].get("since"), "modus_vorher": iv["paused"].get("mode")}
             if d.get(D_KIND) == KIND_EVCC:
                 g["evcc_erreichbar"] = self._evcc_lp.get(dev_id) is not None
             for k, v in d.items():
@@ -2102,6 +2118,8 @@ class Waechter:
     def _engine_dict(d: dict[str, Any]) -> dict[str, Any]:
         """What the engine gets of a device: an evcc loadpoint is a wallbox for it (one-phase option is the number of phases)."""
         if d.get(D_KIND) != KIND_EVCC:
+            if d.get(D_KIND) == KIND_WALLBOX and d.get(D_MAY_PAUSE) and not (d.get(D_WB_PAUSE) and d.get(D_WB_RESUME)):
+                return {**d, D_MAY_PAUSE: False}   # pause (0.16.0, Beta) only with a way to pause and to allow again
             return d
         return {**d, D_KIND: KIND_WALLBOX, "one_phase_option": "1" if d.get(D_EVCC_ONE_PHASE) else None}
 
@@ -2149,6 +2167,15 @@ class Waechter:
             await client.set_phases(loadpoint, int(float(a.value)))
             return
         lp = self._evcc_lp.get(a.device_id)
+        if a.kind == "wb_pause":   # 0.16.0 (Beta): the mode from before is in the intervention (saved like the others)
+            await client.set_mode(loadpoint, "off")
+            return
+        if a.kind == "wb_resume":
+            if lp is not None and lp.get("mode") not in (None, "off"):   # someone chose a mode meanwhile: it stays theirs
+                self._log(Action(a.device_id, "log", None, self.t("wb_pause_kept", name=d.get(D_NAME, a.device_id)), False), False)
+                return
+            await client.set_mode(loadpoint, str(a.value or "now"))   # unknown: "now", the car was charging when it was paused
+            return
         orig = self._evcc_orig.get(a.device_id)
         if orig is None and a.intervention and lp and lp.get("ceiling") is not None:
             orig = {"ceiling": float(lp["ceiling"]), "virtual": float(virtual_current(lp) or lp["ceiling"])}
@@ -2160,8 +2187,15 @@ class Waechter:
 
     async def _exec(self, a: Action) -> None:
         d = self.raw_devices.get(a.device_id, {})
-        if d.get(D_KIND) == KIND_EVCC and a.kind in ("set_current", "set_phase"):
+        if d.get(D_KIND) == KIND_EVCC and a.kind in ("set_current", "set_phase", "wb_pause", "wb_resume"):
             await self._evcc_exec(a, d)
+        elif a.kind == "wb_pause":   # another wallbox (0.16.0, Beta): its pause command, as the charge plan pauses
+            await self._set_entity(d[D_WB_PAUSE], str(d.get(D_WB_PAUSE_VALUE) or ""))
+        elif a.kind == "wb_resume":
+            if self._wb_paused(d) is False:   # the pause was ended otherwise meanwhile: nothing is sent
+                self._log(Action(a.device_id, "log", None, self.t("wb_pause_kept", name=d.get(D_NAME, a.device_id)), False), False)
+            else:
+                await self._set_entity(d[D_WB_RESUME], str(d.get(D_WB_RESUME_VALUE) or ""))
         elif a.kind == "set_current":
             eid = d[D_CURRENT]
             domain = eid.split(".")[0]
@@ -2365,6 +2399,14 @@ class Waechter:
                 "suggestion": self.t("pc_suggest", kw=sug["kw"], n=sug["n"]) if sug else None,
             })
         return out
+
+    def paused_names(self) -> list[str]:
+        """Wallboxes the guard has paused as the last measure (0.16.0, Beta): status attribute paused_by_guard and the dashboard, so
+        a charge planner (Plugwhen) or the user sees why the car does not charge. Never in observe mode (nothing is really paused)."""
+        if not self.executing:
+            return []
+        return [self.raw_devices[i].get(D_NAME, i) for i, iv in self.guard.interventions.items()
+                if i in self.raw_devices and isinstance(iv, dict) and iv.get("paused")]
 
     def intervention_names(self) -> list[str]:
         return [self.raw_devices[i].get("name", i) for i in self.guard.interventions if i in self.raw_devices]

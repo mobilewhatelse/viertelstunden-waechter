@@ -80,6 +80,8 @@ class StatusSensor(WaechterEntity, SensorEntity):
         return {
             "mode": w.mode,
             "interventions": w.intervention_names(),
+            # 0.16.0 (Beta): wallboxes paused by the guard as the last measure (only while there is one), for Plugwhen and the dashboard
+            **({"paused_by_guard": pz} if (pz := w.paused_names()) else {}),
             "recent": w.log_lines(10),
             "today": w.log_lines(50, today_only=True),
             "room_kw": w.guard.values.get("room_kw"),

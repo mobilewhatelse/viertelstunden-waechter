@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any
 
 TIMEOUT_S = 6.0
@@ -157,6 +158,13 @@ class EvccClient:
 
     async def set_phases(self, loadpoint: int, phases: int) -> None:
         await self._request("POST", f"/api/loadpoints/{int(loadpoint)}/phases/{int(phases)}")
+
+    async def set_mode(self, loadpoint: int, mode: str) -> None:
+        """0.16.0 (Beta): 'off' pauses the loadpoint as the last measure, the mode from before ('pv', 'minpv', 'now') allows it again.
+        Only a plain word goes into the path (the mode comes from evcc itself, but never a path of our own making)."""
+        if not isinstance(mode, str) or not re.fullmatch(r"[a-z]{1,16}", mode):
+            raise ValueError(f"no evcc mode: {mode!r}")
+        await self._request("POST", f"/api/loadpoints/{int(loadpoint)}/mode/{mode}")
 
 
 # ---- the grid import from evcc, and what to do with two sources ----

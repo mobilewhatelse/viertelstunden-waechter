@@ -35,7 +35,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "now": "Jetzt", "costs": "Kosten und Ersparnis", "forecast": "Prognose 24 Stunden",
         "profile": "Typisches Wochenprofil", "peaks": "Spitzen", "months": "Monate", "interventions": "Eingriffe je Tag",
         "mode": "Betriebsart", "strategy": "Strategie", "limit": "Grenze (kW)", "margin": "Sicherheitsabstand (kW)",
-        "paid_peak": "Erreichte Spitze als Grenze", "eff_limit": "Wirksame Grenze", "notify": "Meldung bei Eingriff", "costs_on": "Kosten und Ersparnis berechnen",
+        "paid_peak": "Erreichte Spitze als Grenze", "eff_limit": "Wirksame Grenze", "paused": "Wallbox vom Wächter pausiert (Beta)", "notify": "Meldung bei Eingriff", "costs_on": "Kosten und Ersparnis berechnen",
         "forecast_on": "Lastprognose lernen und anzeigen", "price_low": "Leistungspreis bis Schwelle",
         "price_high": "Leistungspreis über Schwelle", "threshold": "Preisschwelle (kW)",
         "status": "Status", "prognosis": "Prognose Viertelstunde", "allowed": "Erlaubt jetzt", "so_far": "Viertelstunde bisher",
@@ -112,7 +112,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "now": "Now", "costs": "Cost and savings", "forecast": "24-hour forecast",
         "profile": "Typical weekly profile", "peaks": "Peaks", "months": "Months", "interventions": "Interventions per day",
         "mode": "Mode", "strategy": "Strategy", "limit": "Limit (kW)", "margin": "Safety margin (kW)",
-        "paid_peak": "Reached peak as limit", "eff_limit": "Effective limit", "notify": "Message on intervention", "costs_on": "Calculate cost and savings",
+        "paid_peak": "Reached peak as limit", "eff_limit": "Effective limit", "paused": "Wallbox paused by the guard (Beta)", "notify": "Message on intervention", "costs_on": "Calculate cost and savings",
         "forecast_on": "Learn and show the load forecast", "price_low": "Demand charge to threshold",
         "price_high": "Demand charge above threshold", "threshold": "Price threshold (kW)",
         "status": "Status", "prognosis": "Quarter-hour forecast", "allowed": "Allowed now", "so_far": "Quarter hour so far",
@@ -514,6 +514,8 @@ def _limit_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
         "{% if e is not none %}**" + x["eff_limit"] + ":** {{ '%.1f' | format(e | float(0)) }} kW{% if n %}\n\nℹ️ {{ n }}{% endif %}{% endif %}"
         # 0.16.0: message switch on but no notify service: one line right below that switch, gone when a service is entered
         "{% set h = state_attr('" + s + "', 'notify_hint') %}{% if h %}\n\n⚠️ {{ h }}{% endif %}"
+        # 0.16.0 (Beta): a wallbox the guard paused as the last measure, so nobody wonders why the car does not charge
+        "{% set pz = state_attr('" + s + "', 'paused_by_guard') or [] %}{% if pz %}\n\n⏸️ **" + x["paused"] + ":** {{ pz | join(', ') }}{% endif %}"
     )
 
 
