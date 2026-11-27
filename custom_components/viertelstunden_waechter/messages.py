@@ -72,6 +72,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "wb_pause_user": "{name}: Pause inzwischen selbst geändert, das bleibt so; der Wächter pausiert {name} die nächsten {min} min nicht",
         "wb_pause_kept": "{name}: Pause inzwischen anders beendet, nichts gesendet",
         "still_charging": "lädt noch mit {kw:.1f} kW",
+        "wb_mode_unknown": "{name}: Modus von vorher unbekannt, nichts an evcc gesendet; bitte den Lademodus in evcc selbst wählen",
         # confirmation
         "unreachable": "Gerät nicht erreichbar",
         "cur_not": "Strom steht bei {cur:g} A statt {want} A",
@@ -178,6 +179,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "wb_pause_user": "{name}: the pause was changed by someone meanwhile, it stays so; the guard does not pause {name} for the next {min} min",
         "wb_pause_kept": "{name}: the pause was ended otherwise meanwhile, nothing sent",
         "still_charging": "still charging with {kw:.1f} kW",
+        "wb_mode_unknown": "{name}: the mode from before is unknown, nothing sent to evcc; please choose the charging mode in evcc yourself",
         "unreachable": "device not reachable",
         "cur_not": "current is {cur:g} A instead of {want} A",
         "no_cur": "no current value",

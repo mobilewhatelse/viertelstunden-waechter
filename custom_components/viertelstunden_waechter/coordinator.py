@@ -2174,7 +2174,10 @@ class Waechter:
             if lp is not None and lp.get("mode") not in (None, "off"):   # someone chose a mode meanwhile: it stays theirs
                 self._log(Action(a.device_id, "log", None, self.t("wb_pause_kept", name=d.get(D_NAME, a.device_id)), False), False)
                 return
-            await client.set_mode(loadpoint, str(a.value or "now"))   # unknown: "now", the car was charging when it was paused
+            if not a.value:   # the mode from before is unknown: no guess ("now" would let a solar-only car charge from the grid)
+                self._log(Action(a.device_id, "log", None, self.t("wb_mode_unknown", name=d.get(D_NAME, a.device_id)), False), False)
+                return
+            await client.set_mode(loadpoint, str(a.value))
             return
         orig = self._evcc_orig.get(a.device_id)
         if orig is None and a.intervention and lp and lp.get("ceiling") is not None:
