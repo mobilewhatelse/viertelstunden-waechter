@@ -795,9 +795,24 @@ class Guard:
                 del self._pending[dev_id]
                 self.misses += 1
                 self._rest_until[dev_id] = now + timedelta(minutes=MISS_REST_MIN)
+                if pend["act"].kind == "wb_pause":
+                    self._pause_failed(dev_id, now)
                 acts.append(Action(dev_id, "unconfirmed", None,
                                    self.t("miss", name=dev.name, problem=problem, min=MISS_REST_MIN), False))
         return acts
+
+    def _pause_failed(self, dev_id: str, now: datetime) -> None:
+        """A wallbox pause that did not show after its repetition (review 27.11.2026): the wallbox was never paused, so nothing is
+        allowed again (its mode is not touched). The marker goes, else it would count as saved, show as paused and hold back the give-back
+        of every other device; an intervention made only for the pause goes with it (an earlier lowering stays and is given back as
+        usual). No new pause for PAUSE_USER_REST_MIN: a wallbox that ignores the command will not follow it ten minutes later either."""
+        iv = self.interventions.get(dev_id)
+        if not isinstance(iv, dict):
+            return
+        p = iv.pop("paused", None) or {}
+        if p.get("new_iv"):
+            del self.interventions[dev_id]
+        self._pause_rest[dev_id] = now + timedelta(minutes=PAUSE_USER_REST_MIN)
 
     # ---------- savings estimate ----------
 
@@ -1032,11 +1047,12 @@ class Guard:
         p_wb = (r.power_w or 0.0) / 1000.0
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         phases = self._phases(dev, r)
+        new_iv = dev.id not in self.interventions   # nothing lowered before: the intervention exists only for the pause
         iv = self.interventions.setdefault(dev.id, {
             "since": now.isoformat(), "orig_current": cur, "orig_phase": r.phase_option,
             "one_phase": phases == 1, "switched": False, "phases": phases,
         })
-        iv["paused"] = {"since": now.isoformat(), "mode": r.mode, "kw": round(p_wb, 3), "phases": phases}
+        iv["paused"] = {"since": now.isoformat(), "mode": r.mode, "kw": round(p_wb, 3), "phases": phases, "new_iv": new_iv}
         t = self._wbt(dev.id)
         t["changed"] = now
         t.pop("pause_need", None)
