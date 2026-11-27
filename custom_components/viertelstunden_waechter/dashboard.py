@@ -506,12 +506,14 @@ def plugwhen_section(lang: str | None) -> dict[str, Any]:
 
 
 def _limit_markdown(ids: dict[str, str], x: dict[str, str]) -> str:
-    """The limit the guard works with (0.16.0) and, when the month peak raised it, one sentence why. Without the status sensor (right
-    after a restart) nothing is shown."""
+    """The limit the guard works with (0.16.0) and, when the month peak raised it, one sentence why; below it the hint when messages
+    are on but no notify service is entered. Without the status sensor (right after a restart) nothing is shown."""
     s = ids["status"]
     return (
         "{% set e = state_attr('" + s + "', 'effective_limit_kw') %}{% set n = state_attr('" + s + "', 'limit_note') %}"
         "{% if e is not none %}**" + x["eff_limit"] + ":** {{ '%.1f' | format(e | float(0)) }} kW{% if n %}\n\nℹ️ {{ n }}{% endif %}{% endif %}"
+        # 0.16.0: message switch on but no notify service: one line right below that switch, gone when a service is entered
+        "{% set h = state_attr('" + s + "', 'notify_hint') %}{% if h %}\n\n⚠️ {{ h }}{% endif %}"
     )
 
 

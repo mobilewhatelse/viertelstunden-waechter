@@ -306,6 +306,9 @@
           },
           "limit_note": {
             "name": "Note on the limit"
+          },
+          "notify_hint": {
+            "name": "Note on messages"
           }
         }
       },

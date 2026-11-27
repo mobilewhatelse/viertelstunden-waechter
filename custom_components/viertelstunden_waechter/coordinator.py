@@ -33,7 +33,7 @@ from . import protokoll as pr
 from .evcc import (SOURCES_DIFFER_AFTER_S, EvccClient, GridDiffer, choose_grid, parse_grid_kw, parse_loadpoint, target_ceiling,
                    virtual_current)
 from .explain import build_instructions, extract_text, plain_summary
-from .messages import Messages, limit_note
+from .messages import Messages, limit_note, notify_hint, notify_targets
 from .export import days_csv, quarters_csv
 from .forecast import (
     MAX_PLAUSIBLE_KW, UNPLUGGED_HOUSE_ONLY_QUARTERS, LoadModel, WeatherCurve, add_running_charge, apply_car_plan, combine, quiet_until, running_charge_hours, splice, wallbox_total_w, fit_curve, parse_plan_windows, hourly, reserve_kw, reserve_window, risk_windows, weekly_profile, frozen_value, is_freeze, recharge_due,
@@ -828,6 +828,12 @@ class Waechter:
         eff = self.effective_limit(now)
         return {"limit_kw": self.limit_kw, "effective_limit_kw": round(eff, 3),
                 "limit_note": limit_note(self.hass.config.language, self.limit_kw, eff)}
+
+    def notify_hint(self) -> str | None:
+        """0.16.0: *Message on intervention* on but no notify service entered (user case: waited for messages that could not come).
+        Only a quiet status attribute and a dashboard line: the switch is on by default, a Repairs entry would stay for everybody
+        who does not use messages. Goes away by itself with a service or with the switch off."""
+        return notify_hint(self.hass.config.language, self.notify_intervention, self.cfg.get(CONF_NOTIFY))
 
     def cost(self, peak_kw: float) -> float:
         return monthly_cost(peak_kw, self.price_low, self.price_high, self.price_threshold)
@@ -2201,7 +2207,7 @@ class Waechter:
                 if last is not None and (dt_util.now() - last) < timedelta(minutes=30):
                     return
                 self._miss_push[a.device_id] = dt_util.now()
-            for svc in [s.strip() for s in str(self.cfg.get(CONF_NOTIFY) or "").split(",") if "." in s]:
+            for svc in notify_targets(self.cfg.get(CONF_NOTIFY)):
                 domain, service = svc.split(".", 1)
                 try:
                     await self._call(domain, service, {"title": self.entry.title, "message": a.text})

@@ -306,6 +306,9 @@
           },
           "limit_note": {
             "name": "Hinweis zur Grenze"
+          },
+          "notify_hint": {
+            "name": "Hinweis zu Meldungen"
           }
         }
       },

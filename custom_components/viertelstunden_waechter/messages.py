@@ -237,3 +237,19 @@ def limit_note(lang: str | None, limit_kw: float, effective_kw: float) -> str | 
                 "ein höherer Bezug nichts mehr, deshalb greift der Wächter erst darüber ein.")
     return (f"Effective {_kw(lg, effective_kw)} kW instead of {_kw(lg, limit_kw)} kW, because the month peak is higher: up to it a "
             "higher import costs nothing more, so the guard only steps in above it.")
+
+def notify_targets(raw: Any) -> list[str]:
+    """The notify services of the general settings (comma-separated); only 'domain.service' counts, as when sending."""
+    return [s.strip() for s in str(raw or "").split(",") if "." in s.strip()]
+
+
+def notify_hint(lang: str | None, notify_on: bool, raw: Any) -> str | None:
+    """0.16.0, user case: *Message on intervention* is on, but no notify service is entered, so no message can come. A quiet hint
+    (status attribute and dashboard), None when a service is entered or the switch is off."""
+    if not notify_on or notify_targets(raw):
+        return None
+    if language(lang) == "de":
+        return ("„Meldung bei Eingriff“ ist an, aber in den allgemeinen Einstellungen ist kein Benachrichtigungsdienst eingetragen "
+                "(z. B. notify.mobile_app_handy). Ohne Dienst kommt keine Meldung.")
+    return ("“Message on intervention” is on, but no notify service is entered in the general settings "
+            "(e.g. notify.mobile_app_phone). Without a service no message is sent.")

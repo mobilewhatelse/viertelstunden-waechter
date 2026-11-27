@@ -37,6 +37,17 @@ Format: newest first. German version below each English block is a short summary
   `limit_kw`, `effective_limit_kw` und `limit_note`, und die Erklärung des Tages nennt sie. Der Schalter heißt jetzt *Bereits erreichte
   Spitze als Grenze nutzen* (vorher *Bereits erreichte Spitze nutzen*); vorhandene Entitäts-IDs bleiben, wie sie sind. An der Regelung
   selbst ändert sich nichts. Die neue Zeile im Dashboard kommt mit *Dashboard erstellen* neu.
+- **New: a hint when *Message on intervention* is on but no notify service is entered (user case).** A user waited for messages, but
+  no notify service was entered in the general settings, so none could come. Now the dashboard shows one line below the switch, and
+  the status sensor has the attribute `notify_hint`. The hint goes away by itself when a service is entered (e.g.
+  `notify.mobile_app_phone`) or the switch is turned off. It is deliberately quiet: no Repairs entry and no message, because the switch
+  is on by default and such an entry would stay for everybody who does not use messages. Sending itself is unchanged.
+  *Deutsch:* **Neu: Hinweis, wenn *Meldung bei Eingriff* an ist, aber kein Benachrichtigungsdienst eingetragen ist (Fall eines Nutzers).**
+  Ein Nutzer wartete auf Meldungen, in den allgemeinen Einstellungen war aber kein Benachrichtigungsdienst eingetragen, also konnte keine
+  kommen. Jetzt zeigt das Dashboard eine Zeile unter dem Schalter, und der Status-Sensor hat das Attribut `notify_hint`. Der Hinweis
+  verschwindet von selbst, sobald ein Dienst eingetragen (z. B. `notify.mobile_app_handy`) oder der Schalter ausgeschaltet ist. Er ist
+  bewusst leise: kein Eintrag unter Reparaturen und keine Meldung, weil der Schalter standardmäßig an ist und ein solcher Eintrag bei
+  allen stehen bliebe, die keine Meldungen nutzen. Das Senden selbst ist unverändert.
 
 ## 0.15.1 - 2026-11-26
 
