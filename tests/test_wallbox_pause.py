@@ -136,6 +136,39 @@ class FieldTests(unittest.TestCase):
         self.assertIsNone(r.paused)
 
 
+class EvccModeKnownTests(unittest.TestCase):
+    """Review 27.11.2026: an evcc loadpoint is paused only with a known mode, else there would be no way back."""
+
+    def _run(self, mode, real=True):
+        house = House(Car(mode=mode))
+        orig = house.readings
+        house.readings = lambda: {**orig(), "wb": replace(house.car.reading(), mode=mode, paused=False)}
+        guard = engine.Guard([wb(pause_by_mode=True)] + others())
+        return drive(guard, house, 10, real=real)
+
+    def test_field_default_and_from_settings(self):
+        self.assertFalse(D.from_dict({"id": "x", "kind": "wallbox"}).pause_by_mode)
+        self.assertTrue(D.from_dict({"id": "x", "kind": "wallbox", "pause_by_mode": True}).pause_by_mode)
+
+    def test_unknown_mode_no_pause(self):
+        out = self._run(None)
+        self.assertEqual(kinds(out, "wb_pause"), [], texts(out))
+
+    def test_known_mode_pauses(self):
+        self.assertTrue(kinds(self._run("pv"), "wb_pause"))
+
+    def test_observe_mode_no_line_without_a_known_mode(self):
+        self.assertFalse([a for _, a in self._run(None, real=False) if "würde pausiert" in a.text])
+        self.assertTrue([a for _, a in self._run("pv", real=False) if "würde pausiert" in a.text])
+
+    def test_other_wallbox_without_mode_unchanged(self):
+        house = House(Car())
+        orig = house.readings
+        house.readings = lambda: {**orig(), "wb": replace(house.car.reading(), mode=None)}
+        out = drive(engine.Guard([wb()] + others()), house, 10)
+        self.assertTrue(kinds(out, "wb_pause"), "a wallbox with its own commands needs no mode")
+
+
 class WhenTests(unittest.TestCase):
     def test_switch_off_never_pauses(self):
         house = House(Car())

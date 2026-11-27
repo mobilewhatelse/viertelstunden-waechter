@@ -131,7 +131,10 @@ class EngineDictTests(unittest.TestCase):
         out = self.fn({"kind": "evcc", "may_pause": True})
         self.assertEqual(out["kind"], "wallbox")
         self.assertTrue(out["may_pause"])
+        self.assertTrue(out["pause_by_mode"], "evcc: paused only with a known mode")
         self.assertFalse(self.fn({"kind": "evcc"}).get("may_pause", False))
+        self.assertNotIn("pause_by_mode", self.fn({"kind": "wallbox", "may_pause": True, "pause_entity": "button.a",
+                                                   "resume_entity": "button.b"}))
 
 
 class ShownTests(unittest.TestCase):
