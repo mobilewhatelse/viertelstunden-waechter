@@ -2,6 +2,27 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
+## 0.16.0 - unreleased
+
+- **Fix: two-phase wallboxes are calculated right (field case 26.11.2026).** A wallbox that charges on two phases (e.g. a car whose
+  charger uses two; here a Victron EV Charging Station behind evcc, about 9 A and 4.3 to 4.5 kW) was counted as three-phase. The guard
+  took 6 A x 3 x 230 V = 4.14 kW as its lowest power, so it saw only about 0.26 kW of headroom instead of about 1.6 kW (6 A on two phases
+  is 2.76 kW). When the power was a little lower (9 A on two phases is 4.14 kW at 230 V; below 4.24 kW) the wallbox was no lever at all,
+  and with the strategy *strict order* the battery (priority 3) was released before the wallbox (priority 1) - that is what the field
+  case showed. Now the guard counts two phases when evcc (*phasesActive*) or the sensor *Phases in use* reports exactly 2: for the
+  headroom, the current it sets, the check whether the wallbox followed, the savings estimate and the step back up ("more room again").
+  At two phases the current is only lowered to the minimum, never switched to one phase (the switch stays for three phases). One and
+  three phases, and an unknown phase count (counted as three), work exactly as before.
+  *Deutsch:* **Korrektur: Zweiphasige Wallboxen werden richtig gerechnet (Fall vom 26.11.2026).** Eine Wallbox, die auf zwei Phasen lädt
+  (z. B. ein Auto, dessen Ladegerät zwei nutzt; hier eine Victron EV Charging Station über evcc, etwa 9 A und 4,3 bis 4,5 kW), wurde als
+  dreiphasig gerechnet. Als niedrigste Leistung nahm der Wächter 6 A x 3 x 230 V = 4,14 kW und sah nur etwa 0,26 kW Spielraum statt etwa
+  1,6 kW (6 A zweiphasig sind 2,76 kW). Bei etwas weniger Leistung (9 A zweiphasig sind bei 230 V 4,14 kW; unter 4,24 kW) war die Wallbox
+  gar kein Hebel mehr, und mit der Strategie *Strenge Reihenfolge* wurde der Speicher (Priorität 3) vor der Wallbox (Priorität 1)
+  freigegeben, wie im Fall beobachtet. Jetzt rechnet der Wächter mit zwei Phasen, wenn evcc (*phasesActive*) oder der Sensor *Genutzte
+  Phasen* genau 2 meldet: beim Spielraum, beim gesetzten Strom, bei der Prüfung, ob die Wallbox gefolgt ist, bei der geschätzten Ersparnis
+  und beim Hochstellen („wieder mehr Luft“). Bei zwei Phasen wird nur bis zum Mindeststrom gesenkt, nie auf eine Phase umgeschaltet (die
+  Umschaltung bleibt für drei Phasen). Ein- und dreiphasig sowie eine unbekannte Phasenzahl (zählt als drei) verhalten sich wie bisher.
+
 ## 0.15.1 - 2026-11-26
 
 - **Fix: the set-up no longer "works for ever" when the database is slow (field report 26.11.2026: Raspberry Pi 5, Deye inverter via Solarman).** The set-up looks
