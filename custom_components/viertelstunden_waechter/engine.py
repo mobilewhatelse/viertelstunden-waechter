@@ -122,6 +122,7 @@ class DeviceConfig:
     start_gap_min: float = PC_GAP_MIN  # ... at least this long between two of its changes
     start_day_h: float = PC_DAY_H      # ... at most this many hours locked per calendar day (0 = no daily limit)
     may_pause: bool = False       # wallbox (0.16.0, BETA): may be paused as the last measure (needs a way to pause and allow again)
+    pause_by_mode: bool = False   # ... paused with its mode (evcc): only while the mode is known, else there would be no way back
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -148,6 +149,7 @@ class DeviceConfig:
             start_gap_min=max(0.0, float(d.get("start_gap_min", PC_GAP_MIN) or 0.0)),
             start_day_h=min(24.0, max(0.0, float(PC_DAY_H if d.get("start_day_h") is None else d["start_day_h"]))),
             may_pause=bool(d.get("may_pause", False)),
+            pause_by_mode=bool(d.get("pause_by_mode", False)),
         )
 
 
@@ -986,6 +988,8 @@ class Guard:
         and may be paused now. In observe mode the readings never change: the current the guard would have set counts."""
         if not r.available or not r.allowed or r.paused:
             return False
+        if dev.pause_by_mode and r.mode is None:
+            return False   # evcc without a known mode: nothing to go back to (review 27.11.2026)
         if now < self._rest_until.get(dev.id, now) or now < self._pause_rest.get(dev.id, now):
             return False
         iv = self.interventions.get(dev.id)

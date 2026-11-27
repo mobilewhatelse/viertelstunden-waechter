@@ -2121,7 +2121,8 @@ class Waechter:
             if d.get(D_KIND) == KIND_WALLBOX and d.get(D_MAY_PAUSE) and not (d.get(D_WB_PAUSE) and d.get(D_WB_RESUME)):
                 return {**d, D_MAY_PAUSE: False}   # pause (0.16.0, Beta) only with a way to pause and to allow again
             return d
-        return {**d, D_KIND: KIND_WALLBOX, "one_phase_option": "1" if d.get(D_EVCC_ONE_PHASE) else None}
+        return {**d, D_KIND: KIND_WALLBOX, "one_phase_option": "1" if d.get(D_EVCC_ONE_PHASE) else None,
+                "pause_by_mode": True}   # pause (0.16.0, Beta) with the evcc mode: only while it is known
 
     def _evcc_client(self, url: str, password: str) -> EvccClient:
         key = (url, password)
