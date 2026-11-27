@@ -151,6 +151,20 @@ class ClientTest(unittest.TestCase):
         run(c.set_phases(1, 1))
         self.assertEqual([(m, p) for m, p, _ in s.calls], [("POST", "/api/loadpoints/2/maxcurrent/10"), ("POST", "/api/loadpoints/1/phases/1")])
 
+    def test_mode_uses_the_documented_path(self):
+        """0.16.0 (Beta): pause as the last measure = mode off, back with the mode from before."""
+        s = FakeEvcc()
+        c = EvccClient(s, "http://e:7070")
+        run(c.set_mode(1, "off"))
+        run(c.set_mode(2, "pv"))
+        self.assertEqual([(m, p) for m, p, _ in s.calls], [("POST", "/api/loadpoints/1/mode/off"), ("POST", "/api/loadpoints/2/mode/pv")])
+
+    def test_mode_only_a_plain_word(self):
+        c = EvccClient(FakeEvcc(), "http://e:7070")
+        for bad in ("", "off/../x", "p v", None):
+            with self.assertRaises(ValueError):
+                run(c.set_mode(1, bad))
+
     def test_with_a_password_it_logs_in_by_itself_and_keeps_the_cookie(self):
         s = FakeEvcc(password="geheim")
         c = EvccClient(s, "http://e:7070", "geheim")
