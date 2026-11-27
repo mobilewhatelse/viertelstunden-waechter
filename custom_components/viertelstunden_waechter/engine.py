@@ -78,6 +78,13 @@ PC_HYST_KW = 0.2              # released only with this much more headroom than 
 PC_VERIFY_S = 90              # a lock that does not show in the readings after this long is given up (setting did not change)
 PC_DAY_H = 4.0                # at most this many hours of precautionary lock per calendar day and device (0 = no daily limit)
 PC_OBSERVED = "~beobachtet"   # key suffix of the daily sum of locks that were only observed (not stored, never limits real ones)
+# wallbox may pause as the last measure (0.16.0, BETA, device switch "may_pause", default off): only at the minimum current, with every
+# other lever used up, and only after this has lasted PAUSE_AFTER_S. Minimum duration of the pause and the pause after taking back
+# before the next one are the device fields hold_min / pause_min (0 = MIN_OFF_S), as at the switchable devices
+PAUSE_AFTER_S = 120           # at the minimum and still too much this long (like the wait before 1 phase: cookers cycle)
+PAUSE_MARGIN_KW = 0.5         # allowed again only with room for the minimum current plus this
+PAUSE_USER_REST_MIN = 60      # someone changed the mode during a pause: no new pause of this wallbox for this long
+RESUME_WAIT_S = 180           # after allowing again the car needs a while to start: meanwhile it counts as charging (current stays)
 
 
 def plausible_kw(limit_kw: float | None) -> float:
@@ -114,6 +121,7 @@ class DeviceConfig:
     start_max_min: float = PC_MAX_MIN  # ... never locked longer than this
     start_gap_min: float = PC_GAP_MIN  # ... at least this long between two of its changes
     start_day_h: float = PC_DAY_H      # ... at most this many hours locked per calendar day (0 = no daily limit)
+    may_pause: bool = False       # wallbox (0.16.0, BETA): may be paused as the last measure (needs a way to pause and allow again)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DeviceConfig:
@@ -139,6 +147,7 @@ class DeviceConfig:
             start_max_min=max(1.0, float(d.get("start_max_min") or PC_MAX_MIN)),
             start_gap_min=max(0.0, float(d.get("start_gap_min", PC_GAP_MIN) or 0.0)),
             start_day_h=min(24.0, max(0.0, float(PC_DAY_H if d.get("start_day_h") is None else d["start_day_h"]))),
+            may_pause=bool(d.get("may_pause", False)),
         )
 
 
@@ -160,6 +169,8 @@ class Reading:
     current_steps: tuple[int, ...] | None = None  # wallbox with a list of currents (select): the amps it offers, else any whole amp
     power_gap_s: float | None = None  # typical seconds between new values of the power sensor (None: not measured yet)
     running: bool | None = None   # precautionary lock: the "running" entity of the device (None = none, the power decides)
+    mode: str | None = None       # wallbox behind evcc: the mode of the loadpoint (remembered when the guard pauses it)
+    paused: bool | None = None    # wallbox: it is paused now (evcc mode off, the pause command shows); None = cannot tell
 
 
 def power_gap(gaps: list[float]) -> float | None:
@@ -314,6 +325,7 @@ class Guard:
         # daily limit: key -> {"day": "YYYY-MM-DD", "s": seconds locked that day, "noted": bool}; the real ones survive a restart
         self._pc_day: dict[str, dict[str, Any]] = {}
         self._pc_at: dict[str, datetime] = {}             # when the daily sum was last counted up (only while locked)
+        self._pause_rest: dict[str, datetime] = {}        # wallbox pause (0.16.0): no new pause of the device before this
 
     # ---------- persistence ----------
 
@@ -488,6 +500,9 @@ class Guard:
         allowed = (target * 0.25 - self.energy_kwh) / rest_h
         forecast = (self.energy_kwh + p * rest_h) / 0.25
         excess = p - allowed
+        if excess <= 0.1:   # the wait before a wallbox pause starts again (only set with a device that may pause)
+            for t in self._wb.values():
+                t.pop("pause_need", None)
         self.values = {
             "limit_kw": limit_kw,
             "target_kw": round(target, 2),
@@ -524,7 +539,8 @@ class Guard:
         self.values["room_kw"] = round(room, 2)
 
         checks = self._verify(now, readings)
-        actions = self._forced_releases(now, readings)
+        pause_notes = self._pause_watch_all(now, readings)   # 0.16.0: [] without a wallbox paused by the guard
+        actions = pause_notes + self._forced_releases(now, readings)
         if excess > 0.1:
             actions = actions + self._watch_notes(now, readings, excess)
         if not [a for a in actions if a.kind != "log"]:
@@ -541,11 +557,12 @@ class Guard:
                 for a in actions:
                     if a.text:
                         a.text = self.t("ahead", why=reserve_text, text=a.text)
+                actions = pause_notes + actions
             else:
                 if room > 0:  # only real, lasting headroom ends the wait for 1-phase (a cooker's off-phase does not)
                     for t in self._wb.values():
                         t["too_little"] = None
-                actions = self._release(now, room, readings)
+                actions = pause_notes + self._release(now, room, readings)
         self._register(now, readings, actions)
         self.state = "intervening" if self.interventions else "ready"
         if not any(d.start_kw > 0 for d in self.devices.values()) and not self.precaution:
@@ -717,7 +734,7 @@ class Guard:
                 phase_switch = any(x.kind == "set_phase" and x.device_id == dev.id for x in acts)
                 kw = float(a.value) * self._volts(self._phases(dev, r)) / 1000.0
                 self._set_pending(dev.id, a, now, expect_kw=kw, power_after=PHASE_PAUSE_S if phase_switch else 0)
-            elif a.kind in ("turn_off", "set_value", "battery_release"):
+            elif a.kind in ("turn_off", "set_value", "battery_release", "wb_pause"):
                 self._set_pending(dev.id, a, now)
 
     def _set_pending(self, dev_id: str, a: Action, now: datetime, **extra: Any) -> None:
@@ -746,6 +763,9 @@ class Guard:
         elif a.kind == "battery_release":
             if r.releasable:
                 return self.t("rel_not")
+        elif a.kind == "wb_pause":
+            if (r.power_w or 0.0) > CHARGING_W:
+                return self.t("still_charging", kw=(r.power_w or 0.0) / 1000.0)
         return ""
 
     def _verify(self, now: datetime, readings: dict[str, Reading]) -> list[Action]:
@@ -796,6 +816,9 @@ class Guard:
             if dev is None or r is None:
                 continue
             if dev.kind == KIND_WALLBOX:
+                if iv.get("paused"):   # paused as the last measure: what it drew before
+                    total += float(iv["paused"].get("kw") or 0.0)
+                    continue
                 p = (r.power_w or 0.0) / 1000.0
                 if p < 1.0:
                     continue
@@ -905,12 +928,18 @@ class Guard:
         opts = self._options(now, readings, excess)
         if smooth_only:  # forecast-based: never switch devices off, only lower wallbox current and throttles
             opts = [o for o in opts if o.device.kind in (KIND_WALLBOX, KIND_THROTTLE)]
+        notes: list[Action] = []
+        if not smooth_only and any(d.may_pause for d in self.devices.values()):
+            notes, paused = self._pause_step(now, readings, excess, opts)
+            if paused:   # the last measure was taken (notes = the lines "would be paused" of observed devices, plus the pause)
+                self._last_action = now
+                return notes
         if not opts:
             if not smooth_only and forecast > limit_kw and rest_h < 0.1 and self._notified_q != self.quarter and not self.quarter_estimated:
                 self._notified_q = self.quarter
-                return [Action("", "notify", round(forecast, 1),
-                               self.t("limit_lost", fc=forecast, limit=limit_kw))]
-            return []
+                return notes + [Action("", "notify", round(forecast, 1),
+                                       self.t("limit_lost", fc=forecast, limit=limit_kw))]
+            return notes
         first = self._choose(opts, excess)[0]  # one step per cycle, gentlest of the chosen set first
         dev, r = first.device, readings[first.device.id]
         if dev.kind == KIND_WALLBOX:
@@ -933,7 +962,138 @@ class Guard:
             acts = [Action(dev.id, "script_on", None, self.t("script_on", name=dev.name, excess=excess))]
         if acts:
             self._last_action = now
+        return notes + acts
+
+    # ---------- wallbox pause as the last measure (0.16.0, BETA) ----------
+
+    def _pause_possible(self, dev: DeviceConfig, r: Reading, now: datetime, shadow: bool) -> bool:
+        """The wallbox charges at its minimum current (a three-phase one with phase switching only after the switch to one phase)
+        and may be paused now. In observe mode the readings never change: the current the guard would have set counts."""
+        if not r.available or not r.allowed or r.paused:
+            return False
+        if now < self._rest_until.get(dev.id, now) or now < self._pause_rest.get(dev.id, now):
+            return False
+        iv = self.interventions.get(dev.id)
+        if iv is not None and iv.get("paused"):
+            return False
+        if (r.power_w or 0.0) <= CHARGING_W:
+            return False   # not charging: a pause brings nothing
+        if not shadow and self._wb_locked(dev.id, now):
+            return False
+        cur = int(r.current_a if r.current_a is not None else dev.max_current)
+        set_a = self._wbt(dev.id).get("set_a")
+        if shadow and iv is not None and set_a is not None:
+            cur = min(cur, int(set_a))
+        if cur > self._wb_min(dev, r):
+            return False
+        return not (self._phases(dev, r) == 3 and dev.one_phase_option)
+
+    def _pause_step(self, now: datetime, readings: dict[str, Reading], excess: float,
+                    opts: list[_Option]) -> tuple[list[Action], bool]:
+        """(actions, paused). Pause a wallbox that may be paused only when it is at its minimum, no other lever is left and that
+        lasted PAUSE_AFTER_S. In observe mode or with *Observe only* at the device only the line "would be paused" (once per quarter
+        hour, nothing is remembered)."""
+        cands: list[DeviceConfig] = []
+        for dev in self.devices.values():
+            if dev.kind != KIND_WALLBOX or not dev.may_pause:
+                continue
+            r = readings.get(dev.id)
+            shadow = not self.real_effect or dev.observe_only
+            if r is None or not self._pause_possible(dev, r, now, shadow):
+                self._wbt(dev.id).pop("pause_need", None)
+                continue
+            cands.append(dev)
+        ids = {d.id for d in cands}
+        if not cands or any(o.device.id not in ids for o in opts):
+            for d in cands:   # another lever is left: it comes first, the wait starts again
+                self._wbt(d.id).pop("pause_need", None)
+            return [], False
+        ready = []
+        for dev in cands:
+            t = self._wbt(dev.id)
+            if t.get("pause_need") is None:
+                t["pause_need"] = now
+            if _secs(t["pause_need"], now) >= PAUSE_AFTER_S:
+                ready.append(dev)
+        notes: list[Action] = []
+        real = [d for d in ready if self.real_effect and not d.observe_only]
+        for dev in ready:
+            key = (dev.id + "~pause", self.quarter)
+            if dev in real or key in self._watch_noted:
+                continue
+            self._watch_noted.add(key)
+            notes.append(Action(dev.id, "log", None, self.t("wb_would_pause", name=dev.name, excess=excess), False))
+        if not real:
+            return notes, False
+        dev = sorted(real, key=lambda d: (d.priority, -(readings[d.id].power_w or 0.0)))[0]
+        return notes + [self._pause(dev, readings[dev.id], now, excess)], True
+
+    def _pause(self, dev: DeviceConfig, r: Reading, now: datetime, excess: float) -> Action:
+        p_wb = (r.power_w or 0.0) / 1000.0
+        cur = int(r.current_a if r.current_a is not None else dev.max_current)
+        phases = self._phases(dev, r)
+        iv = self.interventions.setdefault(dev.id, {
+            "since": now.isoformat(), "orig_current": cur, "orig_phase": r.phase_option,
+            "one_phase": phases == 1, "switched": False, "phases": phases,
+        })
+        iv["paused"] = {"since": now.isoformat(), "mode": r.mode, "kw": round(p_wb, 3), "phases": phases}
+        t = self._wbt(dev.id)
+        t["changed"] = now
+        t.pop("pause_need", None)
+        return Action(dev.id, "wb_pause", None, self.t("wb_pause", name=dev.name, excess=excess, kw=p_wb))
+
+    def _wb_allow(self, dev: DeviceConfig, now: datetime, text: str) -> list[Action]:
+        """Allow charging again with the mode from before (evcc) or the allow command; no new pause within the pause after taking
+        back. The current stays at the minimum while the car starts (RESUME_WAIT_S), then the normal give-back raises it."""
+        iv = self.interventions.get(dev.id) or {}
+        p = iv.pop("paused", None) or {}
+        t = self._wbt(dev.id)
+        t["changed"] = t["resumed"] = now
+        rest_s = dev.pause_min * 60 if dev.pause_min > 0 else MIN_OFF_S
+        self._pause_rest[dev.id] = now + timedelta(seconds=rest_s)
+        self._pending.pop(dev.id, None)
+        return [Action(dev.id, "wb_resume", p.get("mode"), text, False)]
+
+    def _resume_due(self, dev: DeviceConfig, r: Reading, room: float, now: datetime) -> list[Action]:
+        p = self.interventions[dev.id]["paused"]
+        hold = dev.hold_min * 60 if dev.hold_min > 0 else MIN_OFF_S
+        try:
+            since = datetime.fromisoformat(str(p.get("since")))
+        except (TypeError, ValueError):
+            since = None
+        if _secs(since, now) < hold:
+            return []
+        need = self._wb_min(dev, r) * self._volts(int(p.get("phases") or 3)) / 1000.0 + PAUSE_MARGIN_KW
+        if room <= need:
+            return []
+        return self._wb_allow(dev, now, self.t("wb_resume", name=dev.name, room=room))
+
+    def _pause_watch_all(self, now: datetime, readings: dict[str, Reading]) -> list[Action]:
+        acts: list[Action] = []
+        for dev_id, iv in list(self.interventions.items()):
+            dev = self.devices.get(dev_id)
+            if dev is not None and dev.kind == KIND_WALLBOX and isinstance(iv, dict) and iv.get("paused"):
+                acts += self._pause_watch(dev, readings.get(dev_id), now)
         return acts
+
+    def _pause_watch(self, dev: DeviceConfig, r: Reading | None, now: datetime) -> list[Action]:
+        """Every cycle while paused: allowed again at once when the switch was turned off; a pause someone ended meanwhile (another
+        mode in evcc, the pause switch on again) stays theirs: nothing is sent, no new pause for PAUSE_USER_REST_MIN."""
+        iv = self.interventions[dev.id]
+        p = iv["paused"]
+        if not dev.may_pause:
+            return self._wb_allow(dev, now, self.t("wb_resume_now", name=dev.name))
+        if r is None or r.paused is None:
+            return []
+        if r.paused:
+            p["seen"] = True
+            return []
+        if not p.get("seen"):
+            return []   # the pause has not shown yet (the check of the command decides)
+        iv.pop("paused", None)
+        self._pending.pop(dev.id, None)
+        self._pause_rest[dev.id] = now + timedelta(minutes=PAUSE_USER_REST_MIN)
+        return [Action(dev.id, "log", None, self.t("wb_pause_user", name=dev.name, min=PAUSE_USER_REST_MIN), False)]
 
     # ---------- throttle (stepless number) ----------
 
@@ -1034,7 +1194,9 @@ class Guard:
         return _secs(t["changed"], now) < WALLBOX_STEP_S or _secs(t["phase"], now) < PHASE_PAUSE_S
 
     def _charging(self, dev_id: str, r: Reading, now: datetime) -> bool:
-        return (r.power_w or 0.0) > CHARGING_W or _secs(self._wbt(dev_id)["phase"], now) < PHASE_PAUSE_S + 60
+        t = self._wbt(dev_id)
+        return ((r.power_w or 0.0) > CHARGING_W or _secs(t["phase"], now) < PHASE_PAUSE_S + 60
+                or _secs(t.get("resumed"), now) < RESUME_WAIT_S)
 
     def _wb_reduction(self, dev: DeviceConfig, r: Reading, now: datetime) -> float:
         p_wb = (r.power_w or 0.0) / 1000.0
@@ -1131,11 +1293,18 @@ class Guard:
             if any(x.kind == "set_phase" for x in acts):
                 iv["one_phase"] = iv["switched"] = True
             t["changed"] = now
+            t["set_a"] = next(int(x.value) for x in acts if x.kind == "set_current")   # observe mode: what it would be now
         return acts
 
     def _wb_release(self, dev: DeviceConfig, r: Reading, room: float, now: datetime, force: bool) -> list[Action]:
         iv = self.interventions[dev.id]
+        if iv.get("paused"):
+            if not force:
+                return []   # a pause is given back by _release first (_resume_due), never by the normal give-back
+            return self._wb_allow(dev, now, self.t("wb_resume_now", name=dev.name)) + self._wb_release(dev, r, room, now, True)
         t = self._wbt(dev.id)
+        if not force and _secs(t.get("resumed"), now) < RESUME_WAIT_S:
+            return []   # allowed again after a pause: the car starts at the minimum current, raised only afterwards
         cur = int(r.current_a if r.current_a is not None else dev.max_current)
         orig = int(iv.get("orig_current") or dev.max_current)
         if force or not self._charging(dev.id, r, now):
@@ -1195,7 +1364,8 @@ class Guard:
     def _release_one(self, dev: DeviceConfig, r: Reading, room: float, now: datetime, force: bool) -> list[Action]:
         had = dev.id in self.interventions
         acts = self._release_one_inner(dev, r, room, now, force)
-        if had and dev.id not in self.interventions and dev.pause_min > 0:
+        # (a wallbox has the field only for its pause since 0.16.0: there it is the wait before the next pause, see _wb_allow)
+        if had and dev.id not in self.interventions and dev.pause_min > 0 and dev.kind != KIND_WALLBOX:
             self._rest_until[dev.id] = now + timedelta(minutes=dev.pause_min)  # protect e.g. a compressor
         return acts
 
@@ -1227,6 +1397,14 @@ class Guard:
     def _release(self, now: datetime, room: float, readings: dict[str, Reading]) -> list[Action]:
         if not self.interventions or _secs(self._last_release, now) < RELEASE_EVERY_S or _secs(self._last_action, now) < SETTLE_S:
             return []
+        paused = [i for i, iv in self.interventions.items() if isinstance(iv, dict) and iv.get("paused") and i in self.devices]
+        if paused:   # the last measure is taken back first; everything else waits for it (reverse order)
+            dev_id = max(paused, key=lambda i: str(self.interventions[i]["paused"].get("since")))
+            dev, r = self.devices[dev_id], readings.get(dev_id) or Reading(available=False)
+            acts = self._resume_due(dev, r, room, now)
+            if acts:
+                self._last_release = now
+            return acts
         # strictly the most important device first: a less important one gets no headroom while a more
         # important one is still waiting (only a wallbox that stopped charging is always given back)
         for dev_id in sorted(self.interventions, key=lambda i: -self.devices[i].priority):
@@ -1251,6 +1429,8 @@ class Guard:
         for dev_id in list(self.interventions):
             dev = self.devices[dev_id]
             r = readings.get(dev_id)
+            if dev.kind == KIND_WALLBOX and self.interventions[dev_id].get("paused"):
+                continue   # see _pause_watch_all
             if dev.kind in GUARDED_KINDS and r is not None and r.soc is not None and r.soc < dev.min_soc:
                 what = self.t("word_soc") if dev.kind == KIND_BATTERY else self.t("word_guard")
                 acts.append(Action(dev_id, "log", None, self.t("below_min", name=dev.name, what=what, v=r.soc, min=dev.min_soc), False))
