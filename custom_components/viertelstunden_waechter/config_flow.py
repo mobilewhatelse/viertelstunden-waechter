@@ -33,6 +33,7 @@ from .const import (
 )
 from .const import D_ART, D_BATTERY_POWER
 from .const import D_RUNNING, D_START_DAY, D_START_GAP, D_START_KW, D_START_MAX
+from .const import D_MAY_PAUSE, D_WB_PAUSE, D_WB_PAUSE_VALUE, D_WB_RESUME, D_WB_RESUME_VALUE
 from .engine import KIND_BATTERY, KIND_EVCC, KIND_SCRIPT, KIND_SETTING, KIND_SWITCH, KIND_THROTTLE, KIND_VEHICLE, KIND_WALLBOX
 from .geraete_check import ARTS
 from .const import CONF_EVCC_BACKUP, CONF_EVCC_PASSWORD, CONF_EVCC_URL, D_EVCC_LOADPOINT, D_EVCC_ONE_PHASE, D_EVCC_PASSWORD, D_EVCC_URL
@@ -270,6 +271,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[vol.Required(D_EVCC_ONE_PHASE, default=bool(d.get(D_EVCC_ONE_PHASE, False)))] = BooleanSelector()
         s[_opt(D_POWER, d)] = _ent("sensor")
         s[_opt(D_ALLOW, d)] = _ent(ON_OFF_DOMAINS)
+        _pause_fields(s, d, commands=False)   # evcc pauses with its mode
     elif kind == KIND_WALLBOX:
         s[vol.Required(D_POWER, default=d.get(D_POWER, vol.UNDEFINED))] = _ent("sensor")
         s[vol.Required(D_CURRENT, default=d.get(D_CURRENT, vol.UNDEFINED))] = _ent(["number", "input_number", "select", "input_select"])
@@ -278,6 +280,7 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
         s[_opt(D_PHASE, d)] = _ent(["select", "input_select"])
         s[_opt(D_ONE_PHASE, d)] = TextSelector()
         s[_opt(D_PHASES, d)] = _ent("sensor")
+        _pause_fields(s, d, commands=True)
     elif kind == KIND_SWITCH:
         s[vol.Required(D_SWITCH, default=d.get(D_SWITCH, vol.UNDEFINED))] = _ent(["switch", "input_boolean", "light", "fan"])
         s[_opt(D_POWER, d)] = _ent("sensor")
@@ -360,6 +363,54 @@ def _device_schema(kind: str, d: dict[str, Any]) -> vol.Schema:
     return vol.Schema(out)
 
 
+def _pause_fields(s: dict[Any, Any], d: dict[str, Any], commands: bool) -> None:
+    """Wallbox may pause as the last measure (0.16.0, BETA, default off). Minimum duration and pause after taking back as at the
+    switchable devices (here only for the pause); another wallbox needs its pause and allow commands (as the charge plan)."""
+    s[vol.Required(D_MAY_PAUSE, default=bool(d.get(D_MAY_PAUSE, False)))] = BooleanSelector()
+    s[vol.Required(D_HOLD, default=d.get(D_HOLD, 0))] = _num(0, 240, 1, "min")
+    s[vol.Required(D_PAUSE, default=d.get(D_PAUSE, 0))] = _num(0, 240, 1, "min")
+    if commands:
+        s[_opt(D_WB_PAUSE, d)] = _ent(COMMAND_DOMAINS)
+        s[_opt(D_WB_PAUSE_VALUE, d)] = TextSelector()
+        s[_opt(D_WB_RESUME, d)] = _ent(COMMAND_DOMAINS)
+        s[_opt(D_WB_RESUME_VALUE, d)] = TextSelector()
+
+
+def _pause_errors(u: dict[str, Any], options_of: Any) -> dict[str, str]:
+    """Wallbox pause (0.16.0, Beta): switched on, it needs a command that pauses and one that allows again (else a pause could never be
+    taken back); each value must fit its entity (a button needs none). `options_of(entity)` = the options of a selection or None."""
+    if not u.get(D_MAY_PAUSE):
+        return {}
+    if not u.get(D_WB_PAUSE) or not u.get(D_WB_RESUME):
+        return {D_MAY_PAUSE: "pause_needs_commands"}
+    for ent_key, val_key in ((D_WB_PAUSE, D_WB_PAUSE_VALUE), (D_WB_RESUME, D_WB_RESUME_VALUE)):
+        ent, val = str(u.get(ent_key)), str(u.get(val_key) or "").strip()
+        domain = ent.split(".")[0]
+        if domain == "button":
+            continue
+        if not val:
+            return {val_key: "pair"}
+        if domain in ("number", "input_number"):
+            try:
+                float(val)
+            except ValueError:
+                return {val_key: "value_number"}
+        elif domain in ("select", "input_select"):
+            options = options_of(ent) or []
+            if options and val not in options:
+                return {val_key: "unknown_option"}
+        elif val not in ("on", "off"):
+            return {val_key: "value_onoff"}
+    return {}
+
+
+def _options_of(hass: Any):
+    def get(ent: str) -> list[str] | None:
+        st = hass.states.get(ent)
+        return list(st.attributes.get("options", [])) if st else None
+    return get
+
+
 def device_title(d: dict[str, Any], kind: str | None = None) -> str:
     """One line for the device list on the integration page: priority, name and what the guard does with it."""
     kind = kind or d.get(D_KIND)
@@ -383,6 +434,8 @@ def device_title(d: dict[str, Any], kind: str | None = None) -> str:
         what = f"Batterie ab {int(d.get(D_MIN_SOC, 30))} %, ≈ {int(d.get(D_POWER_W, 0))} W"
     else:
         what = f"Skript ≈ {int(d.get(D_POWER_W, 0))} W"
+    if kind in (KIND_WALLBOX, KIND_EVCC) and d.get(D_MAY_PAUSE):
+        what += " · darf pausieren (Beta)"
     if d.get(D_OBSERVE):
         what += " · nur beobachten"
     return f"{prio} · {d.get(D_NAME, '?')} · {what}"
@@ -488,6 +541,8 @@ class WaechterConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors = {D_MIN_CURRENT: "min_above_max"}
             if not errors:
                 errors = await _device_sign_errors(self.hass, kind, user_input)
+            if not errors and kind == KIND_WALLBOX:
+                errors = _pause_errors(user_input, _options_of(self.hass))
             if not errors and kind == KIND_EVCC:
                 errors = await EvccFlow._validate_async(self, user_input)  # type: ignore[arg-type]
             if not errors:
@@ -677,7 +732,7 @@ class WallboxFlow(_DeviceFlow):
             options = st.attributes.get("options", []) if st else []
             if option not in options:
                 return {D_ONE_PHASE: "unknown_option"}
-        return {}
+        return _pause_errors(u, _options_of(self.hass))
 
 
 class SwitchFlow(_DeviceFlow):

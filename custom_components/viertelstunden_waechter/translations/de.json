@@ -64,7 +64,7 @@
       },
       "evcc_device": {
         "title": "evcc-Ladepunkt",
-        "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nie gestoppt. Die Adresse von evcc genügt.",
+        "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nur pausiert, wenn Sie es unten erlauben (Beta, standardmäßig aus). Die Adresse von evcc genügt.",
         "data": {
           "name": "Name",
           "priority": "Priorität",
@@ -77,7 +77,10 @@
           "power_entity": "Ladeleistung (optional)",
           "allow_entity": "Eingriff nur solange",
           "observe_only": "Nur beobachten",
-          "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+          "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+          "may_pause": "Darf als letzte Maßnahme pausiert werden (Beta)",
+          "hold_min": "Mindestdauer einer Pause",
+          "pause_min": "Pause nach dem Zurücknehmen"
         },
         "data_description": {
           "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
@@ -89,12 +92,15 @@
           "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
           "allow_entity": "Optional. Nur solange diese Entität an ist.",
           "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-          "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+          "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+          "may_pause": "BETA, standardmäßig aus. Nur wenn der Ladepunkt schon mit dem Mindeststrom lädt, alle anderen Geräte ausgeschöpft sind und die Grenze trotzdem nicht zu halten ist, stellt der Wächter den evcc-Modus auf Aus und später auf den Modus von vorher zurück. Nicht jedes Auto lädt danach von selbst weiter: vorher mit „Nur beobachten“ ausprobieren.",
+          "hold_min": "Eine Pause dauert mindestens so lange (0 = 5 Minuten). Nur für die Pause (Beta).",
+          "pause_min": "Nach dem Wiedererlauben so lange keine neue Pause (0 = 5 Minuten). Nur für die Pause (Beta)."
         }
       },
       "add_wallbox": {
         "title": "Wallbox",
-        "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nie gestoppt.",
+        "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nur pausiert, wenn Sie es unten erlauben (Beta, standardmäßig aus).",
         "data": {
           "name": "Name",
           "priority": "Priorität",
@@ -107,7 +113,14 @@
           "phases_entity": "Genutzte Phasen",
           "allow_entity": "Eingriff nur, solange",
           "observe_only": "Nur beobachten",
-          "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+          "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+          "may_pause": "Darf als letzte Maßnahme pausiert werden (Beta)",
+          "hold_min": "Mindestdauer einer Pause",
+          "pause_min": "Pause nach dem Zurücknehmen",
+          "pause_entity": "Befehl: Laden pausieren (für die Pause, Beta)",
+          "pause_value": "Wert für „pausieren“",
+          "resume_entity": "Befehl: Laden erlauben (für die Pause, Beta)",
+          "resume_value": "Wert für „erlauben“"
         },
         "data_description": {
           "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -117,7 +130,14 @@
           "allow_entity": "Optional. Nur solange diese Entität an ist.",
           "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
           "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
-          "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren."
+          "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren.",
+          "may_pause": "BETA, standardmäßig aus. Nur wenn die Wallbox schon mit dem Mindeststrom lädt, alle anderen Geräte ausgeschöpft sind und die Grenze trotzdem nicht zu halten ist, pausiert der Wächter das Laden und erlaubt es später wieder. Nicht jedes Auto lädt danach von selbst weiter: vorher mit „Nur beobachten“ ausprobieren.",
+          "hold_min": "Eine Pause dauert mindestens so lange (0 = 5 Minuten). Nur für die Pause (Beta).",
+          "pause_min": "Nach dem Wiedererlauben so lange keine neue Pause (0 = 5 Minuten). Nur für die Pause (Beta).",
+          "pause_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert, wie beim Ladeplan. Nötig, wenn das Pausieren an ist.",
+          "pause_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig).",
+          "resume_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden wieder erlaubt. Nötig, wenn das Pausieren an ist.",
+          "resume_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig)."
         }
       },
       "grid_check_invert": {
@@ -175,7 +195,11 @@
       "min_above_max": "Der Mindeststrom liegt über dem Höchststrom.",
       "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
       "unknown_option": "Diese Option hat die Phasenwahl nicht.",
-      "evcc_not_charger": "Dieser Ladepunkt ist in evcc ein Heizgerät (Wärmepumpe, Heizstab), keine Wallbox. Der Wächter kann ihn nicht über einen Ladestrom begrenzen."
+      "evcc_not_charger": "Dieser Ladepunkt ist in evcc ein Heizgerät (Wärmepumpe, Heizstab), keine Wallbox. Der Wächter kann ihn nicht über einen Ladestrom begrenzen.",
+      "pause_needs_commands": "Zum Pausieren braucht es einen Befehl, der pausiert, und einen, der das Laden wieder erlaubt.",
+      "pair": "Befehl und Wert gehören zusammen.",
+      "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
+      "value_onoff": "Ein Schalter braucht den Wert on oder off."
     }
   },
   "options": {
@@ -461,7 +485,7 @@
       "step": {
         "user": {
           "title": "Wallbox",
-          "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nie gestoppt.",
+          "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nur pausiert, wenn Sie es unten erlauben (Beta, standardmäßig aus).",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -474,7 +498,14 @@
             "phases_entity": "Genutzte Phasen",
             "allow_entity": "Eingriff nur, solange",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "may_pause": "Darf als letzte Maßnahme pausiert werden (Beta)",
+            "hold_min": "Mindestdauer einer Pause",
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "pause_entity": "Befehl: Laden pausieren (für die Pause, Beta)",
+            "pause_value": "Wert für „pausieren“",
+            "resume_entity": "Befehl: Laden erlauben (für die Pause, Beta)",
+            "resume_value": "Wert für „erlauben“"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -484,12 +515,19 @@
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
-            "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren."
+            "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren.",
+            "may_pause": "BETA, standardmäßig aus. Nur wenn die Wallbox schon mit dem Mindeststrom lädt, alle anderen Geräte ausgeschöpft sind und die Grenze trotzdem nicht zu halten ist, pausiert der Wächter das Laden und erlaubt es später wieder. Nicht jedes Auto lädt danach von selbst weiter: vorher mit „Nur beobachten“ ausprobieren.",
+            "hold_min": "Eine Pause dauert mindestens so lange (0 = 5 Minuten). Nur für die Pause (Beta).",
+            "pause_min": "Nach dem Wiedererlauben so lange keine neue Pause (0 = 5 Minuten). Nur für die Pause (Beta).",
+            "pause_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert, wie beim Ladeplan. Nötig, wenn das Pausieren an ist.",
+            "pause_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig).",
+            "resume_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden wieder erlaubt. Nötig, wenn das Pausieren an ist.",
+            "resume_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig)."
           }
         },
         "reconfigure": {
           "title": "Wallbox",
-          "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nie gestoppt.",
+          "description": "Der Ladestrom wird schrittweise gesenkt, wenn erlaubt bis auf 1 Phase. Das Laden wird nur pausiert, wenn Sie es unten erlauben (Beta, standardmäßig aus).",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -502,7 +540,14 @@
             "phases_entity": "Genutzte Phasen",
             "allow_entity": "Eingriff nur, solange",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "may_pause": "Darf als letzte Maßnahme pausiert werden (Beta)",
+            "hold_min": "Mindestdauer einer Pause",
+            "pause_min": "Pause nach dem Zurücknehmen",
+            "pause_entity": "Befehl: Laden pausieren (für die Pause, Beta)",
+            "pause_value": "Wert für „pausieren“",
+            "resume_entity": "Befehl: Laden erlauben (für die Pause, Beta)",
+            "resume_value": "Wert für „erlauben“"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn sonst nichts hilft.",
@@ -512,7 +557,14 @@
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde. Es wird nichts gesendet, und das Gerät zählt nicht als Hebel. Gut, um ein neues Gerät zuerst auszuprobieren.",
             "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
-            "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren."
+            "current_entity": "Eine Zahl in A oder eine Auswahlliste wie „6 A“, „8 A“ … (z. B. Anker SOLIX V1). Bei einer Liste nimmt der Wächter den passenden Eintrag, nie einen höheren.",
+            "may_pause": "BETA, standardmäßig aus. Nur wenn die Wallbox schon mit dem Mindeststrom lädt, alle anderen Geräte ausgeschöpft sind und die Grenze trotzdem nicht zu halten ist, pausiert der Wächter das Laden und erlaubt es später wieder. Nicht jedes Auto lädt danach von selbst weiter: vorher mit „Nur beobachten“ ausprobieren.",
+            "hold_min": "Eine Pause dauert mindestens so lange (0 = 5 Minuten). Nur für die Pause (Beta).",
+            "pause_min": "Nach dem Wiedererlauben so lange keine neue Pause (0 = 5 Minuten). Nur für die Pause (Beta).",
+            "pause_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden pausiert, wie beim Ladeplan. Nötig, wenn das Pausieren an ist.",
+            "pause_value": "Der Optionstext, on/off oder die Zahl für „pausieren“ (bei einem Knopf nicht nötig).",
+            "resume_entity": "Ein Knopf (wird gedrückt), Schalter, eine Auswahl oder Zahl, die das Laden wieder erlaubt. Nötig, wenn das Pausieren an ist.",
+            "resume_value": "Der Optionstext, on/off oder die Zahl für „erlauben“ (bei einem Knopf nicht nötig)."
           }
         }
       },
@@ -521,7 +573,11 @@
         "phase_pair": "Phasenwahl und Option für 1 Phase gehören zusammen.",
         "unknown_option": "Diese Option hat die Phasenwahl nicht.",
         "not_power": "Dieser Sensor hat keine Leistungseinheit (W, kW oder MW). Ergänzen Sie beim Template-Sensor unit_of_measurement: W oder wählen Sie einen anderen Sensor.",
-        "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen."
+        "looks_inverted": "Fast alle Werte dieses Sensors sind negativ. Ein Verbraucher speist nie ein: „Vorzeichen umkehren“ ankreuzen.",
+        "pause_needs_commands": "Zum Pausieren braucht es einen Befehl, der pausiert, und einen, der das Laden wieder erlaubt.",
+        "pair": "Befehl und Wert gehören zusammen.",
+        "value_number": "Diese Einstellung ist eine Zahl: bitte eine Zahl eintragen.",
+        "value_onoff": "Ein Schalter braucht den Wert on oder off."
       }
     },
     "switch": {
@@ -1094,7 +1150,7 @@
       "step": {
         "user": {
           "title": "evcc-Ladepunkt",
-          "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nie gestoppt. Die Adresse von evcc genügt.",
+          "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nur pausiert, wenn Sie es unten erlauben (Beta, standardmäßig aus). Die Adresse von evcc genügt.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -1107,7 +1163,10 @@
             "power_entity": "Ladeleistung (optional)",
             "allow_entity": "Eingriff nur solange",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "may_pause": "Darf als letzte Maßnahme pausiert werden (Beta)",
+            "hold_min": "Mindestdauer einer Pause",
+            "pause_min": "Pause nach dem Zurücknehmen"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
@@ -1119,12 +1178,15 @@
             "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "may_pause": "BETA, standardmäßig aus. Nur wenn der Ladepunkt schon mit dem Mindeststrom lädt, alle anderen Geräte ausgeschöpft sind und die Grenze trotzdem nicht zu halten ist, stellt der Wächter den evcc-Modus auf Aus und später auf den Modus von vorher zurück. Nicht jedes Auto lädt danach von selbst weiter: vorher mit „Nur beobachten“ ausprobieren.",
+            "hold_min": "Eine Pause dauert mindestens so lange (0 = 5 Minuten). Nur für die Pause (Beta).",
+            "pause_min": "Nach dem Wiedererlauben so lange keine neue Pause (0 = 5 Minuten). Nur für die Pause (Beta)."
           }
         },
         "reconfigure": {
           "title": "evcc-Ladepunkt",
-          "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nie gestoppt. Die Adresse von evcc genügt.",
+          "description": "Der Wächter setzt in evcc nur eine Obergrenze für den Ladestrom und gibt sie zurück. Das Laden wird nur pausiert, wenn Sie es unten erlauben (Beta, standardmäßig aus). Die Adresse von evcc genügt.",
           "data": {
             "name": "Name",
             "priority": "Priorität",
@@ -1137,7 +1199,10 @@
             "power_entity": "Ladeleistung (optional)",
             "allow_entity": "Eingriff nur solange",
             "observe_only": "Nur beobachten",
-            "power_invert": "Vorzeichen umkehren (Leistungssensor)"
+            "power_invert": "Vorzeichen umkehren (Leistungssensor)",
+            "may_pause": "Darf als letzte Maßnahme pausiert werden (Beta)",
+            "hold_min": "Mindestdauer einer Pause",
+            "pause_min": "Pause nach dem Zurücknehmen"
           },
           "data_description": {
             "priority": "1 = wird zuerst eingeschränkt, 10 = nur wenn nichts anderes hilft.",
@@ -1149,7 +1214,10 @@
             "power_entity": "Optionaler Sensor, zum Beispiel aus der evcc-Integration der Community. Ohne ihn liest der Wächter die Leistung aus evcc.",
             "allow_entity": "Optional. Nur solange diese Entität an ist.",
             "observe_only": "Der Wächter schreibt nur ins Protokoll, was er mit diesem Gerät tun würde, und schaltet es nicht. Gut zum Ausprobieren.",
-            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ."
+            "power_invert": "An = der Leistungssensor zählt den Verbrauch negativ.",
+            "may_pause": "BETA, standardmäßig aus. Nur wenn der Ladepunkt schon mit dem Mindeststrom lädt, alle anderen Geräte ausgeschöpft sind und die Grenze trotzdem nicht zu halten ist, stellt der Wächter den evcc-Modus auf Aus und später auf den Modus von vorher zurück. Nicht jedes Auto lädt danach von selbst weiter: vorher mit „Nur beobachten“ ausprobieren.",
+            "hold_min": "Eine Pause dauert mindestens so lange (0 = 5 Minuten). Nur für die Pause (Beta).",
+            "pause_min": "Nach dem Wiedererlauben so lange keine neue Pause (0 = 5 Minuten). Nur für die Pause (Beta)."
           }
         },
         "loadpoint": {

@@ -64,7 +64,7 @@
       },
       "evcc_device": {
         "title": "evcc loadpoint",
-        "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is never stopped. The address of evcc is enough.",
+        "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is only paused if you allow it below (Beta, off by default). The address of evcc is enough.",
         "data": {
           "name": "Name",
           "priority": "Priority",
@@ -77,7 +77,10 @@
           "power_entity": "Charging power (optional)",
           "allow_entity": "Intervention only while",
           "observe_only": "Observe only",
-          "power_invert": "Turn the sign round (power sensor)"
+          "power_invert": "Turn the sign round (power sensor)",
+          "may_pause": "May be paused as the last measure (Beta)",
+          "hold_min": "Minimum duration of a pause",
+          "pause_min": "Pause after taking back"
         },
         "data_description": {
           "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -89,12 +92,15 @@
           "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
           "allow_entity": "Optional. Only while this entity is on.",
           "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-          "power_invert": "On = the power sensor counts consumption as negative."
+          "power_invert": "On = the power sensor counts consumption as negative.",
+          "may_pause": "BETA, off by default. Only when the loadpoint already charges at its minimum current, every other device is used up and the limit still cannot be held, the guard sets the evcc mode to Off and later back to the mode from before. Not every car starts again by itself: try it with Observe only first.",
+          "hold_min": "A pause lasts at least this long (0 = 5 minutes). Only for the pause (Beta).",
+          "pause_min": "After allowing again, no new pause for this long (0 = 5 minutes). Only for the pause (Beta)."
         }
       },
       "add_wallbox": {
         "title": "Wallbox",
-        "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is never stopped.",
+        "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is only paused if you allow it below (Beta, off by default).",
         "data": {
           "name": "Name",
           "priority": "Priority",
@@ -107,7 +113,14 @@
           "phases_entity": "Phases in use",
           "allow_entity": "Intervention only while",
           "observe_only": "Observe only",
-          "power_invert": "Turn the sign round (power sensor)"
+          "power_invert": "Turn the sign round (power sensor)",
+          "may_pause": "May be paused as the last measure (Beta)",
+          "hold_min": "Minimum duration of a pause",
+          "pause_min": "Pause after taking back",
+          "pause_entity": "Command: pause charging (for the pause, Beta)",
+          "pause_value": "Value for \"pause\"",
+          "resume_entity": "Command: allow charging (for the pause, Beta)",
+          "resume_value": "Value for \"allow\""
         },
         "data_description": {
           "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -117,7 +130,14 @@
           "allow_entity": "Optional. Only while this entity is on.",
           "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
           "power_invert": "On = the power sensor counts consumption as negative.",
-          "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one."
+          "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one.",
+          "may_pause": "BETA, off by default. Only when the wallbox already charges at its minimum current, every other device is used up and the limit still cannot be held, the guard pauses the charging and allows it again later. Not every car starts again by itself: try it with Observe only first.",
+          "hold_min": "A pause lasts at least this long (0 = 5 minutes). Only for the pause (Beta).",
+          "pause_min": "After allowing again, no new pause for this long (0 = 5 minutes). Only for the pause (Beta).",
+          "pause_entity": "A button (pressed), switch, selection or number that pauses the charging, as in the charge plan. Needed when pausing is on.",
+          "pause_value": "The option text, on/off or number for \"pause\" (not needed for a button).",
+          "resume_entity": "A button (pressed), switch, selection or number that lets the car charge again. Needed when pausing is on.",
+          "resume_value": "The option text, on/off or number for \"allow\" (not needed for a button)."
         }
       },
       "grid_check_invert": {
@@ -175,7 +195,11 @@
       "min_above_max": "Minimum current is above maximum current.",
       "phase_pair": "Phase selection and option for 1 phase belong together.",
       "unknown_option": "The phase selection has no such option.",
-      "evcc_not_charger": "This loadpoint is a heating device (heat pump, heating rod) in evcc, not a wallbox. The guard cannot limit it by a charging current."
+      "evcc_not_charger": "This loadpoint is a heating device (heat pump, heating rod) in evcc, not a wallbox. The guard cannot limit it by a charging current.",
+      "pause_needs_commands": "Pausing needs a command that pauses and one that allows charging again.",
+      "pair": "Command and value belong together.",
+      "value_number": "This setting is a number: enter a number.",
+      "value_onoff": "A switch needs the value on or off."
     }
   },
   "options": {
@@ -461,7 +485,7 @@
       "step": {
         "user": {
           "title": "Wallbox",
-          "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is never stopped.",
+          "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is only paused if you allow it below (Beta, off by default).",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -474,7 +498,14 @@
             "phases_entity": "Phases in use",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "may_pause": "May be paused as the last measure (Beta)",
+            "hold_min": "Minimum duration of a pause",
+            "pause_min": "Pause after taking back",
+            "pause_entity": "Command: pause charging (for the pause, Beta)",
+            "pause_value": "Value for \"pause\"",
+            "resume_entity": "Command: allow charging (for the pause, Beta)",
+            "resume_value": "Value for \"allow\""
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -484,12 +515,19 @@
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
             "power_invert": "On = the power sensor counts consumption as negative.",
-            "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one."
+            "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one.",
+            "may_pause": "BETA, off by default. Only when the wallbox already charges at its minimum current, every other device is used up and the limit still cannot be held, the guard pauses the charging and allows it again later. Not every car starts again by itself: try it with Observe only first.",
+            "hold_min": "A pause lasts at least this long (0 = 5 minutes). Only for the pause (Beta).",
+            "pause_min": "After allowing again, no new pause for this long (0 = 5 minutes). Only for the pause (Beta).",
+            "pause_entity": "A button (pressed), switch, selection or number that pauses the charging, as in the charge plan. Needed when pausing is on.",
+            "pause_value": "The option text, on/off or number for \"pause\" (not needed for a button).",
+            "resume_entity": "A button (pressed), switch, selection or number that lets the car charge again. Needed when pausing is on.",
+            "resume_value": "The option text, on/off or number for \"allow\" (not needed for a button)."
           }
         },
         "reconfigure": {
           "title": "Wallbox",
-          "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is never stopped.",
+          "description": "The charging current is reduced step by step, if allowed down to 1 phase. Charging is only paused if you allow it below (Beta, off by default).",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -502,7 +540,14 @@
             "phases_entity": "Phases in use",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "may_pause": "May be paused as the last measure (Beta)",
+            "hold_min": "Minimum duration of a pause",
+            "pause_min": "Pause after taking back",
+            "pause_entity": "Command: pause charging (for the pause, Beta)",
+            "pause_value": "Value for \"pause\"",
+            "resume_entity": "Command: allow charging (for the pause, Beta)",
+            "resume_value": "Value for \"allow\""
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -512,7 +557,14 @@
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only writes to the log what it would do with this device. Nothing is sent to it and it does not count as a lever. Good for trying a new device first.",
             "power_invert": "On = the power sensor counts consumption as negative.",
-            "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one."
+            "current_entity": "A number in A or a list like \"6 A\", \"8 A\" … (e.g. Anker SOLIX V1). With a list the guard picks the matching entry, never a higher one.",
+            "may_pause": "BETA, off by default. Only when the wallbox already charges at its minimum current, every other device is used up and the limit still cannot be held, the guard pauses the charging and allows it again later. Not every car starts again by itself: try it with Observe only first.",
+            "hold_min": "A pause lasts at least this long (0 = 5 minutes). Only for the pause (Beta).",
+            "pause_min": "After allowing again, no new pause for this long (0 = 5 minutes). Only for the pause (Beta).",
+            "pause_entity": "A button (pressed), switch, selection or number that pauses the charging, as in the charge plan. Needed when pausing is on.",
+            "pause_value": "The option text, on/off or number for \"pause\" (not needed for a button).",
+            "resume_entity": "A button (pressed), switch, selection or number that lets the car charge again. Needed when pausing is on.",
+            "resume_value": "The option text, on/off or number for \"allow\" (not needed for a button)."
           }
         }
       },
@@ -521,7 +573,11 @@
         "phase_pair": "Phase selection and option for 1 phase belong together.",
         "unknown_option": "The phase selection has no such option.",
         "not_power": "This sensor has no power unit (W, kW or MW). Add unit_of_measurement: W to the template sensor or choose another sensor.",
-        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”."
+        "looks_inverted": "Nearly all values of this sensor are negative. A consumer never feeds in: tick “turn the sign round”.",
+        "pause_needs_commands": "Pausing needs a command that pauses and one that allows charging again.",
+        "pair": "Command and value belong together.",
+        "value_number": "This setting is a number: enter a number.",
+        "value_onoff": "A switch needs the value on or off."
       }
     },
     "switch": {
@@ -1094,7 +1150,7 @@
       "step": {
         "user": {
           "title": "evcc loadpoint",
-          "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is never stopped. The address of evcc is enough.",
+          "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is only paused if you allow it below (Beta, off by default). The address of evcc is enough.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -1107,7 +1163,10 @@
             "power_entity": "Charging power (optional)",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "may_pause": "May be paused as the last measure (Beta)",
+            "hold_min": "Minimum duration of a pause",
+            "pause_min": "Pause after taking back"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -1119,12 +1178,15 @@
             "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "may_pause": "BETA, off by default. Only when the loadpoint already charges at its minimum current, every other device is used up and the limit still cannot be held, the guard sets the evcc mode to Off and later back to the mode from before. Not every car starts again by itself: try it with Observe only first.",
+            "hold_min": "A pause lasts at least this long (0 = 5 minutes). Only for the pause (Beta).",
+            "pause_min": "After allowing again, no new pause for this long (0 = 5 minutes). Only for the pause (Beta)."
           }
         },
         "reconfigure": {
           "title": "evcc loadpoint",
-          "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is never stopped. The address of evcc is enough.",
+          "description": "The guard only sets a ceiling for the charging current in evcc and gives it back. Charging is only paused if you allow it below (Beta, off by default). The address of evcc is enough.",
           "data": {
             "name": "Name",
             "priority": "Priority",
@@ -1137,7 +1199,10 @@
             "power_entity": "Charging power (optional)",
             "allow_entity": "Intervention only while",
             "observe_only": "Observe only",
-            "power_invert": "Turn the sign round (power sensor)"
+            "power_invert": "Turn the sign round (power sensor)",
+            "may_pause": "May be paused as the last measure (Beta)",
+            "hold_min": "Minimum duration of a pause",
+            "pause_min": "Pause after taking back"
           },
           "data_description": {
             "priority": "1 = restricted first, 10 = only when nothing else helps.",
@@ -1149,7 +1214,10 @@
             "power_entity": "Optional sensor, for example from the evcc integration of the community. Without it the guard reads the power from evcc.",
             "allow_entity": "Optional. Only while this entity is on.",
             "observe_only": "The guard only logs what it would do with this device and does not switch it. Good for trying it out.",
-            "power_invert": "On = the power sensor counts consumption as negative."
+            "power_invert": "On = the power sensor counts consumption as negative.",
+            "may_pause": "BETA, off by default. Only when the loadpoint already charges at its minimum current, every other device is used up and the limit still cannot be held, the guard sets the evcc mode to Off and later back to the mode from before. Not every car starts again by itself: try it with Observe only first.",
+            "hold_min": "A pause lasts at least this long (0 = 5 minutes). Only for the pause (Beta).",
+            "pause_min": "After allowing again, no new pause for this long (0 = 5 minutes). Only for the pause (Beta)."
           }
         },
         "loadpoint": {
