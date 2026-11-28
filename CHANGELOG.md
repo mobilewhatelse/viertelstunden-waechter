@@ -2,7 +2,7 @@
 
 Format: newest first. German version below each English block is a short summary in German.
 
-## 0.16.0 - unreleased
+## 0.16.0 - 2026-11-28
 
 - **Fixed: absurd "kW too much" at the end of a quarter hour.** In a quarter hour that was already over its budget, the allowed power
   (budget / remaining seconds) became strongly negative and log lines said e.g. "245.9 kW zu viel" (seen in the setup film, 135.6 kW in the
