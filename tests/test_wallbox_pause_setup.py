@@ -144,7 +144,10 @@ class ShownTests(unittest.TestCase):
                     if c.get("type") == "markdown" and "paused_by_guard" in c.get("content", ""))
 
     def test_dashboard_line_only_while_paused(self):
-        import jinja2
+        try:
+            import jinja2
+        except ImportError:
+            self.skipTest("jinja2 not installed")
         for lang, word in (("de", "vom Wächter pausiert"), ("en", "paused by the guard")):
             md = self._md(lang)
             render = lambda attrs: jinja2.Environment().from_string(md).render(state_attr=lambda e, a: attrs.get(a))  # noqa: E731

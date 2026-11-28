@@ -50,7 +50,10 @@ class DashboardTests(unittest.TestCase):
                     if c.get("type") == "markdown" and "notify_hint" in c.get("content", ""))
 
     def test_hint_shown_only_when_there(self):
-        import jinja2
+        try:
+            import jinja2
+        except ImportError:
+            self.skipTest("jinja2 not installed")
 
         md = self._md("de")
         env = jinja2.Environment()

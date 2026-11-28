@@ -79,7 +79,10 @@ class DashboardTests(unittest.TestCase):
             self.assertIn(IDS["status"], md[0])
 
     def test_template_renders(self):
-        import jinja2
+        try:
+            import jinja2
+        except ImportError:
+            self.skipTest("jinja2 not installed")
 
         main = build_views(IDS, "de")[0]
         md = next(c["content"] for s in main["sections"] for c in s["cards"]
